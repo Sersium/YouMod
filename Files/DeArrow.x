@@ -9,8 +9,7 @@ static NSString *currentInlinePreviewVideoID = nil;
 
 static NSString *YouModFindVideoIDFromView(UIView *view);
 
-@interface ASTextNode : ASDisplayNode
-@property (nonatomic, copy) NSAttributedString *attributedText;
+@interface ASTextNode (YouMod)
 - (void)setNeedsDisplay;
 - (UIView *)view;
 @end

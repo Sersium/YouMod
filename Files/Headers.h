@@ -70,7 +70,14 @@
 #import <YouTubeHeader/YTIPlayerBarDecorationModel.h>
 #import <YouTubeHeader/YTPlayerBarProgressDecorationView.h>
 #import <YouTubeHeader/YTPlayerBarRectangleDecorationView.h>
+#import <YouTubeHeader/ASTextNode.h>
 #import <YouTubeHeader/ELMNodeController.h>
+#import <YouTubeHeader/ELMCellNode.h>
+#import <YouTubeHeader/ELMContainerNode.h>
+#import <YouTubeHeader/ELMNodeFactory.h>
+#import <YouTubeHeader/ELMTextNode.h>
+#import <YouTubeHeader/YTRollingNumberNode.h>
+#import <YouTubeHeader/YTRollingNumberView.h>
 #import <objc/runtime.h>
 #import <YouTubeHeader/ELMTouchCommandPropertiesHandler.h>
 #import <YouTubeHeader/YTReelNonVideoContentModel.h>
