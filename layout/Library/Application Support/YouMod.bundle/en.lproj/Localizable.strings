@@ -25,8 +25,8 @@
 "FIX_PLAYBACK_ISSUES" = "Fix playback issues (Temporary)";
 "FIX_PLAYBACK_ISSUES_DESC" = "Try to fix video playback issues for some users. Turning this on will make the player automatically reloads itself everytime it errors or fails to play the video.";
 
-"PERFER_HEADER" = "YouMod perferences";
-"PERFER" = "Perferences";
+"PERFER_HEADER" = "YouMod preferences";
+"PERFER" = "Preferences";
 "IMPORT" = "Import settings";
 "IMPORT_DESC" = "Load your preferences in a .plist file.";
 "IMPORT_DONE" = "Successful";

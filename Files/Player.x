@@ -775,17 +775,83 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 }
 %end
 
+static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
+    UIViewController *curVC = vc;
+    while (curVC) {
+        if ([curVC isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)] ||
+            [NSStringFromClass([curVC class]) containsString:@"Inline"]) {
+            return YES;
+        }
+        curVC = curVC.parentViewController;
+    }
+    UIView *curV = view;
+    while (curV) {
+        NSString *cls = NSStringFromClass([curV class]);
+        if ([cls containsString:@"Inline"]) return YES;
+        curV = curV.superview;
+    }
+    return NO;
+}
+
 %hook YTInlineMutedPlaybackScrubberViewController
 - (void)setActiveSingleVideoObservable:(YTSingleVideoController *)singleVideoController {
+    if (singleVideoController) {
+        objc_setAssociatedObject(singleVideoController, "kYMIsInlinePlayback", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+            [singleVideoController setMuted:NO];
+        }
+    }
     %orig;
     if (singleVideoController) {
         BOOL shouldSoundOn = IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute);
-        [singleVideoController setMuted:!shouldSoundOn];
         @try {
             UIView *soundView = [self.view.superview valueForKey:@"_audioSoundIconView"];
             if ([soundView respondsToSelector:@selector(setAudioOn:)]) {
                 [soundView performSelector:@selector(setAudioOn:) withObject:@(shouldSoundOn)];
             }
+        } @catch (id ex) {}
+    }
+}
+%end
+
+%hook YTSingleVideoController
+- (void)setMuted:(BOOL)muted {
+    if (objc_getAssociatedObject(self, "kYMIsInlinePlayback")) {
+        if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+            %orig(NO);
+            return;
+        }
+    }
+    %orig;
+}
+- (BOOL)isMuted {
+    if (objc_getAssociatedObject(self, "kYMIsInlinePlayback")) {
+        if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+            return NO;
+        }
+    }
+    return %orig;
+}
+%end
+
+%hook YTInlineMutedPlaybackPlayerOverlayView
+- (void)layoutSubviews {
+    %orig;
+    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+        @try {
+            UIView *soundView = [self valueForKey:@"_audioSoundIconView"];
+            if ([soundView respondsToSelector:@selector(setAudioOn:)]) {
+                [soundView performSelector:@selector(setAudioOn:) withObject:@YES];
+            }
+        } @catch (id ex) {}
+    }
+    if (IS_ENABLED(FeedPreviewCCDisabled)) {
+        @try {
+            UIView *captionBtn = [self valueForKey:@"_captionButton"];
+            if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
+                [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
+            }
+            captionBtn.hidden = YES;
         } @catch (id ex) {}
     }
 }
@@ -800,6 +866,7 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
             if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
                 [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
             }
+            captionBtn.hidden = YES;
         } @catch (id ex) {}
     }
 }
@@ -808,24 +875,23 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 %hook YTCaptionViewController
 - (void)loadView {
     %orig;
-    if (IS_ENABLED(FeedPreviewCCDisabled)) {
-        UIViewController *parent = self.parentViewController;
-        if ([parent isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)] ||
-            [parent.parentViewController isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) {
-            self.view.hidden = YES;
-        }
+    if (IS_ENABLED(FeedPreviewCCDisabled) && YouModIsInlinePlaybackContext(self.view, self)) {
+        self.view.hidden = YES;
     }
 }
 - (void)setCaptionsHidden:(BOOL)hidden {
-    if (IS_ENABLED(FeedPreviewCCDisabled)) {
-        UIViewController *parent = self.parentViewController;
-        if ([parent isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)] ||
-            [parent.parentViewController isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) {
-            %orig(YES);
-            return;
-        }
+    if (IS_ENABLED(FeedPreviewCCDisabled) && YouModIsInlinePlaybackContext(self.view, self)) {
+        %orig(YES);
+        return;
     }
     %orig(hidden);
+}
+- (void)setActiveCaptionTrack:(id)track {
+    if (IS_ENABLED(FeedPreviewCCDisabled) && YouModIsInlinePlaybackContext(self.view, self)) {
+        %orig(nil);
+        return;
+    }
+    %orig(track);
 }
 %end
 

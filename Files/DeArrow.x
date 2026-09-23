@@ -9,6 +9,7 @@ static NSString *currentInlinePreviewVideoID = nil;
 
 @interface YouModDeArrowManager : NSObject
 @property (nonatomic, strong) NSCache<NSString *, NSDictionary *> *brandingCache;
+@property (nonatomic, strong) NSCache<NSString *, NSString *> *titleToVideoIDCache;
 @property (nonatomic, strong) NSMutableSet<NSString *> *inFlightRequests;
 @property (nonatomic, strong) NSMutableSet<NSString *> *toggledOriginalVideoIDs;
 + (instancetype)sharedInstance;
@@ -20,6 +21,8 @@ static NSString *currentInlinePreviewVideoID = nil;
 - (BOOL)isOriginalToggledForVideoID:(NSString *)videoID;
 - (BOOL)toggleDeArrowForVideoID:(NSString *)videoID;
 - (BOOL)hasDeArrowBrandingForVideoID:(NSString *)videoID;
+- (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID;
+- (NSString *)videoIDForTitle:(NSString *)title;
 @end
 
 @implementation YouModDeArrowManager
@@ -38,10 +41,22 @@ static NSString *currentInlinePreviewVideoID = nil;
     if (self) {
         _brandingCache = [[NSCache alloc] init];
         _brandingCache.countLimit = 500;
+        _titleToVideoIDCache = [[NSCache alloc] init];
+        _titleToVideoIDCache.countLimit = 1000;
         _inFlightRequests = [NSMutableSet set];
         _toggledOriginalVideoIDs = [NSMutableSet set];
     }
     return self;
+}
+
+- (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID {
+    if (!title || title.length == 0 || !videoID || videoID.length == 0) return;
+    [_titleToVideoIDCache setObject:videoID forKey:title];
+}
+
+- (NSString *)videoIDForTitle:(NSString *)title {
+    if (!title || title.length == 0) return nil;
+    return [_titleToVideoIDCache objectForKey:title];
 }
 
 - (BOOL)isOriginalToggledForVideoID:(NSString *)videoID {
@@ -419,6 +434,11 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     NSString *vID = self.videoId;
     if (vID.length == 0) return origTitle;
 
+    NSString *cleanTitle = [origTitle stringWithFormattingRemoved];
+    if (cleanTitle.length > 0) {
+        [[YouModDeArrowManager sharedInstance] registerOriginalTitle:cleanTitle forVideoID:vID];
+    }
+
     NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:vID];
     if (deArrowTitle.length > 0) {
         Class fmtClass = %c(YTIFormattedString);
@@ -439,6 +459,11 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowReplaceTitles)) return origHeadline;
     NSString *vID = self.videoId;
     if (vID.length == 0) return origHeadline;
+
+    NSString *cleanTitle = [origHeadline stringWithFormattingRemoved];
+    if (cleanTitle.length > 0) {
+        [[YouModDeArrowManager sharedInstance] registerOriginalTitle:cleanTitle forVideoID:vID];
+    }
 
     NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:vID];
     if (deArrowTitle.length > 0) {
@@ -461,6 +486,11 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     NSString *vID = self.videoId;
     if (vID.length == 0) return origTitle;
 
+    NSString *cleanTitle = [origTitle stringWithFormattingRemoved];
+    if (cleanTitle.length > 0) {
+        [[YouModDeArrowManager sharedInstance] registerOriginalTitle:cleanTitle forVideoID:vID];
+    }
+
     NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:vID];
     if (deArrowTitle.length > 0) {
         Class fmtClass = %c(YTIFormattedString);
@@ -481,6 +511,11 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowReplaceTitles)) return origTitle;
     NSString *vID = self.videoId;
     if (vID.length == 0) return origTitle;
+
+    NSString *cleanTitle = [origTitle stringWithFormattingRemoved];
+    if (cleanTitle.length > 0) {
+        [[YouModDeArrowManager sharedInstance] registerOriginalTitle:cleanTitle forVideoID:vID];
+    }
 
     NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:vID];
     if (deArrowTitle.length > 0) {
@@ -503,6 +538,11 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     NSString *vID = self.videoId;
     if (vID.length == 0) return origTitle;
 
+    NSString *cleanTitle = [origTitle stringWithFormattingRemoved];
+    if (cleanTitle.length > 0) {
+        [[YouModDeArrowManager sharedInstance] registerOriginalTitle:cleanTitle forVideoID:vID];
+    }
+
     NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:vID];
     if (deArrowTitle.length > 0) {
         Class fmtClass = %c(YTIFormattedString);
@@ -523,6 +563,11 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowReplaceTitles)) return origTitle;
     NSString *vID = self.videoId;
     if (vID.length == 0) return origTitle;
+
+    NSString *cleanTitle = [origTitle stringWithFormattingRemoved];
+    if (cleanTitle.length > 0) {
+        [[YouModDeArrowManager sharedInstance] registerOriginalTitle:cleanTitle forVideoID:vID];
+    }
 
     NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:vID];
     if (deArrowTitle.length > 0) {
@@ -545,6 +590,10 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     NSString *vID = self.videoId;
     if (vID.length == 0) return origTitle;
 
+    if (origTitle.length > 0) {
+        [[YouModDeArrowManager sharedInstance] registerOriginalTitle:origTitle forVideoID:vID];
+    }
+
     NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:vID];
     if (deArrowTitle.length > 0) {
         return deArrowTitle;
@@ -552,6 +601,77 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
 
     [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:vID];
     return origTitle;
+}
+%end
+
+#pragma mark - Elements and Texture ASTextNode Title Hook
+
+%hook ASTextNode
+
+- (void)setAttributedText:(NSAttributedString *)attributedString {
+    if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowReplaceTitles) || attributedString.length == 0) {
+        %orig;
+        return;
+    }
+
+    NSString *curStr = attributedString.string;
+    NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
+    if (!videoID) {
+        videoID = [[YouModDeArrowManager sharedInstance] videoIDForTitle:curStr];
+    }
+    if (!videoID && [self respondsToSelector:@selector(view)]) {
+        UIView *v = [self performSelector:@selector(view)];
+        if (v && v.superview) {
+            videoID = YouModFindVideoIDFromView(v.superview);
+        }
+    }
+
+    if (videoID && videoID.length == 11) {
+        objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (!objc_getAssociatedObject(self, "kYMDeArrowOrigAttrKey")) {
+            objc_setAssociatedObject(self, "kYMDeArrowOrigAttrKey", attributedString, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:curStr forVideoID:videoID];
+        }
+
+        NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
+        if (deArrowTitle && deArrowTitle.length > 0 && ![curStr isEqualToString:deArrowTitle]) {
+            NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:attributedString];
+            [mod.mutableString setString:deArrowTitle];
+            %orig(mod);
+            return;
+        } else if (!deArrowTitle) {
+            [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
+        }
+    }
+    %orig(attributedString);
+}
+
+- (void)didLoad {
+    %orig;
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowTextNotification:) name:kYMDeArrowUpdatedNotification object:nil];
+}
+
+%new
+- (void)youmod_onDeArrowTextNotification:(NSNotification *)note {
+    NSString *notifVideoID = note.userInfo[@"videoID"];
+    NSString *myVideoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
+    if (!myVideoID || ![myVideoID isEqualToString:notifVideoID]) return;
+
+    NSAttributedString *origAttr = objc_getAssociatedObject(self, "kYMDeArrowOrigAttrKey");
+    if (!origAttr) return;
+
+    NSString *title = [[YouModDeArrowManager sharedInstance] titleForVideoID:myVideoID];
+    if (title && title.length > 0) {
+        NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:origAttr];
+        [mod.mutableString setString:title];
+        [self setAttributedText:mod];
+        [self setNeedsDisplay];
+        if ([self respondsToSelector:@selector(view)]) {
+            UIView *v = [self performSelector:@selector(view)];
+            [v setNeedsDisplay];
+            [v setNeedsLayout];
+        }
+    }
 }
 %end
 
@@ -571,7 +691,6 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
 + (instancetype)sharedHandler;
 - (void)handleSwapGesture:(UILongPressGestureRecognizer *)gesture;
 - (void)handleSwapButtonTap:(UIButton *)button;
-- (void)handlePreviewOverlayTap:(UIButton *)button;
 @end
 
 @implementation YouModDeArrowSwapHandler
@@ -631,39 +750,7 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     [self triggerSwapForVideoID:videoID fromView:button.superview];
 }
 
-- (void)handlePreviewOverlayTap:(UIButton *)button {
-    NSString *videoID = objc_getAssociatedObject(button, "kYMDeArrowVideoIDKey");
-    if (!videoID && currentInlinePreviewVideoID.length > 0) {
-        videoID = currentInlinePreviewVideoID;
-    }
-    if (!videoID) return;
-    [self triggerSwapForVideoID:videoID fromView:button.superview];
-}
-
 @end
-
-// Update indicator badge styling
-static void YouModUpdateIndicatorBadge(UIButton *badgeBtn, NSString *videoID) {
-    if (!badgeBtn || !videoID) return;
-    BOOL isOriginal = [[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID];
-    BOOL hasBranding = [[YouModDeArrowManager sharedInstance] hasDeArrowBrandingForVideoID:videoID];
-
-    if (!hasBranding && !isOriginal) {
-        badgeBtn.hidden = YES;
-        return;
-    }
-
-    badgeBtn.hidden = NO;
-    if (isOriginal) {
-        [badgeBtn setTitle:@"Original" forState:UIControlStateNormal];
-        badgeBtn.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.75];
-        [badgeBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    } else {
-        [badgeBtn setTitle:@"⚡ DeArrow" forState:UIControlStateNormal];
-        badgeBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.45 blue:0.9 alpha:0.8];
-        [badgeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    }
-}
 
 // Robust helper to extract video ID from an ASDisplayView or its hierarchy
 static NSString *YouModFindVideoIDFromView(UIView *view) {
@@ -721,7 +808,24 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
     return YouModExtractDeArrowVideoID([view description]);
 }
 
-#pragma mark - Visual Indicator & Feed Preview Cell Overlay
+#pragma mark - Visual Indicator (Web-Style) next to 3-dots Menu & Feed Quick Swap
+
+static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
+    if (!indBtn || !videoID) return;
+    BOOL isOriginal = [[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID];
+    BOOL hasBranding = [[YouModDeArrowManager sharedInstance] hasDeArrowBrandingForVideoID:videoID];
+
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIFontWeightMedium];
+    UIImage *img = [UIImage systemImageNamed:@"circle.circle.fill" withConfiguration:cfg];
+    if (!img) img = [UIImage systemImageNamed:@"circle.inset.filled" withConfiguration:cfg];
+    [indBtn setImage:img forState:UIControlStateNormal];
+
+    if (isOriginal || !hasBranding) {
+        indBtn.tintColor = [UIColor colorWithWhite:0.6 alpha:0.7];
+    } else {
+        indBtn.tintColor = [UIColor colorWithRed:0.0 green:0.65 blue:1.0 alpha:1.0]; // Cyan/blue matching web version
+    }
+}
 
 %hook _ASDisplayView
 
@@ -736,11 +840,12 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
     NSString *iden = self.accessibilityIdentifier;
     if (iden.length == 0) return;
 
-    if ([iden containsString:@"thumbnail"] || [iden containsString:@"compact_video"] || [iden containsString:@"video_with_context"]) {
+    if ([iden isEqualToString:@"eml.overflow_button"] || [iden isEqualToString:@"id.ui.video.action.menu"]) {
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowNotification:) name:kYMDeArrowUpdatedNotification object:nil];
+    } else if ([iden containsString:@"thumbnail"] || [iden containsString:@"compact_video"] || [iden containsString:@"video_with_context"]) {
         NSString *videoID = YouModFindVideoIDFromView(self);
         if (videoID && videoID.length == 11) {
             objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
             if (IS_ENABLED(DeArrowQuickSwap)) {
                 BOOL hasLongPress = NO;
                 for (UIGestureRecognizer *gr in self.gestureRecognizers) {
@@ -756,27 +861,37 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
                     [self addGestureRecognizer:lp];
                 }
             }
-
-            // Indicator Badge
-            if ([iden containsString:@"thumbnail"]) {
-                UIButton *badgeBtn = (UIButton *)[self viewWithTag:0xDEA220];
-                if (!badgeBtn) {
-                    badgeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-                    badgeBtn.tag = 0xDEA220;
-                    badgeBtn.frame = CGRectMake(6, 6, 74, 22);
-                    badgeBtn.layer.cornerRadius = 4;
-                    badgeBtn.layer.masksToBounds = YES;
-                    badgeBtn.titleLabel.font = [UIFont systemFontOfSize:10 weight:UIFontWeightBold];
-                    [badgeBtn addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapButtonTap:) forControlEvents:UIControlEventTouchUpInside];
-                    [self addSubview:badgeBtn];
-                }
-                objc_setAssociatedObject(badgeBtn, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                YouModUpdateIndicatorBadge(badgeBtn, videoID);
-
-                // Listen for DeArrow branding updates to show badge once fetched
-                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowNotification:) name:kYMDeArrowUpdatedNotification object:nil];
-            }
         }
+    }
+}
+
+- (void)layoutSubviews {
+    %orig;
+    if (!IS_ENABLED(DeArrowEnabled)) return;
+    NSString *iden = self.accessibilityIdentifier;
+    if ([iden isEqualToString:@"eml.overflow_button"] || [iden isEqualToString:@"id.ui.video.action.menu"]) {
+        UIView *container = self.superview;
+        if (!container) return;
+
+        NSString *videoID = YouModFindVideoIDFromView(container);
+        if (!videoID || videoID.length != 11) return;
+
+        objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+        UIButton *indBtn = (UIButton *)[container viewWithTag:0xDEA222];
+        if (!indBtn) {
+            indBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+            indBtn.tag = 0xDEA222;
+            [indBtn addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapButtonTap:) forControlEvents:UIControlEventTouchUpInside];
+            [container addSubview:indBtn];
+        }
+
+        objc_setAssociatedObject(indBtn, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+        CGFloat btnSize = 22.0;
+        indBtn.frame = CGRectMake(self.frame.origin.x - btnSize - 4.0, self.frame.origin.y + (self.frame.size.height - btnSize) / 2.0, btnSize, btnSize);
+
+        YouModUpdateOverflowIndicator(indBtn, videoID);
     }
 }
 
@@ -784,17 +899,23 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
 - (void)youmod_onDeArrowNotification:(NSNotification *)notif {
     NSString *notifVideoID = notif.userInfo[@"videoID"];
     NSString *myVideoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
+    if (!myVideoID && self.superview) {
+        myVideoID = YouModFindVideoIDFromView(self.superview);
+        if (myVideoID) objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", myVideoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     if (!myVideoID || ![myVideoID isEqualToString:notifVideoID]) return;
 
-    UIButton *badgeBtn = (UIButton *)[self viewWithTag:0xDEA220];
-    if (badgeBtn) {
-        YouModUpdateIndicatorBadge(badgeBtn, myVideoID);
+    if (self.superview) {
+        UIButton *indBtn = (UIButton *)[self.superview viewWithTag:0xDEA222];
+        if (indBtn) {
+            YouModUpdateOverflowIndicator(indBtn, myVideoID);
+        }
     }
 }
 
 %end
 
-#pragma mark - Preview Button Overlay on Video Playback Previews (Inline Muted Playback)
+#pragma mark - Inline Muted Playback Tracking
 
 // Track active preview video ID
 %hook YTInlineMutedPlaybackScrubberViewController
@@ -817,67 +938,6 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
                 }
             }
         } @catch (id ex) {}
-    }
-}
-
-%end
-
-// Add DeArrow toggle button to the inline preview overlay
-%hook YTInlineMutedPlaybackPlayerOverlayView
-
-- (void)layoutSubviews {
-    %orig;
-    if (!IS_ENABLED(DeArrowEnabled)) {
-        UIView *btn = [self viewWithTag:0xDEA221];
-        if (btn) btn.hidden = YES;
-        return;
-    }
-
-    UIButton *deArrowBtn = (UIButton *)[self viewWithTag:0xDEA221];
-    if (!deArrowBtn) {
-        deArrowBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-        deArrowBtn.tag = 0xDEA221;
-        deArrowBtn.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.65];
-        deArrowBtn.layer.cornerRadius = 16;
-        deArrowBtn.layer.masksToBounds = YES;
-        [deArrowBtn addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handlePreviewOverlayTap:) forControlEvents:UIControlEventTouchUpInside];
-
-        UIImageSymbolConfiguration *symConfig = [UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIFontWeightBold];
-        UIImage *swapImg = [UIImage systemImageNamed:@"arrow.triangle.swap" withConfiguration:symConfig];
-        if (!swapImg) swapImg = [UIImage systemImageNamed:@"arrow.2.squarepath" withConfiguration:symConfig];
-        [deArrowBtn setImage:swapImg forState:UIControlStateNormal];
-
-        [self addSubview:deArrowBtn];
-    }
-
-    deArrowBtn.hidden = NO;
-    NSString *activeVID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
-    if (!activeVID && currentInlinePreviewVideoID.length > 0) {
-        activeVID = currentInlinePreviewVideoID;
-        objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", activeVID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    objc_setAssociatedObject(deArrowBtn, "kYMDeArrowVideoIDKey", activeVID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
-    BOOL isOriginal = [[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:activeVID];
-    if (isOriginal) {
-        deArrowBtn.tintColor = [UIColor colorWithWhite:0.6 alpha:1.0];
-        deArrowBtn.alpha = 0.6;
-    } else {
-        deArrowBtn.tintColor = [UIColor colorWithRed:0.24 green:0.65 blue:1.0 alpha:1.0]; // YouTube blue tint
-        deArrowBtn.alpha = 1.0;
-    }
-
-    // Position next to the mute button or top right
-    UIView *soundIconView = [self valueForKey:@"_audioSoundIconView"];
-    if (soundIconView && !soundIconView.hidden) {
-        CGRect soundFrame = soundIconView.frame;
-        CGFloat btnSize = 32.0;
-        deArrowBtn.frame = CGRectMake(soundFrame.origin.x - btnSize - 8.0, soundFrame.origin.y + (soundFrame.size.height - btnSize) / 2.0, btnSize, btnSize);
-    } else {
-        CGFloat btnSize = 32.0;
-        CGFloat topMargin = 12.0;
-        CGFloat rightMargin = 12.0;
-        deArrowBtn.frame = CGRectMake(self.bounds.size.width - rightMargin - btnSize, topMargin, btnSize, btnSize);
     }
 }
 

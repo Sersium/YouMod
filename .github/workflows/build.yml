@@ -190,6 +190,29 @@ jobs:
             cd ..
           fi
 
+          # Ensure all tweak bundles (YouMod.bundle, DontEatMyContent.bundle) are embedded in Payload/YouTube.app/
+          echo "Embedding all tweak bundles into YouTube_YouMod.ipa..."
+          rm -rf ipa_bundle_unpack
+          unzip -q YouTube_YouMod.ipa -d ipa_bundle_unpack
+
+          for d in youmod.deb demc.deb ytvo.deb; do
+            if [ -f "$d" ]; then
+              rm -rf deb_temp
+              mkdir -p deb_temp
+              dpkg-deb -x "$d" deb_temp/
+              cp -rf deb_temp/var/jb/Library/Application\ Support/*.bundle ipa_bundle_unpack/Payload/YouTube.app/ 2>/dev/null || true
+              cp -rf deb_temp/Library/Application\ Support/*.bundle ipa_bundle_unpack/Payload/YouTube.app/ 2>/dev/null || true
+              rm -rf deb_temp
+            fi
+          done
+
+          ls -ld ipa_bundle_unpack/Payload/YouTube.app/*.bundle || true
+
+          cd ipa_bundle_unpack
+          zip -qr ../YouTube_YouMod.ipa Payload
+          cd ..
+          rm -rf ipa_bundle_unpack
+
           ls -lh YouTube_YouMod.ipa
 
           IPA_SIZE=$(stat -f%z YouTube_YouMod.ipa 2>/dev/null || stat -c%s YouTube_YouMod.ipa)
@@ -214,7 +237,7 @@ jobs:
               'date': now_iso,
               'downloadURL': download_url,
               'size': ipa_size,
-              'localizedDescription': f'YouMod v{ym_ver}: Fixed crash on launch, removed conflicting tweaks/extensions, fakesigned arm64 binaries, and added multi-version history.'
+              'localizedDescription': f'YouMod v{ym_ver}: Universal DeArrow titles, web-style feed indicator, RYD action bar & details dislike counters, feed audio ON & CC disabled, and embedded tweak preferences.'
           }
 
           versions = app.get('versions', [])

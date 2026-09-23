@@ -570,12 +570,12 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         return YES;
     }];
     YTIIcon *iconRYD = [%c(YTIIcon) new];
-    iconRYD.iconType = 62;
+    iconRYD.iconType = 51; // YT_DISLIKE
     rydgroup.settingIcon = iconRYD;
     [sectionItems addObject:rydgroup];
 
     // Section 9
-    // Perferences
+    // Preferences
     YTSettingsSectionItem *perfgroup = [YTSettingsSectionItemClass itemWithTitle:YMLOC(@"PERFER_HEADER") accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
         YMPushSubSettings(YMLOC(@"PERFER_HEADER"), @[
             YMHeader(YMLOC(@"PERFER")),
