@@ -53,6 +53,10 @@
 "DOWNLOADING" = "İndiriliyor";
 "DOWNLOAD_MANAGER" = "İndirme yöneticisi";
 "DOWNLOAD_MANAGER_DESC" = "YouTube'un video indiricisini YouMod indiricisi ile değiştirir. Videoları, sesleri, altyazıları ve küçük resimleri indirme imkanı sunar.";
+"DOWNLOAD_BUTTON_POSITION" = "Download button position";
+"UNDER_THE_PLAYER" = "Under the player";
+"OVERLAY" = "Overlay";
+"BOTH" = "Both";
 "POST_DOWNLOAD_ACTION" = "İndirme sonrası işlem";
 "POST_ACTION_SAVE_PHOTOS" = "Fotoğraflar'a kaydet";
 "POST_ACTION_SHARE" = "Paylaş";
@@ -106,24 +110,18 @@
 "THUMBNAIL_OPTIONS" = "Küçük resmi indir";
 "COPY" = "Kopyala";
 "COPIED_TO_CLIPBOARD" = "Pano'ya kopyalandı";
-"CONNECTING_TO_SERVER" = "Sunucuya bağlanılıyor...";
-"DOWNLOADING_TO_SERVER" = "Sunucuya indiriliyor...";
 "COPY_COMMENT_TEXT" = "Yorum metnini kopyala";
 "SAVE_COMMENT_IMAGE" = "Yorumu görsel olarak kaydet";
 "COPY_COMMENT_IMAGE" = "Yorumu görsel olarak kopyala";
 "COPY_POST_TEXT" = "Gönderi metnini kopyala";
 "SAVE_POST_IMAGE" = "Gönderiyi görsel olarak kaydet";
 "COPY_POST_IMAGE" = "Gönderiyi görsel olarak kopyala";
-"DOWNLOAD_SERVER" = "İndirme sunucusu";
-"CHOOSE_DOWNLOAD_SERVER" = "İndirme sunucusunu seçin";
 "DOWNLOAD_COMMENT" = "Yorum bilgilerini kaydet";
 "DOWNLOAD_COMMENT_DESC" = "Üç nokta butonuna uzun basarak yorum metnini kopyalamaya ve yorumu görsel olarak kaydetmeye izin verir.";
 "DOWNLOAD_POST" = "Gönderi bilgilerini kaydet";
 "DOWNLOAD_POST_DESC" = "Uzun basarak gönderi metnini kopyalamaya ve gönderiyi görsel olarak kaydetmeye izin verir.";
 "TRANSLATE_COMMENT" = "Yorumu çevir";
 "TRANSLATE_POST" = "Gönderiyi çevir";
-"SERVER_EUROPRE1" = "Avrupa";
-"SERVER_ASIA1" = "Tayland - Asya";
 "SHOW_OPTIONS" = "Seçenekleri göster";
 "ENGLISH" = "İngilizce";
 "TRANSLATION" = "Çeviri";
@@ -136,8 +134,8 @@
 "DOWNLOAD_METHOD" = "İndirme yöntemi";
 "DOWNLOAD_METHOD_DESC" = "Videoların nasıl indirileceği. Cihaz içi yöntemi en son YouTube sürümlerinde çalışır.";
 "METHOD_DIRECT" = "Doğrudan";
-"METHOD_SERVER" = "Sunucu";
 "METHOD_ONDEVICE" = "Cihaz içi (SABR)";
+"AUDIO" = "Audio";
 
 "APPEARANCE" = "Görünüm";
 "OLED_THEME" = "OLED karanlık mod";
@@ -161,6 +159,8 @@
 "HIDE_VOICE_SEARCH_BUTTON_DESC" = "Gezinme çubuğundaki sesli arama butonunu gizler.";
 "HIDE_CAST_BUTTON_NAVBAR" = "Yayınla butonunu gizle";
 "HIDE_CAST_BUTTON_NAVBAR_DESC" = "Gezinme çubuğundaki yayınla butonunu gizler.";
+"HIDE_MESSAGES_BUTTON" = "Hide messages button";
+"HIDE_MESSAGES_BUTTON_DESC" = "Hide messages button in the navigation bar.";
 
 "FEED" = "Akış";
 "HIDE_SUBBAR" = "Alt çubuğu gizle";
@@ -179,14 +179,10 @@
 "KEEP_SHORTS_SUBSCRIPT_DESC" = "Shorts'un Abonelikler sekmesinden kaldırılmasını engeller.";
 "HIDE_SEARCH_HISTORY" = "Arama geçmişini gizle";
 "HIDE_SEARCH_HISTORY_DESC" = "Arama çubuğunu kullanırken önceki arama geçmişini ve önerileri gizler.\\nNOT: Arama geçmişinize diğer YouTube istemcilerinizden erişilmeye devam edilebilir.";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON" = "Topluluk butonunu kaldır";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC" = "Kanal üst bilgilerindeki topluluk butonunu kaldırır.";
-"REMOVE_CHANNEL_SPONSOR_BUTTON" = "Katıl butonunu kaldır";
-"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC" = "Akışlar, kanal üst bilgileri ve Shorts genelindeki sponsor / katıl butonunu kaldırır.";
 "HIDE_PLAYABLES" = "Oynatılabilirleri kaldır";
 "HIDE_PLAYABLES_DESC" = "Akıştaki oynatılabilirleri (mini oyunları) kaldırır.";
 "HIDE_RELATED_VIDEOS" = "İlgili videoları gizle";
-"HIDE_RELATED_VIDEOS_DESC" = "Oynatıcının altındaki ilgili videoları gizler. (Katman içinde değil)";
+"HIDE_RELATED_VIDEOS_DESC" = "Hem akışta hem de oynatıcıda ilgili videoları gizler";
 
 "PLAYER" = "Oynatıcı";
 "PLAYBACK_SPEED" = "Oynatma hızı";
@@ -225,7 +221,12 @@
 "SPONSORBLOCK_BUTTON" = "SponsorBlock";
 "MANAGE_OVERLAY_BUTTONS" = "Katman butonlarını yönet";
 "MANAGE_OVERLAY_BUTTONS_DESC" = "Katman butonlarını yeniden sıralayın ve açıp kapatın";
-"OVERLAY_BUTTON_REORDER_HINT" = "Katman butonlarını yeniden sıralamak için sürükleyin. Göstermek/gizlemek için anahtarı kullanın.";
+"OVERLAY_BUTTON_REORDER_HINT" = "Yeniden sıralamak için sürükleyin. Düğmeyi üst ve alt sıra arasında taşımak için oka dokunun. Göstermek veya gizlemek için açıp kapatın.";
+"OVERLAY_BUTTONS_TOP" = "Üstteki düğmeler";
+"OVERLAY_BUTTONS_BOTTOM" = "Alttaki düğmeler";
+"OVERLAY_BUTTONS_EMPTY" = "Düğme yok";
+"REMOVE_ADS" = "Reklamları kaldır";
+"REMOVE_ADS_DESC" = "Uygulamadaki reklamları kaldırır, oyunlar hariç";
 "HOLD_TO_SPEED" = "Hızlandırmak için basılı tut";
 "HOLD_TO_SPEED_DESC" = "Özel basılı tutarak hızlandırma oranını kullanır.";
 "HIDE_AUTOPLAY" = "Otomatik oynatma anahtarını gizle";
@@ -325,9 +326,9 @@
 "PAUSE_TWO_FINGERS" = "İki parmakla duraklat";
 "PAUSE_TWO_FINGERS_DESC" = "Ekrana iki parmakla dokunarak oynatmayı duraklatır/sürdürür.";
 "SKIP_BACKWARD" = "Geri sar";
-"SKIP_BACKWARD_DESC" = "Denetim Merkezi'ndeki önceki parça butonunu belirlenen saniye kadar geri sarma butonuyla değiştirir.";
+"SKIP_BACKWARD_DESC" = "Replaces the previous track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip backward button by a set number of seconds.";
 "SKIP_FORWARD" = "İleri sar";
-"SKIP_FORWARD_DESC" = "Denetim Merkezi'ndeki sonraki parça butonunu belirlenen saniye kadar ileri sarma butonuyla değiştirir.";
+"SKIP_FORWARD_DESC" = "Replaces the next track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip forward button by a set number of seconds.";
 "REWIND_SECONDS" = "Geri sarma saniyesi";
 "FORWARD_SECONDS" = "İleri sarma saniyesi";
 "HIDE_COMMENTS_SECTION" = "Yorumlar bölümünü gizle";
@@ -509,6 +510,10 @@
 "HIDE_COMMU_GUIDE_DESC" = "Topluluk kuralları üst bilgisini gizler.";
 "HIDE_ENGAGEMENT_SUBBAR" = "Yorumlar üst bilgisini gizle";
 "HIDE_ENGAGEMENT_SUBBAR_DESC" = "Yorum sıralama üst bilgisini (En popüler, En yeni) asla görünmeyecek şekilde gizler.";
+"HIDE_COMMUNITY_BUTTON_PANEL" = "Hide community button";
+"HIDE_COMMUNITY_BUTTON_PANEL_DESC" = "Hide the community button in the engagement panel.";
+"HIDE_INFO_BUTTON_PANEL" = "Hide info button";
+"HIDE_INFO_BUTTON_PANEL_DESC" = "Hide the info button in the engagement panel.";
 "DISABLES_RTL" = "RTL biçimlendirmesini devre dışı bırak";
 "DISABLES_RTL_DESC" = "Sağdan sola (RTL) yazılan dillerdeki metinleri zorla soldan sağa (LTR) biçimde görüntüler.";
 "DEVICE_UI" = "Arayüz stili";
@@ -576,3 +581,63 @@
 "SB_SKIP_ALERT_DURATION" = "Atlama uyarısı süresi";
 "SB_UNSKIP_ALERT_DURATION" = "Atlamayı geri alma uyarısı süresi";
 "SB_MIN_DURATION_SLIDER" = "Atlanacak minimum bölüm süresi";
+
+/* SponsorBlock menu / vote / whitelist / user ID */
+"SB_MENU_ENABLE" = "Enable SponsorBlock";
+"SB_MENU_DISABLE" = "Disable SponsorBlock";
+"SB_MENU_VOTE" = "Vote on segments";
+"SB_MENU_WHITELIST" = "Whitelist channel";
+"SB_VOTE_TITLE" = "Segments";
+"SB_VOTES_COUNT" = "%ld votes";
+"SB_VOTE_UPVOTE" = "Upvote";
+"SB_VOTE_DOWNVOTE" = "Downvote";
+"SB_VOTE_UNDO" = "Undo vote";
+"SB_VOTE_CHANGE_CATEGORY" = "Change category";
+"SB_VOTE_JUMP_START" = "Jump to segment start";
+"SB_VOTE_JUMP_END" = "Jump to segment end";
+"SB_VOTE_SUCCESS" = "Vote submitted";
+"SB_VOTE_FAILED" = "Vote failed";
+"SB_VOTE_NO_SEGMENTS" = "No segments for this video";
+"SB_WHITELIST_ADD" = "Add to whitelist";
+"SB_WHITELIST_REMOVE" = "Remove from whitelist";
+"SB_WHITELIST_DESC" = "SponsorBlock will be disabled for this channel.";
+"SB_WHITELIST_MANAGE" = "Whitelist";
+"SB_WHITELIST_EMPTY" = "No whitelisted channels";
+"SB_WHITELIST_DELETE" = "Delete";
+"SB_USERID_HEADER" = "User ID";
+"SB_PRIVATE_ID" = "Private User ID";
+"SB_PUBLIC_ID" = "Public User ID";
+"SB_COPY_ID" = "Copy ID";
+"SB_EDIT_ID" = "Edit ID";
+"SB_ID_COPIED" = "ID copied";
+"SB_ID_SAVED" = "ID saved";
+"SB_ID_INVALID" = "ID must be at least 30 characters";
+"SB_ID_SAVE" = "Save";
+"SB_ID_CANCEL" = "Cancel";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "Hide Mix playlists";
+"HIDE_MIX_PLAYLISTS_DESC" = "Removes YouTube Mix and My Mix playlists from feeds.";
+"HIDE_AI_SUMMARIES" = "Hide AI summaries";
+"HIDE_AI_SUMMARIES_DESC" = "Hides AI-generated video summaries and key moments in search and feeds.";
+"SHORTS_AUTO_SPEED" = "Shorts playback speed";
+"SHORTS_AUTO_SPEED_DESC" = "Automatically applies the selected playback speed for YouTube Shorts independently of regular videos.";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "Remove Dislike button";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "Removes the Dislike button from the Shorts action bar.";
+"REMOVE_SHORTS_SAVE_BUTTON" = "Remove Save button";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "Removes the Save/Bookmark button from the Shorts action bar.";
+"CLEAN_URLS" = "Clean copied links";
+"CLEAN_URLS_DESC" = "Strips tracking parameters (si, feature, pp, utm_*, etc.) from shared and copied YouTube URLs.";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "Enable 'Play next in queue'";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "Enables 'Play next in queue' and 'Add to queue' without requiring YouTube Premium.";
+"RELOAD_BUTTON" = "Reload";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "Enable DeArrow";
+"DEARROW_ENABLED_DESC" = "Replaces sensationalized, clickbait titles and thumbnails with community-created accurate titles and snapshots from the DeArrow API.";
+"DEARROW_REPLACE_TITLES" = "Replace titles";
+"DEARROW_REPLACE_TITLES_DESC" = "Replaces video titles with crowd-sourced descriptive titles.";
+"DEARROW_REPLACE_THUMBNAILS" = "Replace thumbnails";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
+"DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";

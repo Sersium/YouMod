@@ -109,23 +109,44 @@ void sbUpdateOverlayInsetForPivotBar() {
 
 static const NSTimeInterval SBOverlayRestoreFadeDuration = 0.15;
 
-// Hide the pill overlay instantly (non-animated): iOS captures the app-switcher
-// snapshot synchronously as the app deactivates, so an animated hide wouldn't
-// land in time and the pill would leak into the switcher card.
+void sbDismissAllNotifications(void) {
+    if (!sbOverlayWindow) return;
+    UIViewController *rootVC = sbOverlayWindow.rootViewController;
+    UIView *rootView = rootVC ? rootVC.view : nil;
+    if (!rootView) return;
+    for (UIView *sub in [rootView.subviews copy]) {
+        [sub.layer removeAllAnimations];
+        if ([sub isKindOfClass:[SBSkipNotificationView class]]) {
+            [((SBSkipNotificationView *)sub).progressOverlay.layer removeAllAnimations];
+        }
+        [sub removeFromSuperview];
+    }
+}
+
+// Hide the pill overlay instantly (non-animated) and dismiss active notifications
+// so stale pills never persist into app-switcher or upon re-entering the app.
 static void sbHideOverlayForSnapshot(void) {
+    sbDismissAllNotifications();
     if (sbOverlayWindow) sbOverlayWindow.hidden = YES;
 }
 
-// Restore the overlay, fading it back in so the reappearance isn't a hard pop.
+// Restore the overlay only if active notification subviews are present.
 // Guarded to the hidden state so the two "became active" notifications don't
 // each re-trigger the fade.
 static void sbRestoreOverlayAfterSnapshot(void) {
-    if (!sbOverlayWindow || !sbOverlayWindow.hidden) return;
-    sbOverlayWindow.alpha = 0.0;
-    sbOverlayWindow.hidden = NO;
-    [UIView animateWithDuration:SBOverlayRestoreFadeDuration animations:^{
-        sbOverlayWindow.alpha = 1.0;
-    }];
+    if (!sbOverlayWindow) return;
+    UIView *rootView = sbOverlayWindow.rootViewController.view;
+    if (!rootView || rootView.subviews.count == 0) {
+        sbOverlayWindow.hidden = YES;
+        return;
+    }
+    if (sbOverlayWindow.hidden) {
+        sbOverlayWindow.alpha = 0.0;
+        sbOverlayWindow.hidden = NO;
+        [UIView animateWithDuration:SBOverlayRestoreFadeDuration animations:^{
+            sbOverlayWindow.alpha = 1.0;
+        }];
+    }
 }
 
 // Tracks which scene's lifecycle is currently observed. When sbOverlayWindow is
@@ -220,11 +241,26 @@ UIView *sbGetNotificationParent(void) {
 
         sbRegisterOverlayLifecycleObservers(activeScene);
         sbUpdateOverlayInsetForPivotBar();
+    } else {
+        if (sbOverlayWindow.hidden) {
+            sbOverlayWindow.alpha = 1.0;
+            sbOverlayWindow.hidden = NO;
+        }
+        sbUpdateOverlayInsetForPivotBar();
     }
     return sbOverlayWindow.rootViewController.view;
 }
 
 static NSMutableDictionary<NSString *, NSArray<SBSegment *> *> *sbSegmentCache;
+
+// Drops the cached segments for a video (e.g. after a vote changed server-side
+// data) so the next activation refetches.
+void sbInvalidateSegmentCache(NSString *videoID) {
+    if (!videoID) return;
+    @synchronized(sbSegmentCache) {
+        [sbSegmentCache removeObjectForKey:videoID];
+    }
+}
 
 NSArray<NSString *> *sbAllCategories(void) {
     static NSArray *cats;
@@ -329,6 +365,7 @@ UIColor *SBColorFromHex(NSString *hexString) {
                                                                  start:[segment[0] floatValue]
                                                                    end:[segment[1] floatValue]
                                                                 action:item[@"actionType"] ?: @"skip"];
+                            seg.votes = [item[@"votes"] integerValue];
                             [segments addObject:seg];
                         }
                     }
@@ -369,6 +406,15 @@ UIColor *SBColorFromHex(NSString *hexString) {
     if ([self.sbLastVideoID isEqualToString:videoID] && self.sbSegments.count > 0) return;
     self.sbLastVideoID = videoID;
 
+    // Skip fetching (and clear markers) while disabled via the menu toggle or
+    // a whitelisted channel.
+    if (!sbActiveForVideo(self)) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"SBSegmentsDidLoad"
+                                                            object:self
+                                                          userInfo:@{@"segments": @[]}];
+        return;
+    }
+
     __weak typeof(self) weakSelf = self;
     [SBRequest fetchSegmentsForVideoID:videoID completion:^(NSArray<SBSegment *> *segments) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
@@ -398,7 +444,7 @@ UIColor *SBColorFromHex(NSString *hexString) {
 // both time-change hooks so the skip logic lives in one place.
 %new
 - (void)sbCheckSegmentsAtCurrentTime {
-    if (!IS_ENABLED(SBEnabled) || !IS_ENABLED(SBButtonKey) || self.isPlayingAd) return;
+    if (!sbActiveForVideo(self) || self.isPlayingAd) return;
     if ([self.parentViewController isKindOfClass:%c(YTShortsPlayerViewController)]) return;
 
     CGFloat currentTime = [self currentVideoMediaTime];
@@ -465,6 +511,7 @@ UIColor *SBColorFromHex(NSString *hexString) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(SBSkipNotificationDelaySeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (!strongSelf) return;
+            if ([UIApplication sharedApplication].applicationState != UIApplicationStateActive) return;
             UIView *parentView = sbGetNotificationParent();
             strongSelf.sbNotificationView = [SBSkipNotificationView showInView:parentView
                 message:message
@@ -503,7 +550,7 @@ UIColor *SBColorFromHex(NSString *hexString) {
 
 %new
 - (void)sbShowHighlightBannerIfNeeded:(NSArray<SBSegment *> *)segments {
-    if (!IS_ENABLED(SBEnabled) || !IS_ENABLED(SBButtonKey) || self.isPlayingAd) return;
+    if (!sbActiveForVideo(self) || self.isPlayingAd) return;
     if ([self.parentViewController isKindOfClass:%c(YTShortsPlayerViewController)]) return;
 
     for (SBSegment *seg in segments) {
@@ -580,41 +627,26 @@ UIColor *SBColorFromHex(NSString *hexString) {
 
 %end
 
-// SponsorBlock's accent blue, reused for the toggle button's enabled state.
-static UIColor *SBAccentColor() {
-    return [UIColor colorWithRed:0.4 green:0.8 blue:1.0 alpha:1.0];
-}
-
 %ctor {
     sbSegmentCache = [NSMutableDictionary dictionary];
     %init;
 
-    // Register the SponsorBlock toggle in the player overlay's custom button row.
+    // Register the SponsorBlock entry in the player overlay's custom button row.
     // sortOrder 100 keeps it right-most (directly under YouTube's settings gear).
+    // Tapping opens the SponsorBlock menu (enable/disable, voting, whitelist);
+    // the icon stays a plain white outline shield regardless of state.
     YMOverlayButtonSpec *toggle = [[YMOverlayButtonSpec alloc] init];
     toggle.identifier = @"sponsorblock.toggle";
-    toggle.symbolName = @"shield.fill";
-    toggle.settingsSymbolName = @"shield.fill";
+    toggle.symbolName = @"shield";
+    toggle.settingsSymbolName = @"shield";
     toggle.displayName = LOC(@"SPONSORBLOCK_BUTTON");
-    toggle.tintColor = SBAccentColor();
     toggle.sortOrder = 100;
     toggle.isVisible = ^BOOL(YTPlayerViewController *player) {
         return IS_ENABLED(SBEnabled) && YMIsOverlayButtonEnabled(@"sponsorblock.toggle");
     };
-    toggle.tintProvider = ^UIColor *(YTPlayerViewController *player) {
-        return IS_ENABLED(SBButtonKey) ? SBAccentColor() : [UIColor grayColor];
-    };
     toggle.onTap = ^(YTPlayerViewController *player, UIButton *button) {
         if (!player) return;
-        BOOL newState = !IS_ENABLED(SBButtonKey);
-        [[NSUserDefaults standardUserDefaults] setBool:newState forKey:SBButtonKey];
-        button.tintColor = newState ? SBAccentColor() : [UIColor grayColor];
-
-        NSArray *segments = newState ? (player.sbSegments ?: @[]) : @[];
-        if (newState && segments.count == 0) return;
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"SBSegmentsDidLoad"
-                                                            object:player
-                                                          userInfo:@{@"segments": segments}];
+        [player sbShowMainMenuFromView:button];
     };
     YMRegisterOverlayButton(toggle);
 }

@@ -3,17 +3,15 @@
 // YouTube Premium logo
 %hook YTHeaderLogoController
 - (void)setTopbarLogoRenderer:(YTITopbarLogoRenderer *)renderer {
-    if (INTFORVAL(YTLogoIndex) == 0) {
-        %orig;
-        return;
-    }
-    // Modify the type of the icon before setting the renderer
-    YTIIcon *icon = renderer.iconImage;
-    if (icon) {
-        if (INTFORVAL(YTLogoIndex) == 1) {
-            icon.iconType = 537;
-        } else if (INTFORVAL(YTLogoIndex) == 2) {
-            icon.iconType = 158;
+    if (INTFORVAL(YTLogoIndex) == 1 || INTFORVAL(YTLogoIndex) == 2) {
+        // Modify the type of the icon before setting the renderer
+        YTIIcon *icon = renderer.iconImage;
+        if (icon) {
+            if (INTFORVAL(YTLogoIndex) == 1) {
+                icon.iconType = 537;
+            } else if (INTFORVAL(YTLogoIndex) == 2) {
+                icon.iconType = 158;
+            }
         }
     }
     %orig(renderer);
@@ -39,17 +37,15 @@
 
 %hook YTHeaderLogoControllerImpl
 - (void)setTopbarLogoRenderer:(YTITopbarLogoRenderer *)renderer {
-    if (INTFORVAL(YTLogoIndex) == 0) {
-        %orig;
-        return;
-    }
-    // Modify the type of the icon before setting the renderer
-    YTIIcon *icon = renderer.iconImage;
-    if (icon) {
-        if (INTFORVAL(YTLogoIndex) == 1) {
-            icon.iconType = 537;
-        } else if (INTFORVAL(YTLogoIndex) == 2) {
-            icon.iconType = 158;
+    if (INTFORVAL(YTLogoIndex) == 1 || INTFORVAL(YTLogoIndex) == 2) {
+        // Modify the type of the icon before setting the renderer
+        YTIIcon *icon = renderer.iconImage;
+        if (icon) {
+            if (INTFORVAL(YTLogoIndex) == 1) {
+                icon.iconType = 537;
+            } else if (INTFORVAL(YTLogoIndex) == 2) {
+                icon.iconType = 158;
+            }
         }
     }
     %orig(renderer);
@@ -77,25 +73,35 @@
 %hook YTRightNavigationButtons
 - (void)layoutSubviews {
     %orig;
-    if (IS_ENABLED(HideNoti)) self.notificationButton.hidden = YES;
-    if (IS_ENABLED(HideSearch)) self.searchButton.hidden = YES;
+    if (IS_ENABLED(HideNoti) && self.notificationButton != nil) self.notificationButton.hidden = YES;
+    if (IS_ENABLED(HideSearch) && self.searchButton != nil) self.searchButton.hidden = YES;
+    if (IS_ENABLED(HideMessages)) {
+        if (self.connectionsInboxButton != nil) self.connectionsInboxButton.hidden = YES;
+        for (UIView *subview in self.subviews) {
+            NSString *ident = subview.accessibilityIdentifier.lowercaseString;
+            NSString *label = subview.accessibilityLabel.lowercaseString;
+            if ([ident containsString:@"message"] || [ident containsString:@"chat"] || [ident containsString:@"dm"] ||
+                [label containsString:@"message"] || [label containsString:@"chat"] || [label containsString:@"dm"]) {
+                subview.hidden = YES;
+            }
+        }
+    }
+    if (IS_ENABLED(HideCastButtonNav) && self.MDXButton != nil) self.MDXButton.hidden = YES;
     for (UIView *subview in self.subviews) {
-        if (IS_ENABLED(HideVoiceSearch) && [subview.accessibilityLabel isEqualToString:NSLocalizedString(@"search.voice.access", nil)]) subview.hidden = YES;
-        if (IS_ENABLED(HideCastButtonNav) && [subview.accessibilityIdentifier isEqualToString:@"id.mdx.playbackroute.button"]) subview.hidden = YES;
+        if (IS_ENABLED(HideVoiceSearch) && [subview.accessibilityLabel isEqualToString:NSLocalizedString(@"search.voice.access", nil)]) {
+            subview.hidden = YES;
+            break;
+        }
     }
 }
 %end
 
 %hook YTHeaderLogoController
-- (id)init {
-    return INTFORVAL(YTLogoIndex) == 3 ? nil : %orig;
-}
+- (id)init { return INTFORVAL(YTLogoIndex) == 3 ? nil : %orig; }
 %end
 
 %hook YTHeaderLogoControllerImpl
-- (id)init {
-    return INTFORVAL(YTLogoIndex) == 3 ? nil : %orig;
-}
+- (id)init { return INTFORVAL(YTLogoIndex) == 3 ? nil : %orig; }
 %end
 
 %hook YTNavigationBarTitleView

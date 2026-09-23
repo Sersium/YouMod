@@ -5,12 +5,52 @@ NSBundle *YouModBundle() {
     static NSBundle *bundle = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSString *tweakBundlePath = [[NSBundle mainBundle] pathForResource:@"YouMod" ofType:@"bundle"];
-        if (tweakBundlePath) {
-            bundle = [NSBundle bundleWithPath:tweakBundlePath];
-        } else {
-            bundle = [NSBundle bundleWithPath:[NSString stringWithFormat:jbroot(@"/Library/Application Support/%@.bundle"), @"YouMod"]];
+        NSString *mainResource = [[NSBundle mainBundle] pathForResource:@"YouMod" ofType:@"bundle"];
+        if (mainResource && [[NSFileManager defaultManager] fileExistsAtPath:mainResource]) {
+            bundle = [NSBundle bundleWithPath:mainResource];
+            return;
         }
+
+        NSString *mainBundleSubpath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"YouMod.bundle"];
+        if ([[NSFileManager defaultManager] fileExistsAtPath:mainBundleSubpath]) {
+            bundle = [NSBundle bundleWithPath:mainBundleSubpath];
+            return;
+        }
+
+        NSString *frameworksPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Frameworks/YouMod.bundle"];
+        if ([[NSFileManager defaultManager] fileExistsAtPath:frameworksPath]) {
+            bundle = [NSBundle bundleWithPath:frameworksPath];
+            return;
+        }
+
+        Class tweakClass = %c(YMOverlayButtonSpec);
+        if (tweakClass) {
+            NSBundle *classBundle = [NSBundle bundleForClass:tweakClass];
+            NSString *classBundlePath = [classBundle pathForResource:@"YouMod" ofType:@"bundle"];
+            if (classBundlePath && [[NSFileManager defaultManager] fileExistsAtPath:classBundlePath]) {
+                bundle = [NSBundle bundleWithPath:classBundlePath];
+                return;
+            }
+            if ([classBundle.bundlePath hasSuffix:@"YouMod.bundle"]) {
+                bundle = classBundle;
+                return;
+            }
+        }
+
+        NSString *jbPath = jbroot(@"/Library/Application Support/YouMod.bundle");
+        if ([[NSFileManager defaultManager] fileExistsAtPath:jbPath]) {
+            bundle = [NSBundle bundleWithPath:jbPath];
+            return;
+        }
+
+        NSString *prefBundlePath = jbroot(@"/Library/PreferenceBundles/YouMod.bundle");
+        if ([[NSFileManager defaultManager] fileExistsAtPath:prefBundlePath]) {
+            bundle = [NSBundle bundleWithPath:prefBundlePath];
+            return;
+        }
+
+        // Fallback to main bundle
+        bundle = [NSBundle mainBundle];
     });
     return bundle;
 }
@@ -20,7 +60,7 @@ UIImage *YouModYTIconImage(NSInteger iconType, BOOL useCustomColor, UIColor *cus
     YTIIcon *icon = [%c(YTIIcon) new];
     icon.iconType = iconType;
     UIColor *targetColor = (useCustomColor && customColor) ? customColor : [UIColor labelColor];
-    return [icon iconImageWithColor:targetColor];
+    return [[icon iconImageWithColor:targetColor] imageWithTintColor:targetColor];
 }
 
 // Language list
@@ -95,4 +135,19 @@ BOOL isDarkMode(UIView *view) {
 
 BOOL isPad() {
     return UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad;
+}
+
+void YouModConfigureSharePopover(UIActivityViewController *activityVC, UIView *sourceView) {
+    if (isPad() && activityVC) {
+        UIView *targetView = sourceView ?: YouModTopViewController(nil).view;
+        if (targetView) {
+            activityVC.popoverPresentationController.sourceView = targetView;
+            CGRect bounds = targetView.bounds;
+            if (CGRectIsEmpty(bounds) && targetView.window) {
+                bounds = targetView.window.bounds;
+            }
+            activityVC.popoverPresentationController.sourceRect = CGRectMake(bounds.size.width / 2, bounds.size.height, 0, 0);
+            activityVC.popoverPresentationController.permittedArrowDirections = 0;
+        }
+    }
 }

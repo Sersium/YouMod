@@ -24,13 +24,23 @@
 
 %hook YTColdConfig
 - (BOOL)iosEnableVideoPlayerScrubber { return IS_ENABLED(ShowShortsSeekbar) ? YES : %orig; }
-- (BOOL)mobileShortsTablnlinedExpandWatchOnDismiss { return IS_ENABLED(ShowShortsSeekbar) ? YES : %orig; }
+- (BOOL)mobileShortsTabInlinedExpandWatchOnDismiss { return IS_ENABLED(ShowShortsSeekbar) ? YES : %orig; }
 %end
 
 static void YouModMakeAShortsAction(YTReelPlayerViewController *self, YTSingleVideoController *video, YTSingleVideoTime *time) {
     if (INTFORVAL(ShortsActionIndex) == 0) return;
+    if (!video || video.totalMediaTime <= 0) return;
 
-    if (floor(time.time) >= floor(video.totalMediaTime)) {
+    static void *lastVideoPtr = NULL;
+    static BOOL hasTriggeredForCurrentVideo = NO;
+
+    if (lastVideoPtr != (__bridge void *)video || time.time < 0.5) {
+        lastVideoPtr = (__bridge void *)video;
+        hasTriggeredForCurrentVideo = NO;
+    }
+
+    if (!hasTriggeredForCurrentVideo && (time.time >= (video.totalMediaTime - 0.4) || (time.time >= video.totalMediaTime))) {
+        hasTriggeredForCurrentVideo = YES;
         if (INTFORVAL(ShortsActionIndex) == 1) {
             [self reelContentViewRequestsAdvanceToNextVideo:nil];
         } else if (INTFORVAL(ShortsActionIndex) == 2) {
@@ -41,6 +51,35 @@ static void YouModMakeAShortsAction(YTReelPlayerViewController *self, YTSingleVi
 
 static BOOL isShortsOnlyOn = YES;
 static BOOL isFullscreenEnabled = NO;
+
+static void YouModRemoveShortsOverlayButton(_ASDisplayView *dpView) {
+    NSDictionary *buttonsList = @{
+        @"id.reel_like_button": @(IS_ENABLED(RemoveShortsLikeButton)),
+        @"id.reel_like_toggled_button": @(IS_ENABLED(RemoveShortsLikeButton)),
+        @"id.reel_dislike_button": @(IS_ENABLED(RemoveShortsDislikeButton)),
+        @"id.reel_dislike_toggled_button": @(IS_ENABLED(RemoveShortsDislikeButton)),
+        @"id.reel_save_button": @(IS_ENABLED(RemoveShortsSaveButton)),
+        @"id.reel_comment_button": @(IS_ENABLED(RemoveShortsCommentButton)),
+        @"id.reel_share_button": @(IS_ENABLED(RemoveShortsShareButton)),
+        @"id.reel_remix_button" : @(IS_ENABLED(RemoveShortsRemixButton)),
+        @"id.reel_pivot_button": @(IS_ENABLED(RemoveShortsSoundMetadataButton))
+    };
+    ASDisplayNode *node = dpView.keepalive_node;
+    for (NSString *button in buttonsList) {
+        if ([buttonsList[button] boolValue]) {
+            for (UIView *sub in dpView.subviews) {
+                if ([sub.accessibilityIdentifier isEqualToString:button]) {
+                    [sub removeFromSuperview];
+                }
+            }
+            for (id child in [node.yogaChildren copy]) {
+                if ([[child description] containsString:button]) {
+                    [node removeYogaChild:child];
+                }
+            }
+        }
+    }   
+}
 
 %hook YTReelPlayerViewController
 - (BOOL)shouldAlwaysEnablePlayerBar { return IS_ENABLED(ShowShortsSeekbar) ? YES : %orig; }
@@ -54,7 +93,11 @@ static BOOL isFullscreenEnabled = NO;
     if ((isShortsOnlyOn && IS_ENABLED(ShortsOnly)) || (isFullscreenEnabled && IS_ENABLED(FullScreenShorts))) [[self valueForKey:@"_pivotBarProvider"] performSelector:@selector(hidePivotBar)];
     YTPlayerViewController *main = self.player;
     if (INTFORVAL(CaptionTrack) != 0) [main performSelector:@selector(YouModAutoCaptions) withObject:nil afterDelay:0.5];
-    if (INTFORVAL(AutoSpeedIndex) != 0) [main performSelector:@selector(YouModSetAutoSpeed) withObject:nil afterDelay:0.5];
+    if (INTFORVAL(ShortsAutoSpeedIndex) != 0) {
+        [main performSelector:@selector(YouModSetShortsAutoSpeed) withObject:nil afterDelay:0.5];
+    } else if (INTFORVAL(AutoSpeedIndex) != 0) {
+        [main performSelector:@selector(YouModSetAutoSpeed) withObject:nil afterDelay:0.5];
+    }
     if (INTFORVAL(AudioTrack) != 0) [self performSelector:@selector(YouModAutoAudioTrack:) withObject:main afterDelay:0.5];
 }
 %new
@@ -108,46 +151,19 @@ static BOOL isFullscreenEnabled = NO;
 - (void)didMoveToWindow {
     %orig;
     if (IS_ENABLED(HideShortsTopbar)) {
-        if (self.superview) {
-            [self removeFromSuperview];
-        }
-    } else if (IS_ENABLED(HideShortsSubbar)) {
+        [self removeFromSuperview];
+    } else if (IS_ENABLED(HideShortsSubbar)) { 
         UIView *subbar = [self valueForKey:@"_pausedStateCarouselView"];
-        if (subbar && subbar.superview) {
-            [subbar removeFromSuperview];
-        }
+        if (subbar) [subbar removeFromSuperview];
     }
 }
 %end
 
-extern void YouModConfigureDownloadButton(_ASDisplayView *view);
-
-static void YouModFilterShortsButtons(_ASDisplayView *self, NSString *iden) {
-    NSDictionary *buttonsList = @{
-        @"id.reel_like_button": @(IS_ENABLED(RemoveShortsLikeButton)),
-        @"id.reel_like_toggled_button": @(IS_ENABLED(RemoveShortsLikeButton)),
-        @"id.reel_comment_button": @(IS_ENABLED(RemoveShortsCommentButton)),
-        @"id.reel_share_button": @(IS_ENABLED(RemoveShortsShareButton)),
-        @"id.reel_remix_button" : @(IS_ENABLED(RemoveShortsRemixButton)),
-        @"id.reel_pivot_button": @(IS_ENABLED(RemoveShortsSoundMetadataButton))
-    };
-    for (NSString *button in buttonsList) {
-        if ([iden isEqualToString:button] && [buttonsList[button] boolValue]) {
-            _ASDisplayView *mainView = (_ASDisplayView *)self.superview;
-            ASDisplayNode *node = mainView.keepalive_node;
-            for (_ASDisplayView *view in node.yogaChildren) {
-                if ([[view description] containsString:button]) {
-                    [node removeYogaChild:view];
-                    [self removeFromSuperview];
-                    break;
-                }
-            }
-            break;
-        }
-    }
-}
-
-static void YouModFilterShortsPausedHeader(_ASDisplayView *self, NSString *iden) {
+void YouModRemoveShortsPausedButtons(_ASDisplayView *self, NSString *iden) {
+    if (!IS_ENABLED(RemoveShortsPausedSubButton) && !IS_ENABLED(RemoveShortsPausedLiveButton) && !IS_ENABLED(RemoveShortsPausedLensButton) && !IS_ENABLED(RemoveShortsPausedTrendsButton)) return;
+    if (![iden containsString:@"id.ui.shorts_paused_state."] && ![iden hasSuffix:@"_button"]) return;
+    ASScrollView *view = (ASScrollView *)self.superview;
+    if (![view isKindOfClass:%c(ASScrollView)]) return;
     NSDictionary *buttonsList = @{
         @"id.ui.shorts_paused_state.subscriptions_button": @(IS_ENABLED(RemoveShortsPausedSubButton)),
         @"id.ui.shorts_paused_state.live_button": @(IS_ENABLED(RemoveShortsPausedLiveButton)),
@@ -155,57 +171,34 @@ static void YouModFilterShortsPausedHeader(_ASDisplayView *self, NSString *iden)
         @"id.ui.shorts_paused_state.trends_button" : @(IS_ENABLED(RemoveShortsPausedTrendsButton))
     };
     for (NSString *button in buttonsList) {
-        if ([iden isEqualToString:button] && [buttonsList[button] boolValue]) {
-            ASScrollView *mainView = (ASScrollView *)self.superview;
-            ASDisplayNode *node = mainView.scrollNode;
-            for (_ASDisplayView *view in node.yogaChildren) {
-                if ([[view description] containsString:button]) {
-                    [node removeYogaChild:view];
+        if ([buttonsList[button] boolValue] && [iden isEqualToString:button]) {
+            ASDisplayNode *node = view.scrollNode;
+            for (id child in node.yogaChildren) {
+                if ([[child description] containsString:button]) {
+                    [node removeYogaChild:child];
                     [self removeFromSuperview];
                     break;
                 }
             }
-            break;
         }
     }
 }
 
-static void YouModFilterShortsDisclosure(_ASDisplayView *self, NSString *iden) {
-    if (![self.accessibilityIdentifier isEqualToString:@"eml.shorts-disclosures"] || !IS_ENABLED(RemoveShortsDisclosure)) return;
-    _ASDisplayView *dpView = (_ASDisplayView *)self.superview;
-    ASDisplayNode *node = dpView.keepalive_node;
-    _ASDisplayView *maindpView = (_ASDisplayView *)dpView.superview;
-    ASDisplayNode *mainNode = maindpView.keepalive_node;
-    [mainNode removeYogaChild:node];
-    [maindpView removeFromSuperview];
-}
-
-// _ASDisplayView filters
-%hook _ASDisplayView
-- (void)didMoveToWindow {
-    %orig;
-    YouModConfigureDownloadButton(self);
-    NSString *iden = self.accessibilityIdentifier;
+void YouModFilterShortsDisplayView(_ASDisplayView *view, NSString *iden) {
     if (!iden || iden.length == 0) return;
-    NSDictionary *elements = @{
-        @"product_sticker.main_target": @(IS_ENABLED(HideShortsProducts)),
-        @"product_sticker.secondary_target": @(IS_ENABLED(HideShortsProducts)),
-        @"id.elements.components.suggested_action": @(IS_ENABLED(HideShortsRecbar))
-    };
-    if ([elements[iden] boolValue]) {
-        [self removeFromSuperview];
-        return;
+    if (([iden isEqualToString:@"product_sticker.main_target"] || [iden isEqualToString:@"product_sticker.secondary_target"]) && IS_ENABLED(HideShortsProducts)) {
+        [view removeFromSuperview];
+    } else if ([iden isEqualToString:@"id.elements.components.suggested_action"] && IS_ENABLED(HideShortsRecbar)) {
+        [view.superview removeFromSuperview];
+    } else if ([iden isEqualToString:@"eml.shorts-disclosures"] && IS_ENABLED(RemoveShortsDisclosure)) {
+        _ASDisplayView *dpView = (_ASDisplayView *)view.superview;
+        ASDisplayNode *node = dpView.keepalive_node;
+        _ASDisplayView *maindpView = (_ASDisplayView *)dpView.superview;
+        ASDisplayNode *mainNode = maindpView.keepalive_node;
+        [mainNode removeYogaChild:node];
+        [maindpView removeFromSuperview];
     }
-    if ([iden isEqualToString:@"eml.reel_sponsor_button"] && IS_ENABLED(RemoveChannelSponsorAll)) {
-        [self.superview removeFromSuperview];
-        return;
-    }
-    
-    YouModFilterShortsButtons(self, iden);
-    YouModFilterShortsPausedHeader(self, iden);
-    YouModFilterShortsDisclosure(self, iden);
 }
-%end
 
 %hook YTAppDelegate
 - (void)appDidBecomeActive {
@@ -257,11 +250,39 @@ static void YouModFilterShortsDisclosure(_ASDisplayView *self, NSString *iden) {
     }
     return NO;
 }
+// Filtering Shorts overlay buttons
+- (void)layoutActionBar {
+    %orig;
+    if (!IS_ENABLED(RemoveShortsLikeButton) && !IS_ENABLED(RemoveShortsDislikeButton) && !IS_ENABLED(RemoveShortsSaveButton) && !IS_ENABLED(RemoveShortsCommentButton) && !IS_ENABLED(RemoveShortsShareButton) && !IS_ENABLED(RemoveShortsRemixButton) && !IS_ENABLED(RemoveShortsSoundMetadataButton)) return;
+    YTReelElementAsyncComponentView *view = nil;
+    @try {
+        view = [self valueForKey:@"_playerOverlayView"];
+    } @catch (id ex) {}
+    if (view != nil) {
+        UIView *check = view;
+        while (view.subviews.count == 1) {
+            view = view.subviews[0];
+        }
+        if (view.subviews.count > 1 && view != check) {
+            _ASDisplayView *dpView = (_ASDisplayView *)view.subviews[1];
+            YouModRemoveShortsOverlayButton(dpView);
+        }
+    } else {
+        view = [self valueForKey:@"_actionBarComponentView"];
+        UIView *check = view;
+        while (view.subviews.count == 1) {
+            view = view.subviews[0];
+        }
+        if (view == check) return;
+        _ASDisplayView *dpView = (_ASDisplayView *)view;
+        YouModRemoveShortsOverlayButton(dpView);
+    }
+}
 %end
 
 %hook YTReelContentView
 %property (nonatomic, retain) UILongPressGestureRecognizer *YouModExitShortsOnlyGesture;
-- (void)setPlaybackView:(id)arg1 {
+- (void)setPlaybackView:(UIView *)playbackView {
     %orig;
     self.playbackOverlay.alpha = !isFullscreenEnabled;
     if (!IS_ENABLED(ShortsOnly)) return;

@@ -53,6 +53,10 @@
 "DOWNLOADING" = "การดาวน์โหลด";
 "DOWNLOAD_MANAGER" = "ตัวจัดการดาวน์โหลด";
 "DOWNLOAD_MANAGER_DESC" = "แทนที่ตัวดาวน์โหลดวิดีโอของ YouTube ด้วยของ YouMod รองรับการดาวน์โหลดวิดีโอ เสียง คำบรรยาย และปกคลิป";
+"DOWNLOAD_BUTTON_POSITION" = "ตำแหน่งปุ่มดาวน์โหลด";
+"UNDER_THE_PLAYER" = "ใต้เครื่องเล่น";
+"OVERLAY" = "โอเวอร์เลย์";
+"BOTH" = "ทั้งคู่";
 "POST_DOWNLOAD_ACTION" = "การกระทำหลังดาวน์โหลด";
 "POST_ACTION_SAVE_PHOTOS" = "บันทึกลงคลังรูปภาพ";
 "POST_ACTION_SHARE" = "แชร์";
@@ -106,24 +110,18 @@
 "THUMBNAIL_OPTIONS" = "ดาวน์โหลดปกคลิป";
 "COPY" = "คัดลอก";
 "COPIED_TO_CLIPBOARD" = "คัดลอกไปยังคลิปบอร์ดแล้ว";
-"CONNECTING_TO_SERVER" = "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...";
-"DOWNLOADING_TO_SERVER" = "กำลังดาวน์โหลดไปยังเซิร์ฟเวอร์...";
 "COPY_COMMENT_TEXT" = "คัดลอกข้อความคอมเมนต์";
 "SAVE_COMMENT_IMAGE" = "บันทึกคอมเมนต์เป็นรูปภาพ";
 "COPY_COMMENT_IMAGE" = "คัดลอกคอมเมนต์เป็นรูปภาพ";
 "COPY_POST_TEXT" = "คัดลอกข้อความโพสต์";
 "SAVE_POST_IMAGE" = "บันทึกโพสต์เป็นรูปภาพ";
 "COPY_POST_IMAGE" = "คัดลอกโพสต์เป็นรูปภาพ";
-"DOWNLOAD_SERVER" = "เซิร์ฟเวอร์ดาวน์โหลด";
-"CHOOSE_DOWNLOAD_SERVER" = "เลือกเซิร์ฟเวอร์ดาวน์โหลด";
 "DOWNLOAD_COMMENT" = "บันทึกข้อมูลคอมเมนต์";
 "DOWNLOAD_COMMENT_DESC" = "อนุญาตให้คัดลอกข้อความคอมเมนต์และบันทึกคอมเมนต์เป็นรูปภาพโดยการแตะปุ่มสามจุดค้างไว้";
 "DOWNLOAD_POST" = "บันทึกข้อมูลโพสต์";
 "DOWNLOAD_POST_DESC" = "อนุญาตให้คัดลอกข้อความโพสต์และบันทึกโพสต์เป็นรูปภาพโดยการแตะค้างไว้";
 "TRANSLATE_COMMENT" = "แปลคอมเมนต์";
 "TRANSLATE_POST" = "แปลโพสต์";
-"SERVER_EUROPRE1" = "ยุโรป";
-"SERVER_ASIA1" = "ไทย - เอเชีย";
 "SHOW_OPTIONS" = "แสดงตัวเลือก";
 "ENGLISH" = "อังกฤษ";
 "TRANSLATION" = "แปลภาษา";
@@ -136,7 +134,6 @@
 "DOWNLOAD_METHOD" = "วิธีดาวน์โหลด";
 "DOWNLOAD_METHOD_DESC" = "วิธีการดาวน์โหลดวิดีโอ แบบอุปกรณ์จะใช้งานได้กับ YouTube เวอร์ชันล่าสุด";
 "METHOD_DIRECT" = "โดยตรง";
-"METHOD_SERVER" = "ผ่านเซิร์ฟเวอร์";
 "METHOD_ONDEVICE" = "บนอุปกรณ์ (SABR)";
 
 "APPEARANCE" = "ลักษณะ";
@@ -161,6 +158,8 @@
 "HIDE_VOICE_SEARCH_BUTTON_DESC" = "ซ่อนปุ่มค้นหาด้วยเสียงในแถบนำทาง";
 "HIDE_CAST_BUTTON_NAVBAR" = "ซ่อนปุ่มแคสต์";
 "HIDE_CAST_BUTTON_NAVBAR_DESC" = "ซ่อนปุ่มแคสต์ในแถบนำทาง";
+"HIDE_MESSAGES_BUTTON" = "ซ่อนปุ่มข้อความ";
+"HIDE_MESSAGES_BUTTON_DESC" = "ซ่อนปุ่มข้อความในแถบนำทาง";
 
 "FEED" = "ฟีด";
 "HIDE_SUBBAR" = "ซ่อนแถบหมวดหมู่";
@@ -178,15 +177,11 @@
 "KEEP_SHORTS_SUBSCRIPT" = "แสดง Shorts ในหน้าการติดตาม";
 "KEEP_SHORTS_SUBSCRIPT_DESC" = "ป้องกันไม่ให้วิดีโอ Shorts ถูกลบออกจากแท็บการติดตาม";
 "HIDE_SEARCH_HISTORY" = "ซ่อนประวัติการค้นหา";
-"HIDE_SEARCH_HISTORY_DESC" = "ซ่อนประวัติและคำแนะนำการค้นหา\\nหมายเหตุ: ประวัติการค้นหายังสามารถเข้าถึงได้ในอุปกรณ์อื่น";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON" = "ลบปุ่มชุมชน";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC" = "ลบปุ่มชุมชนในแถบส่วนหัวของช่อง";
-"REMOVE_CHANNEL_SPONSOR_BUTTON" = "ลบปุ่มสมัครสมาชิกช่อง";
-"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC" = "ลบปุ่มสนับสนุน / สมัครสมาชิกช่องในฟีด หน้าช่อง และ Shorts";
+"HIDE_SEARCH_HISTORY_DESC" = "ซ่อนประวัติและคำแนะนำการค้นหา\nหมายเหตุ: ประวัติการค้นหายังสามารถเข้าถึงได้ในอุปกรณ์อื่น";
 "HIDE_PLAYABLES" = "ซ่อนมินิเกม";
 "HIDE_PLAYABLES_DESC" = "ซ่อนมินิเกมออกจากหน้าฟีด";
 "HIDE_RELATED_VIDEOS" = "ซ่อนวิดีโอที่เกี่ยวข้อง";
-"HIDE_RELATED_VIDEOS_DESC" = "ซ่อนวิดีโอที่เกี่ยวข้องใต้เครื่องเล่น (ไม่ใช่ในโอเวอร์เลย์)";
+"HIDE_RELATED_VIDEOS_DESC" = "ซ่อนวิดีโอที่เกี่ยวข้องทั้งในฟีดและเครื่องเล่น";
 
 "PLAYER" = "เครื่องเล่น";
 "PLAYBACK_SPEED" = "ความเร็ววิดีโอ";
@@ -225,7 +220,12 @@
 "SPONSORBLOCK_BUTTON" = "SponsorBlock";
 "MANAGE_OVERLAY_BUTTONS" = "จัดการปุ่มบนโอเวอร์เลย์";
 "MANAGE_OVERLAY_BUTTONS_DESC" = "จัดเรียงและเปิด/ปิดใช้งานปุ่มบนโอเวอร์เลย์";
-"OVERLAY_BUTTON_REORDER_HINT" = "ลากเพื่อจัดเรียงปุ่มบนโอเวอร์เลย์ เปิด/ปิดเพื่อแสดงหรือซ่อนปุ่ม";
+"OVERLAY_BUTTON_REORDER_HINT" = "ลากเพื่อจัดเรียง แตะลูกศรเพื่อย้ายปุ่มระหว่างแถวบนกับแถวล่าง เปิด/ปิดเพื่อแสดงหรือซ่อนปุ่ม";
+"OVERLAY_BUTTONS_TOP" = "ปุ่มด้านบน";
+"OVERLAY_BUTTONS_BOTTOM" = "ปุ่มด้านล่าง";
+"OVERLAY_BUTTONS_EMPTY" = "ไม่มีปุ่ม";
+"REMOVE_ADS" = "ลบโฆษณา";
+"REMOVE_ADS_DESC" = "ลบโฆษณาออกจากแอป ยกเว้นเกม";
 "HOLD_TO_SPEED" = "ความเร็วเมื่อกดค้าง";
 "HOLD_TO_SPEED_DESC" = "ใช้ความเร็วในการเล่นวิดีโอแบบกำหนดเองเมื่อกดค้างที่หน้าจอ";
 "HIDE_AUTOPLAY" = "ซ่อนสวิตซ์เล่นอัตโนมัติ";
@@ -325,9 +325,9 @@
 "PAUSE_TWO_FINGERS" = "หยุดวิดีโอโดยใช้ 2 นิ้ว";
 "PAUSE_TWO_FINGERS_DESC" = "หยุด/เล่น วิดีโอโดยใช้ 2 นิ้วแตะหน้าจอ";
 "SKIP_BACKWARD" = "ย้อนกลับ";
-"SKIP_BACKWARD_DESC" = "เปลี่ยนปุ่มเล่นเพลงก่อนหน้าในศูนย์ควบคุมให้เป็นปุ่มข้ามย้อนกลับตามจำนวนวินาทีที่กำหนด";
+"SKIP_BACKWARD_DESC" = "เปลี่ยนปุ่มเล่นเพลงก่อนหน้าในศูนย์ควบคุม หน้าจอล็อก Bluetooth และ CarPlay ให้เป็นปุ่มข้ามย้อนกลับตามจำนวนวินาทีที่กำหนด";
 "SKIP_FORWARD" = "ไปข้างหน้า";
-"SKIP_FORWARD_DESC" = "เปลี่ยนปุ่มเล่นเพลงถัดไปในศูนย์ควบคุมให้เป็นปุ่มข้ามไปข้างหน้าตามจำนวนวินาทีที่กำหนด";
+"SKIP_FORWARD_DESC" = "เปลี่ยนปุ่มเล่นเพลงถัดไปในศูนย์ควบคุม หน้าจอล็อก Bluetooth และ CarPlay ให้เป็นปุ่มข้ามไปข้างหน้าตามจำนวนวินาทีที่กำหนด";
 "REWIND_SECONDS" = "จำนวนวินาทีที่ย้อนกลับ";
 "FORWARD_SECONDS" = "จำนวนวินาทีที่ไปข้างหน้า";
 "HIDE_COMMENTS_SECTION" = "ซ่อนกล่องคอมเมนต์";
@@ -436,7 +436,7 @@
 "LEARNING_TAB" = "การเรียนรู้";
 "MANAGE_TABS" = "จัดการแท็บ";
 "MANAGE_TABS_DESC" = "จัดเรียงและเปิด/ปิดใช้งานแท็บ";
-"TAB_REORDER_HINT" = "ลากเพื่อจัดเรียงใหม่ เปิด/ปิดเพื่อแสดง/ซ่อน\\nนอกจากนี้ การตั้งค่าแท็บยังสามารถเข้าถึงได้โดยการแตะแท็บแรกค้างไว้";
+"TAB_REORDER_HINT" = "ลากเพื่อจัดเรียงใหม่ เปิด/ปิดเพื่อแสดง/ซ่อน\nนอกจากนี้ การตั้งค่าแท็บยังสามารถเข้าถึงได้โดยการแตะแท็บแรกค้างไว้";
 "TAB_LIMIT" = "จำกัดแท็บ";
 "TAB_LIMIT_DESC" = "สามารถมีแท็บได้สูงสุด 6 แท็บ";
 "ZERO_TAB_DESC" = "ต้องเปิดใช้งานอย่างน้อย 1 แท็บ";
@@ -509,14 +509,18 @@
 "HIDE_COMMU_GUIDE_DESC" = "นำหลักเกณฑ์ชุมชนที่ปักหมุดไว้ออกจากคอมเมนต์";
 "HIDE_ENGAGEMENT_SUBBAR" = "ซ่อนส่วนหัวความคิดเห็น";
 "HIDE_ENGAGEMENT_SUBBAR_DESC" = "ซ่อนแถบจัดเรียงความคิดเห็น (ยอดนิยม, ล่าสุด) ด้านบนของคอมเมนต์";
+"HIDE_COMMUNITY_BUTTON_PANEL" = "ซ่อนปุ่มชุมชน";
+"HIDE_COMMUNITY_BUTTON_PANEL_DESC" = "ซ่อนปุ่มชุมชนจากด้านบนของแผง";
+"HIDE_INFO_BUTTON_PANEL" = "ซ่อนปุ่มข้อมูล";
+"HIDE_INFO_BUTTON_PANEL_DESC" = "ซ่อนปุ่มข้อมูลจากด้านบนของแผง";
 "DISABLES_RTL" = "ปิดใช้งานเลย์เอาต์ RTL";
 "DISABLES_RTL_DESC" = "บังคับให้แสดงผลจากซ้ายไปขวา (LTR) และปิดการจัดหน้าแบบขวาไปซ้าย (RTL)";
 "DEVICE_UI" = "รูปแบบอุปกรณ์";
 "OPEN_LINK" = "เปิดลิงก์";
 "FLOATING_KEYBOARD" = "แป้นพิมพ์แบบลอย";
-"FLOATING_KEYBOARD_DESC" = "บังคับเปิดใช้งานแป้นพิมพ์แบบลอย มีประโยชน์สำหรับ iPhone ที่ใช้การปลอมแปลงสไตล์ iPad\\nหมายเหตุ: ทำงานเฉพาะเมื่อเลือกสไตล์ iPad เท่านั้น";
+"FLOATING_KEYBOARD_DESC" = "บังคับเปิดใช้งานแป้นพิมพ์แบบลอย มีประโยชน์สำหรับ iPhone ที่ใช้การปลอมแปลงสไตล์ iPad\nหมายเหตุ: ทำงานเฉพาะเมื่อเลือกสไตล์ iPad เท่านั้น";
 "AUTO_OPEN_LINK" = "ตรวจจับคลิปบอร์ดอัตโนมัติ";
-"AUTO_OPEN_LINK_DESC" = "ตรวจสอบคลิปบอร์ดหาลิงก์ที่เกี่ยวข้องกับ YouTube ทุกครั้งที่เปิดแอป\\nเพื่อให้ทำงานได้อย่างถูกต้อง ให้ไปที่การตั้งค่า iOS → YouTube → วางจากแอปอื่น แล้วเลือก 'อนุญาต'";
+"AUTO_OPEN_LINK_DESC" = "ตรวจสอบคลิปบอร์ดหาลิงก์ที่เกี่ยวข้องกับ YouTube ทุกครั้งที่เปิดแอป\nเพื่อให้ทำงานได้อย่างถูกต้อง ให้ไปที่การตั้งค่า iOS → YouTube → วางจากแอปอื่น แล้วเลือก 'อนุญาต'";
 
 "SB_DESCRIPTION" = "ข้ามช่วงสปอนเซอร์โดยอัตโนมัติด้วยข้อมูลจากชุมชน";
 "SB_ENABLE" = "เปิดใช้งาน SponsorBlock";
@@ -566,7 +570,7 @@
 "SB_CAT_filler_DESC" = "เนื้อหาที่ออกนอกเรื่อง มุกตลก หรือส่วนเติมที่ไม่ได้เกี่ยวข้องกับหัวข้อหลัก";
 
 "SB_SKIPPED" = "ข้ามช่วง %@ แล้ว";
-"SB_DETECTED" = "ตรวจพบช่วง %@\\nคุณต้องการข้ามช่วงนี้หรือไม่?";
+"SB_DETECTED" = "ตรวจพบช่วง %@\nคุณต้องการข้ามช่วงนี้หรือไม่?";
 "SB_SKIP_NOW" = "ข้าม";
 "SB_UNSKIP" = "ยกเลิกการข้าม";
 "SB_JUMPED_TO_HIGHLIGHT" = "ข้ามไปยังไฮไลท์แล้ว";
@@ -576,3 +580,65 @@
 "SB_SKIP_ALERT_DURATION" = "ระยะเวลาแสดงการแจ้งเตือนเมื่อข้าม";
 "SB_UNSKIP_ALERT_DURATION" = "ระยะเวลาแสดงการแจ้งเตือนเมื่อยกเลิกการข้าม";
 "SB_MIN_DURATION_SLIDER" = "ความยาวขั้นต่ำของช่วงวิดีโอที่จะให้ข้าม";
+
+/* SponsorBlock menu / vote / whitelist / user ID */
+"SB_MENU_ENABLE" = "เปิด SponsorBlock";
+"SB_MENU_DISABLE" = "ปิด SponsorBlock";
+"SB_MENU_VOTE" = "โหวต segment";
+"SB_MENU_WHITELIST" = "Whitelist ช่องนี้";
+"SB_VOTE_TITLE" = "Segments";
+"SB_VOTES_COUNT" = "%ld โหวต";
+"SB_VOTE_UPVOTE" = "โหวตว่าถูกต้อง";
+"SB_VOTE_DOWNVOTE" = "โหวตว่าไม่ถูกต้อง";
+"SB_VOTE_UNDO" = "ยกเลิกโหวต";
+"SB_VOTE_CHANGE_CATEGORY" = "เปลี่ยนหมวดหมู่";
+"SB_VOTE_JUMP_START" = "กระโดดไปจุดเริ่ม segment";
+"SB_VOTE_JUMP_END" = "กระโดดไปจุดจบ segment";
+"SB_VOTE_SUCCESS" = "ส่งโหวตแล้ว";
+"SB_VOTE_FAILED" = "โหวตไม่สำเร็จ";
+"SB_VOTE_NO_SEGMENTS" = "ไม่มี segment ในวิดีโอนี้";
+"SB_WHITELIST_ADD" = "เพิ่มใน whitelist";
+"SB_WHITELIST_REMOVE" = "นำออกจาก whitelist";
+"SB_WHITELIST_DESC" = "SponsorBlock จะถูกปิดสำหรับช่องนี้";
+"SB_WHITELIST_MANAGE" = "Whitelist";
+"SB_WHITELIST_EMPTY" = "ยังไม่มีช่องใน whitelist";
+"SB_WHITELIST_DELETE" = "ลบ";
+"SB_USERID_HEADER" = "User ID";
+"SB_PRIVATE_ID" = "Private User ID";
+"SB_PUBLIC_ID" = "Public User ID";
+"SB_COPY_ID" = "คัดลอก ID";
+"SB_EDIT_ID" = "แก้ไข ID";
+"SB_ID_COPIED" = "คัดลอก ID แล้ว";
+"SB_ID_SAVED" = "บันทึก ID แล้ว";
+"SB_ID_INVALID" = "ID ต้องยาวอย่างน้อย 30 ตัวอักษร";
+"SB_ID_SAVE" = "บันทึก";
+"SB_ID_CANCEL" = "ยกเลิก";
+"AUDIO" = "เสียง";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "Hide Mix playlists";
+"HIDE_MIX_PLAYLISTS_DESC" = "Removes YouTube Mix and My Mix playlists from feeds.";
+"HIDE_AI_SUMMARIES" = "Hide AI summaries";
+"HIDE_AI_SUMMARIES_DESC" = "Hides AI-generated video summaries and key moments in search and feeds.";
+"SHORTS_AUTO_SPEED" = "Shorts playback speed";
+"SHORTS_AUTO_SPEED_DESC" = "Automatically applies the selected playback speed for YouTube Shorts independently of regular videos.";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "Remove Dislike button";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "Removes the Dislike button from the Shorts action bar.";
+"REMOVE_SHORTS_SAVE_BUTTON" = "Remove Save button";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "Removes the Save/Bookmark button from the Shorts action bar.";
+"CLEAN_URLS" = "Clean copied links";
+"CLEAN_URLS_DESC" = "Strips tracking parameters (si, feature, pp, utm_*, etc.) from shared and copied YouTube URLs.";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "Enable 'Play next in queue'";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "Enables 'Play next in queue' and 'Add to queue' without requiring YouTube Premium.";
+"RELOAD_BUTTON" = "Reload";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "Enable DeArrow";
+"DEARROW_ENABLED_DESC" = "Replaces sensationalized, clickbait titles and thumbnails with community-created accurate titles and snapshots from the DeArrow API.";
+"DEARROW_REPLACE_TITLES" = "Replace titles";
+"DEARROW_REPLACE_TITLES_DESC" = "Replaces video titles with crowd-sourced descriptive titles.";
+"DEARROW_REPLACE_THUMBNAILS" = "Replace thumbnails";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
+"DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";
+

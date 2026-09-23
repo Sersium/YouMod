@@ -388,18 +388,11 @@ static void YouModTranslateText(NSString *text, NSString *targetLang, void (^com
     }
 }
 
-- (void)shareTapped:(id)sender {
+- (void)shareTapped:(UIView *)sender {
     if (self.translationState != YouModTranslationStateSuccess || self.resultTextView.text.length == 0) return;
     
     UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:@[self.resultTextView.text] applicationActivities:nil];
-    if (activityVC.popoverPresentationController) {
-        if ([sender isKindOfClass:[UIBarButtonItem class]]) {
-            activityVC.popoverPresentationController.barButtonItem = (UIBarButtonItem *)sender;
-        } else if ([sender isKindOfClass:[UIView class]]) {
-            activityVC.popoverPresentationController.sourceView = (UIView *)sender;
-            activityVC.popoverPresentationController.sourceRect = ((UIView *)sender).bounds;
-        }
-    }
+    YouModConfigureSharePopover(activityVC, self.view);
     [self presentViewController:activityVC animated:YES completion:nil];
 }
 

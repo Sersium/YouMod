@@ -53,6 +53,10 @@
 "DOWNLOADING" = "下载中";
 "DOWNLOAD_MANAGER" = "下载管理器";
 "DOWNLOAD_MANAGER_DESC" = "用 YouMod 的下载器替换 YouTube 原生下载器。支持下载视频、音频、字幕和缩略图。";
+"DOWNLOAD_BUTTON_POSITION" = "Download button position";
+"UNDER_THE_PLAYER" = "Under the player";
+"OVERLAY" = "Overlay";
+"BOTH" = "Both";
 "POST_DOWNLOAD_ACTION" = "下载后操作";
 "POST_ACTION_SAVE_PHOTOS" = "保存到相册";
 "POST_ACTION_SHARE" = "分享";
@@ -106,24 +110,18 @@
 "THUMBNAIL_OPTIONS" = "下载缩略图";
 "COPY" = "复制";
 "COPIED_TO_CLIPBOARD" = "已复制到剪贴板";
-"CONNECTING_TO_SERVER" = "正在连接服务器…";
-"DOWNLOADING_TO_SERVER" = "正在从服务器下载…";
 "COPY_COMMENT_TEXT" = "复制评论文字";
 "SAVE_COMMENT_IMAGE" = "保存评论图片";
 "COPY_COMMENT_IMAGE" = "复制评论图片";
 "COPY_POST_TEXT" = "复制帖子文字";
 "SAVE_POST_IMAGE" = "保存帖子图片";
 "COPY_POST_IMAGE" = "复制帖子图片";
-"DOWNLOAD_SERVER" = "下载服务器";
-"CHOOSE_DOWNLOAD_SERVER" = "选择下载服务器";
 "DOWNLOAD_COMMENT" = "保存评论信息";
 "DOWNLOAD_COMMENT_DESC" = "长按三点菜单按钮可复制评论文字或保存评论图片。";
 "DOWNLOAD_POST" = "保存帖子信息";
 "DOWNLOAD_POST_DESC" = "长按可复制帖子文字或保存帖子图片。";
 "TRANSLATE_COMMENT" = "翻译评论";
 "TRANSLATE_POST" = "翻译帖子";
-"SERVER_EUROPRE1" = "欧洲";
-"SERVER_ASIA1" = "泰国 - 亚洲";
 "SHOW_OPTIONS" = "显示选项";
 "ENGLISH" = "英语";
 "TRANSLATION" = "翻译";
@@ -136,8 +134,8 @@
 "DOWNLOAD_METHOD" = "下载方式";
 "DOWNLOAD_METHOD_DESC" = "视频的下载方式。设备端下载适用于最新版 YouTube。";
 "METHOD_DIRECT" = "直接下载";
-"METHOD_SERVER" = "服务器";
 "METHOD_ONDEVICE" = "设备端 (SABR)";
+"AUDIO" = "Audio";
 
 "APPEARANCE" = "外观";
 "OLED_THEME" = "OLED 深色模式";
@@ -161,6 +159,8 @@
 "HIDE_VOICE_SEARCH_BUTTON_DESC" = "隐藏导航栏中的语音搜索按钮。";
 "HIDE_CAST_BUTTON_NAVBAR" = "隐藏投屏按钮";
 "HIDE_CAST_BUTTON_NAVBAR_DESC" = "隐藏导航栏中的投屏按钮。";
+"HIDE_MESSAGES_BUTTON" = "Hide messages button";
+"HIDE_MESSAGES_BUTTON_DESC" = "Hide messages button in the navigation bar.";
 
 "FEED" = "信息流";
 "HIDE_SUBBAR" = "隐藏子栏";
@@ -178,15 +178,11 @@
 "KEEP_SHORTS_SUBSCRIPT" = "在订阅中保留 Shorts";
 "KEEP_SHORTS_SUBSCRIPT_DESC" = "防止从订阅标签页中移除 Shorts。";
 "HIDE_SEARCH_HISTORY" = "隐藏搜索历史";
-"HIDE_SEARCH_HISTORY_DESC" = "使用搜索栏时隐藏之前的搜索历史和建议。\\n注意：您的搜索历史在其他 YouTube 客户端中仍可访问。";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON" = "移除社区按钮";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC" = "移除频道主页顶部的社区按钮。";
-"REMOVE_CHANNEL_SPONSOR_BUTTON" = "移除加入会员/赞助按钮";
-"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC" = "移除动态流、频道主页以及 Shorts 中的加入会员/赞助按钮。";
+"HIDE_SEARCH_HISTORY_DESC" = "使用搜索栏时隐藏之前的搜索历史和建议。\n注意：您的搜索历史在其他 YouTube 客户端中仍可访问。";
 "HIDE_PLAYABLES" = "移除小游戏";
 "HIDE_PLAYABLES_DESC" = "从信息流中移除小游戏。";
 "HIDE_RELATED_VIDEOS" = "隐藏相关视频";
-"HIDE_RELATED_VIDEOS_DESC" = "隐藏播放器下方的相关视频。（不包括播放界面中的）";
+"HIDE_RELATED_VIDEOS_DESC" = "Hide related videos in both the feed and the player";
 
 "PLAYER" = "播放器";
 "PLAYBACK_SPEED" = "播放速度";
@@ -225,7 +221,12 @@
 "SPONSORBLOCK_BUTTON" = "SponsorBlock";
 "MANAGE_OVERLAY_BUTTONS" = "管理播放界面按钮";
 "MANAGE_OVERLAY_BUTTONS_DESC" = "重新排列和开关播放界面按钮";
-"OVERLAY_BUTTON_REORDER_HINT" = "拖拽以重新排列播放界面按钮。开关以显示/隐藏。";
+"OVERLAY_BUTTON_REORDER_HINT" = "拖动以重新排序。点按箭头可在顶部与底部之间移动按钮。开关用于显示或隐藏。";
+"OVERLAY_BUTTONS_TOP" = "顶部按钮";
+"OVERLAY_BUTTONS_BOTTOM" = "底部按钮";
+"OVERLAY_BUTTONS_EMPTY" = "无按钮";
+"REMOVE_ADS" = "移除广告";
+"REMOVE_ADS_DESC" = "移除应用内的广告，游戏除外";
 "HOLD_TO_SPEED" = "长按加速";
 "HOLD_TO_SPEED_DESC" = "使用自定义长按加速播放倍速。";
 "HIDE_AUTOPLAY" = "隐藏自动播放开关";
@@ -325,9 +326,9 @@
 "PAUSE_TWO_FINGERS" = "双指暂停";
 "PAUSE_TWO_FINGERS_DESC" = "双指点击屏幕暂停/恢复播放。";
 "SKIP_BACKWARD" = "快退";
-"SKIP_BACKWARD_DESC" = "将控制中心中的上一曲按钮替换为指定秒数的快退按钮。";
+"SKIP_BACKWARD_DESC" = "Replaces the previous track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip backward button by a set number of seconds.";
 "SKIP_FORWARD" = "快进";
-"SKIP_FORWARD_DESC" = "将控制中心中的下一曲按钮替换为指定秒数的快进按钮。";
+"SKIP_FORWARD_DESC" = "Replaces the next track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip forward button by a set number of seconds.";
 "REWIND_SECONDS" = "快退秒数";
 "FORWARD_SECONDS" = "快进秒数";
 "HIDE_COMMENTS_SECTION" = "隐藏评论区";
@@ -436,7 +437,7 @@
 "LEARNING_TAB" = "学习";
 "MANAGE_TABS" = "管理标签";
 "MANAGE_TABS_DESC" = "重新排列和开关标签";
-"TAB_REORDER_HINT" = "拖拽以重新排列。开关以显示/隐藏。\\n也可通过长按标签栏中的第一个标签来访问标签设置。";
+"TAB_REORDER_HINT" = "拖拽以重新排列。开关以显示/隐藏。\n也可通过长按标签栏中的第一个标签来访问标签设置。";
 "TAB_LIMIT" = "标签数量限制";
 "TAB_LIMIT_DESC" = "最多仅允许 6 个标签。";
 "ZERO_TAB_DESC" = "至少需要启用 1 个标签。";
@@ -509,14 +510,18 @@
 "HIDE_COMMU_GUIDE_DESC" = "隐藏社区规范标题。";
 "HIDE_ENGAGEMENT_SUBBAR" = "隐藏评论标题栏";
 "HIDE_ENGAGEMENT_SUBBAR_DESC" = "隐藏评论排序标题栏（最热、最新），使其不再出现。";
+"HIDE_COMMUNITY_BUTTON_PANEL" = "Hide community button";
+"HIDE_COMMUNITY_BUTTON_PANEL_DESC" = "Hide the community button in the engagement panel.";
+"HIDE_INFO_BUTTON_PANEL" = "Hide info button";
+"HIDE_INFO_BUTTON_PANEL_DESC" = "Hide the info button in the engagement panel.";
 "DISABLES_RTL" = "禁用 RTL 格式";
 "DISABLES_RTL_DESC" = "强制以从左到右 (LTR) 格式显示最初为从右到左 (RTL) 显示的语言文本。";
 "DEVICE_UI" = "界面风格";
 "OPEN_LINK" = "打开链接";
 "FLOATING_KEYBOARD" = "浮动键盘";
-"FLOATING_KEYBOARD_DESC" = "强制启用浮动键盘。适用于伪装为 iPad 风格的 iPhone。\\n注意：仅在选择了 iPad 风格时生效。";
+"FLOATING_KEYBOARD_DESC" = "强制启用浮动键盘。适用于伪装为 iPad 风格的 iPhone。\n注意：仅在选择了 iPad 风格时生效。";
 "AUTO_OPEN_LINK" = "自动检查剪贴板";
-"AUTO_OPEN_LINK_DESC" = "每次打开应用时检查剪贴板中是否有 YouTube 相关链接。\\n为确保正常使用，请前往 iOS 设置 → YouTube → 从其他 App 粘贴，选择“允许”";
+"AUTO_OPEN_LINK_DESC" = "每次打开应用时检查剪贴板中是否有 YouTube 相关链接。\n为确保正常使用，请前往 iOS 设置 → YouTube → 从其他 App 粘贴，选择“允许”";
 
 "SB_DESCRIPTION" = "使用社区提交的数据自动跳过赞助片段。";
 "SB_ENABLE" = "启用 SponsorBlock";
@@ -566,7 +571,7 @@
 "SB_CAT_filler_DESC" = "与视频主题无关的闲聊、笑话或填充片段。";
 
 "SB_SKIPPED" = "已跳过 %@ 片段";
-"SB_DETECTED" = "检测到 %@ 片段。\\n是否跳过该片段？";
+"SB_DETECTED" = "检测到 %@ 片段。\n是否跳过该片段？";
 "SB_SKIP_NOW" = "跳过";
 "SB_UNSKIP" = "取消跳过";
 "SB_JUMPED_TO_HIGHLIGHT" = "已跳转至高光时刻";
@@ -576,3 +581,63 @@
 "SB_SKIP_ALERT_DURATION" = "跳过提示时长";
 "SB_UNSKIP_ALERT_DURATION" = "取消跳过提示时长";
 "SB_MIN_DURATION_SLIDER" = "可跳过片段的最小时长";
+
+/* SponsorBlock menu / vote / whitelist / user ID */
+"SB_MENU_ENABLE" = "Enable SponsorBlock";
+"SB_MENU_DISABLE" = "Disable SponsorBlock";
+"SB_MENU_VOTE" = "Vote on segments";
+"SB_MENU_WHITELIST" = "Whitelist channel";
+"SB_VOTE_TITLE" = "Segments";
+"SB_VOTES_COUNT" = "%ld votes";
+"SB_VOTE_UPVOTE" = "Upvote";
+"SB_VOTE_DOWNVOTE" = "Downvote";
+"SB_VOTE_UNDO" = "Undo vote";
+"SB_VOTE_CHANGE_CATEGORY" = "Change category";
+"SB_VOTE_JUMP_START" = "Jump to segment start";
+"SB_VOTE_JUMP_END" = "Jump to segment end";
+"SB_VOTE_SUCCESS" = "Vote submitted";
+"SB_VOTE_FAILED" = "Vote failed";
+"SB_VOTE_NO_SEGMENTS" = "No segments for this video";
+"SB_WHITELIST_ADD" = "Add to whitelist";
+"SB_WHITELIST_REMOVE" = "Remove from whitelist";
+"SB_WHITELIST_DESC" = "SponsorBlock will be disabled for this channel.";
+"SB_WHITELIST_MANAGE" = "Whitelist";
+"SB_WHITELIST_EMPTY" = "No whitelisted channels";
+"SB_WHITELIST_DELETE" = "Delete";
+"SB_USERID_HEADER" = "User ID";
+"SB_PRIVATE_ID" = "Private User ID";
+"SB_PUBLIC_ID" = "Public User ID";
+"SB_COPY_ID" = "Copy ID";
+"SB_EDIT_ID" = "Edit ID";
+"SB_ID_COPIED" = "ID copied";
+"SB_ID_SAVED" = "ID saved";
+"SB_ID_INVALID" = "ID must be at least 30 characters";
+"SB_ID_SAVE" = "Save";
+"SB_ID_CANCEL" = "Cancel";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "隐藏合辑播放列表";
+"HIDE_MIX_PLAYLISTS_DESC" = "从信息流中移除 YouTube 合辑与我的合辑。";
+"HIDE_AI_SUMMARIES" = "隐藏 AI 摘要";
+"HIDE_AI_SUMMARIES_DESC" = "在搜索和信息流中隐藏 AI 生成的视频摘要与重要时刻。";
+"SHORTS_AUTO_SPEED" = "Shorts 播放速度";
+"SHORTS_AUTO_SPEED_DESC" = "为 YouTube Shorts 独立应用所选播放速度。";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "移除不喜欢按钮";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "从 Shorts 操作栏中移除不喜欢按钮。";
+"REMOVE_SHORTS_SAVE_BUTTON" = "移除保存按钮";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "从 Shorts 操作栏中移除保存/书签按钮。";
+"CLEAN_URLS" = "清理复制的链接";
+"CLEAN_URLS_DESC" = "从分享和复制的 YouTube 链接中移除追踪参数（si、feature、pp、utm_* 等）。";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "启用“在队列中接下来播放”";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "无需 YouTube Premium 即可使用“在队列中接下来播放”和“添加到队列”。";
+"RELOAD_BUTTON" = "重新加载";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "启用 DeArrow";
+"DEARROW_ENABLED_DESC" = "使用来自 DeArrow API 的社区创建准确标题和快照替换标题党、噱头标题和缩略图。";
+"DEARROW_REPLACE_TITLES" = "替换标题";
+"DEARROW_REPLACE_TITLES_DESC" = "用众包的描述性标题替换视频标题。";
+"DEARROW_REPLACE_THUMBNAILS" = "替换缩略图";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "用干净的视频帧截图替换吸睛缩略图。";
+"DEARROW_FALLBACK_ORIGINAL" = "无数据时保留原样";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "若没有社区 DeArrow 提交，则显示原始标题与缩略图。";
