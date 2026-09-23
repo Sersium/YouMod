@@ -11,21 +11,21 @@
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
       "version": "21.38.2-2.1.1",
-      "versionDate": "2026-09-23T17:46:29Z",
-      "versionDescription": "YouMod v2.1.1: Fix crash on open, fakesigned arm64 binaries, and multi-version Feather repository.",
+      "versionDate": "2026-09-23T17:49:07Z",
+      "versionDescription": "YouMod v2.1.1: Fixed crash on launch, removed conflicting tweaks/extensions, fakesigned arm64 binaries, and added multi-version history.",
       "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.1/YouTube_YouMod.ipa",
       "localizedDescription": "All-in-one YouTube for iOS with ad blocking, background playback, OLED dark mode, DeArrow title/thumbnail replacement with feed quick-swap, and Return YouTube Dislike counts on videos and Shorts.",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 130202923,
+      "size": 129302401,
       "screenshotURLs": [],
       "versions": [
         {
           "version": "21.38.2-2.1.1",
-          "date": "2026-09-23T17:46:29Z",
+          "date": "2026-09-23T17:49:07Z",
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.1/YouTube_YouMod.ipa",
-          "size": 130202923,
-          "localizedDescription": "YouMod v2.1.1: Fix crash on open, fakesigned arm64 binaries, and multi-version Feather repository."
+          "size": 129302401,
+          "localizedDescription": "YouMod v2.1.1: Fixed crash on launch, removed conflicting tweaks/extensions, fakesigned arm64 binaries, and added multi-version history."
         },
         {
           "version": "21.38.2-2.1.0",
