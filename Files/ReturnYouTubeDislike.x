@@ -122,26 +122,27 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
 
 #pragma mark - Declarations for Elements & Texture Nodes
 
-@interface ELMNodeController : NSObject
+@interface ELMNodeController (RYD)
 - (id)owningComponent;
 @end
 
-@interface ELMCellNode : ASDisplayNode
+@interface ELMCellNode (RYD)
 - (ELMNodeController *)controller;
 @end
 
-@interface ELMContainerNode : ASDisplayNode
+@interface ELMContainerNode (RYD)
 @end
 
-@interface ELMTextNode : ASDisplayNode
+@interface ELMTextNode (RYD)
 @property (nonatomic, copy) NSAttributedString *attributedText;
+- (id)element;
 @end
 
-@interface YTRollingNumberView : UIView
+@interface YTRollingNumberView (RYD)
 @property (nonatomic, strong) UIColor *color;
 @end
 
-@interface YTRollingNumberNode : ASDisplayNode
+@interface YTRollingNumberNode (RYD)
 @property (nonatomic, copy) NSString *updatedCount;
 @property (nonatomic, copy) NSNumber *updatedCountNumber;
 - (id)element;
@@ -150,7 +151,7 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
 - (void)relayoutNode;
 @end
 
-@interface ELMNodeFactory : NSObject
+@interface ELMNodeFactory (RYD)
 + (instancetype)sharedInstance;
 - (id)nodeWithElement:(id)element materializationContext:(const void *)context;
 @end
