@@ -7,6 +7,14 @@
 static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNotification";
 static NSString *currentInlinePreviewVideoID = nil;
 
+static NSString *YouModFindVideoIDFromView(UIView *view);
+
+@interface ASTextNode : ASDisplayNode
+@property (nonatomic, copy) NSAttributedString *attributedText;
+- (void)setNeedsDisplay;
+- (UIView *)view;
+@end
+
 @interface YouModDeArrowManager : NSObject
 @property (nonatomic, strong) NSCache<NSString *, NSDictionary *> *brandingCache;
 @property (nonatomic, strong) NSCache<NSString *, NSString *> *titleToVideoIDCache;
