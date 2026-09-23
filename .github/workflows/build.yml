@@ -99,6 +99,7 @@ jobs:
           mv *.appex ${{ github.workspace }}
           cd ${{ github.workspace }}
 
+          git clone --quiet --depth=1 https://github.com/PoomSmart/YTVideoOverlay.git
           git clone --quiet --depth=1 https://github.com/PoomSmart/YouPiP.git
           git clone --quiet --depth=1 --recurse-submodules https://github.com/PoomSmart/YTUHD.git
           git clone --quiet --depth=1 https://github.com/PoomSmart/Return-YouTube-Dislikes.git
@@ -106,6 +107,12 @@ jobs:
 
       - name: Build Safe Extra Tweaks
         run: |
+          cd ${{ github.workspace }}
+
+          # Build YTVideoOverlay (prerequisite for YouPiP)
+          cd YTVideoOverlay
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/ytvo.deb
           cd ${{ github.workspace }}
 
           # Build YouPiP
@@ -239,6 +246,7 @@ jobs:
              ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb
              ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
              ${{ github.workspace }}/youpip.deb
+             ${{ github.workspace }}/ytvo.deb
              ${{ github.workspace }}/ytuhd.deb
              ${{ github.workspace }}/ryd.deb
              ${{ github.workspace }}/demc.deb
