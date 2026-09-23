@@ -399,8 +399,12 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
 
     NSString *status = isNowOriginal ? @"DeArrow: Original" : @"DeArrow: Replaced";
     Class hudClass = %c(GOOHUDManagerInternal);
-    if ([hudClass respondsToSelector:@selector(showMessageWithText:)]) {
-        [(id)hudClass showMessageWithText:status];
+    SEL sel = NSSelectorFromString(@"showMessageWithText:");
+    if ([hudClass respondsToSelector:sel]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        [hudClass performSelector:sel withObject:status];
+        #pragma clang diagnostic pop
     }
 
     if (targetView) {
