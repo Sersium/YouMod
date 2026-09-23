@@ -700,19 +700,17 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 - (YTIThumbnailDetails *)thumbnail;
 @end
 
-@class YTICompactVideoRenderer, YTIPlaylistVideoRenderer, YTIPlaylistPanelVideoRenderer;
-
-@interface YTICompactVideoRenderer (YouMod)
+@interface YTICompactVideoRenderer : NSObject
 - (NSString *)videoId;
 - (YTIFormattedString *)title;
 @end
 
-@interface YTIPlaylistVideoRenderer (YouMod)
+@interface YTIPlaylistVideoRenderer : NSObject
 - (NSString *)videoId;
 - (YTIFormattedString *)title;
 @end
 
-@interface YTIPlaylistPanelVideoRenderer (YouMod)
+@interface YTIPlaylistPanelVideoRenderer : NSObject
 - (NSString *)videoId;
 - (YTIFormattedString *)title;
 @end
