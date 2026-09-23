@@ -351,34 +351,14 @@ static NSString *YouModFormatDeArrowTitle(NSString *origTitle) {
             }
         }
 
-        if (!bestTimestamp && json[@"randomTime"] && ![json[@"randomTime"] isKindOfClass:[NSNull class]]) {
-            bestTimestamp = @([json[@"randomTime"] doubleValue]);
-        }
-
+        NSString *candidateURL = nil;
         if (bestTimestamp) {
-            NSString *candidateURL = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@&time=%@", videoID, bestTimestamp];
-            NSMutableURLRequest *headReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:candidateURL]];
-            headReq.HTTPMethod = @"HEAD";
-            headReq.timeoutInterval = 2.5;
-
-            NSURLSessionDataTask *headTask = [[NSURLSession sharedSession] dataTaskWithRequest:headReq completionHandler:^(NSData *hData, NSURLResponse *hResp, NSError *hErr) {
-                NSHTTPURLResponse *httpHResp = (NSHTTPURLResponse *)hResp;
-                if (!hErr && httpHResp.statusCode == 200) {
-                    branding[@"timestamp"] = bestTimestamp;
-                    branding[@"thumbnailURL"] = candidateURL;
-                }
-                [self.brandingCache setObject:branding forKey:videoID];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [[NSNotificationCenter defaultCenter] postNotificationName:kYMDeArrowUpdatedNotification
-                                                                        object:nil
-                                                                      userInfo:@{@"videoID": videoID, @"branding": branding}];
-                    if (completion) completion(branding);
-                });
-            }];
-            [headTask resume];
-            return;
+            candidateURL = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@&time=%@", videoID, bestTimestamp];
+            branding[@"timestamp"] = bestTimestamp;
+        } else {
+            candidateURL = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@", videoID];
         }
-
+        branding[@"thumbnailURL"] = candidateURL;
         [self.brandingCache setObject:branding forKey:videoID];
 
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -413,7 +393,60 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     return nil;
 }
 
-#pragma mark - Live Thumbnail Hooks
+// Elements Image Downloader hook (Modern YouTube Feeds)
+%hook ELMImageDownloader
+
+- (id)downloadImageWithURL:(NSURL *)url targetSize:(CGSize)size callbackQueue:(id)queue downloadProgress:(id)progress completion:(void(^)(id imageContainer, NSError *error, id arg3, id arg4))completion {
+    if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowReplaceThumbnails) || !url) {
+        return %orig;
+    }
+    NSString *urlStr = url.absoluteString;
+    NSString *videoID = YouModExtractDeArrowVideoID(urlStr);
+    if (!videoID || videoID.length != 11) {
+        return %orig;
+    }
+    if ([[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID]) {
+        return %orig;
+    }
+
+    NSString *deArrowThumb = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:videoID];
+    if (!deArrowThumb) {
+        deArrowThumb = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@", videoID];
+    }
+    NSURL *deArrowURL = [NSURL URLWithString:deArrowThumb];
+
+    __block id origTask = nil;
+    void (^wrappedCompletion)(id, NSError *, id, id) = ^(id imageContainer, NSError *error, id arg3, id arg4) {
+        if (!error && imageContainer) {
+            if (completion) completion(imageContainer, nil, arg3, arg4);
+        } else {
+            origTask = %orig(url, size, queue, progress, completion);
+        }
+    };
+    return %orig(deArrowURL, size, queue, progress, wrappedCompletion);
+}
+
+- (UIImage *)cachedImageWithURL:(NSURL *)url {
+    if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowReplaceThumbnails) || !url) {
+        return %orig;
+    }
+    NSString *urlStr = url.absoluteString;
+    NSString *videoID = YouModExtractDeArrowVideoID(urlStr);
+    if (!videoID || videoID.length != 11) {
+        return %orig;
+    }
+    if ([[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID]) {
+        return %orig;
+    }
+    NSString *deArrowThumb = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:videoID];
+    if (deArrowThumb) {
+        UIImage *cached = %orig([NSURL URLWithString:deArrowThumb]);
+        if (cached) return cached;
+    }
+    return %orig;
+}
+
+%end
 
 // AsyncDisplayKit network image hook
 %hook ASNetworkImageNode
@@ -959,6 +992,73 @@ static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
     }
 }
 
+static void YouModCollectNodesFromView(UIView *view, NSMutableArray *textNodes, NSMutableArray *imageNodes) {
+    if (!view) return;
+    id node = nil;
+    if ([view respondsToSelector:@selector(node)]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        node = [view performSelector:@selector(node)];
+        #pragma clang diagnostic pop
+    }
+    if (!node) {
+        @try { node = [view valueForKey:@"asyncdisplaykit_node"]; } @catch (id ex) {}
+    }
+    if (node) {
+        if ([node isKindOfClass:%c(ASTextNode)]) {
+            [textNodes addObject:node];
+        } else if ([node isKindOfClass:%c(ASNetworkImageNode)]) {
+            [imageNodes addObject:node];
+        }
+    }
+    for (UIView *sub in view.subviews) {
+        YouModCollectNodesFromView(sub, textNodes, imageNodes);
+    }
+}
+
+static ASTextNode *YouModFindTitleNode(NSArray *textNodes) {
+    ASTextNode *bestNode = nil;
+    NSUInteger maxLen = 0;
+    for (id node in textNodes) {
+        if (![node isKindOfClass:%c(ASTextNode)]) continue;
+        ASTextNode *tn = (ASTextNode *)node;
+        NSString *s = tn.attributedText.string;
+        if (!s || s.length < 5) continue;
+        if ([s containsString:@" views"] || [s containsString:@" watching"] || 
+            [s containsString:@" ago"] || [s containsString:@" • "] ||
+            [s hasPrefix:@"http"] || [s containsString:@"subscribers"]) {
+            continue;
+        }
+        if (s.length > maxLen) {
+            maxLen = s.length;
+            bestNode = tn;
+        }
+    }
+    return bestNode;
+}
+
+static ASNetworkImageNode *YouModFindThumbnailNode(NSArray *imageNodes, NSString **outVideoID) {
+    for (id node in imageNodes) {
+        if (![node isKindOfClass:%c(ASNetworkImageNode)]) continue;
+        ASNetworkImageNode *inNode = (ASNetworkImageNode *)node;
+        NSURL *u = nil;
+        if ([inNode respondsToSelector:@selector(URL)]) {
+            u = [inNode URL];
+        }
+        if (!u && [inNode respondsToSelector:@selector(imageURL)]) {
+            u = [inNode imageURL];
+        }
+        if (u) {
+            NSString *vid = YouModExtractDeArrowVideoID(u.absoluteString);
+            if (vid.length == 11) {
+                if (outVideoID) *outVideoID = vid;
+                return inNode;
+            }
+        }
+    }
+    return nil;
+}
+
 @interface YouModDeArrowSwapHandler : NSObject
 + (instancetype)sharedHandler;
 - (void)handleSwapButtonTap:(UIButton *)button;
@@ -979,11 +1079,54 @@ static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
     NSString *videoID = objc_getAssociatedObject(button, "kYMDeArrowVideoIDKey");
     if (!videoID || videoID.length == 0) return;
 
-    [[YouModDeArrowManager sharedInstance] toggleDeArrowForVideoID:videoID];
+    BOOL isOriginal = [[YouModDeArrowManager sharedInstance] toggleDeArrowForVideoID:videoID];
 
     UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
     [feedback prepare];
     [feedback impactOccurred];
+
+    UIView *container = button.superview;
+    if (container) {
+        NSMutableArray *textNodes = [NSMutableArray array];
+        NSMutableArray *imageNodes = [NSMutableArray array];
+        YouModCollectNodesFromView(container, textNodes, imageNodes);
+
+        ASTextNode *tn = YouModFindTitleNode(textNodes);
+        if (tn) {
+            NSAttributedString *origAttr = objc_getAssociatedObject(tn, "kYMDeArrowOrigAttrKey") ?: tn.attributedText;
+            if (isOriginal) {
+                [tn setAttributedText:origAttr];
+            } else {
+                NSString *deTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
+                if (deTitle.length > 0) {
+                    NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:origAttr];
+                    [mod.mutableString setString:deTitle];
+                    [tn setAttributedText:mod];
+                }
+            }
+            [tn setNeedsDisplay];
+            if ([tn respondsToSelector:@selector(view)]) {
+                [[tn view] setNeedsDisplay];
+            }
+        }
+
+        NSString *extractedVID = nil;
+        ASNetworkImageNode *inNode = YouModFindThumbnailNode(imageNodes, &extractedVID);
+        if (inNode) {
+            if (isOriginal) {
+                NSURL *origURL = objc_getAssociatedObject(inNode, "kYMDeArrowOrigURLKey");
+                if (origURL) [inNode setURL:origURL resetToDefault:YES];
+            } else {
+                NSString *deThumb = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:videoID];
+                if (!deThumb) deThumb = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@", videoID];
+                [inNode setURL:[NSURL URLWithString:deThumb] resetToDefault:YES];
+            }
+            [inNode setNeedsDisplay];
+            if ([inNode respondsToSelector:@selector(view)]) {
+                [[inNode view] setNeedsDisplay];
+            }
+        }
+    }
 
     YouModUpdateOverflowIndicator(button, videoID);
 }
@@ -996,7 +1139,6 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
     NSString *vID = objc_getAssociatedObject(view, "kYMDeArrowVideoIDKey");
     if (vID.length == 11) return vID;
 
-    // Check node associated with view
     id node = nil;
     if ([view respondsToSelector:@selector(node)]) {
         #pragma clang diagnostic push
@@ -1017,7 +1159,6 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
         }
     }
 
-    // Check subviews
     for (UIView *sub in view.subviews) {
         NSString *subVID = objc_getAssociatedObject(sub, "kYMDeArrowVideoIDKey");
         if (subVID.length == 11) return subVID;
@@ -1068,33 +1209,6 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
     UIView *superv = self.superview;
     if (!superv) return;
 
-    // Resolve videoID
-    NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
-    if (!videoID) {
-        ASDisplayNode *node = nil;
-        if ([self respondsToSelector:@selector(node)]) {
-            node = [self performSelector:@selector(node)];
-        }
-        ASDisplayNode *cur = node;
-        while (cur && !videoID) {
-            videoID = objc_getAssociatedObject(cur, "kYMDeArrowVideoIDKey");
-            cur = cur.supernode;
-        }
-    }
-    if (!videoID) {
-        UIView *p = superv;
-        while (p && !videoID) {
-            videoID = objc_getAssociatedObject(p, "kYMDeArrowVideoIDKey");
-            p = p.superview;
-        }
-    }
-    if (!videoID) {
-        videoID = YouModFindVideoIDFromView(superv);
-    }
-    if (!videoID || videoID.length != 11) return;
-
-    objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
     // Target container view: expand beyond narrow button wrapper if needed
     UIView *container = superv;
     if (container.frame.size.width < 50 && container.superview) {
@@ -1103,6 +1217,24 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
 
     superv.clipsToBounds = NO;
     container.clipsToBounds = NO;
+
+    NSMutableArray *textNodes = [NSMutableArray array];
+    NSMutableArray *imageNodes = [NSMutableArray array];
+    YouModCollectNodesFromView(container, textNodes, imageNodes);
+
+    NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
+    if (!videoID) {
+        NSString *extractedVID = nil;
+        YouModFindThumbnailNode(imageNodes, &extractedVID);
+        if (extractedVID.length == 11) videoID = extractedVID;
+    }
+    if (!videoID) {
+        videoID = YouModFindVideoIDFromView(container);
+    }
+    if (!videoID || videoID.length != 11) return;
+
+    objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(container, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
     UIButton *indBtn = (UIButton *)[container viewWithTag:0xDEA222];
     if (!indBtn) {
@@ -1122,6 +1254,48 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
     indBtn.frame = CGRectMake(btnX, btnY, btnSize, btnSize);
 
     YouModUpdateOverflowIndicator(indBtn, videoID);
+
+    // Apply DeArrow to title node and thumbnail node if available
+    ASTextNode *tn = YouModFindTitleNode(textNodes);
+    if (tn) {
+        objc_setAssociatedObject(tn, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (!objc_getAssociatedObject(tn, "kYMDeArrowOrigAttrKey")) {
+            objc_setAssociatedObject(tn, "kYMDeArrowOrigAttrKey", tn.attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:tn.attributedText.string forVideoID:videoID];
+        }
+        BOOL isOriginal = [[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID];
+        if (!isOriginal && IS_ENABLED(DeArrowReplaceTitles)) {
+            NSString *deTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
+            if (deTitle.length > 0 && ![tn.attributedText.string isEqualToString:deTitle]) {
+                NSAttributedString *origAttr = objc_getAssociatedObject(tn, "kYMDeArrowOrigAttrKey") ?: tn.attributedText;
+                NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:origAttr];
+                [mod.mutableString setString:deTitle];
+                [tn setAttributedText:mod];
+                [tn setNeedsDisplay];
+                if ([tn respondsToSelector:@selector(view)]) [[tn view] setNeedsDisplay];
+            }
+        }
+    }
+
+    NSString *extractedVID = nil;
+    ASNetworkImageNode *inNode = YouModFindThumbnailNode(imageNodes, &extractedVID);
+    if (inNode) {
+        objc_setAssociatedObject(inNode, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (!objc_getAssociatedObject(inNode, "kYMDeArrowOrigURLKey") && [inNode respondsToSelector:@selector(URL)]) {
+            objc_setAssociatedObject(inNode, "kYMDeArrowOrigURLKey", [inNode URL], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        BOOL isOriginal = [[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID];
+        if (!isOriginal && IS_ENABLED(DeArrowReplaceThumbnails)) {
+            NSString *deThumb = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:videoID];
+            if (deThumb.length > 0) {
+                [inNode setURL:[NSURL URLWithString:deThumb] resetToDefault:YES];
+                [inNode setNeedsDisplay];
+                if ([inNode respondsToSelector:@selector(view)]) [[inNode view] setNeedsDisplay];
+            }
+        }
+    }
+
+    [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
 }
 
 %new
@@ -1139,10 +1313,45 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
     if (container.frame.size.width < 50 && container.superview) {
         container = container.superview;
     }
-    if (container) {
-        UIButton *indBtn = (UIButton *)[container viewWithTag:0xDEA222];
-        if (indBtn) {
-            YouModUpdateOverflowIndicator(indBtn, myVideoID);
+    if (!container) return;
+
+    UIButton *indBtn = (UIButton *)[container viewWithTag:0xDEA222];
+    if (indBtn) {
+        YouModUpdateOverflowIndicator(indBtn, myVideoID);
+    }
+
+    BOOL isOriginal = [[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:myVideoID];
+    if (isOriginal) return;
+
+    NSMutableArray *textNodes = [NSMutableArray array];
+    NSMutableArray *imageNodes = [NSMutableArray array];
+    YouModCollectNodesFromView(container, textNodes, imageNodes);
+
+    if (IS_ENABLED(DeArrowReplaceTitles)) {
+        ASTextNode *tn = YouModFindTitleNode(textNodes);
+        if (tn) {
+            NSString *deTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:myVideoID];
+            if (deTitle.length > 0 && ![tn.attributedText.string isEqualToString:deTitle]) {
+                NSAttributedString *origAttr = objc_getAssociatedObject(tn, "kYMDeArrowOrigAttrKey") ?: tn.attributedText;
+                NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:origAttr];
+                [mod.mutableString setString:deTitle];
+                [tn setAttributedText:mod];
+                [tn setNeedsDisplay];
+                if ([tn respondsToSelector:@selector(view)]) [[tn view] setNeedsDisplay];
+            }
+        }
+    }
+
+    if (IS_ENABLED(DeArrowReplaceThumbnails)) {
+        NSString *extractedVID = nil;
+        ASNetworkImageNode *inNode = YouModFindThumbnailNode(imageNodes, &extractedVID);
+        if (inNode) {
+            NSString *deThumb = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:myVideoID];
+            if (deThumb.length > 0) {
+                [inNode setURL:[NSURL URLWithString:deThumb] resetToDefault:YES];
+                [inNode setNeedsDisplay];
+                if ([inNode respondsToSelector:@selector(view)]) [[inNode view] setNeedsDisplay];
+            }
         }
     }
 }
@@ -1182,7 +1391,6 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
         DeArrowEnabled: @YES,
         DeArrowReplaceTitles: @YES,
         DeArrowReplaceThumbnails: @YES,
-        DeArrowFallbackToOriginal: @YES,
-        DeArrowQuickSwap: @YES
+        DeArrowFallbackToOriginal: @YES
     }];
 }

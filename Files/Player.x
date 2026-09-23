@@ -833,12 +833,6 @@ static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
     }
     %orig(audioOn);
 }
-- (void)layoutSubviews {
-    %orig;
-    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-        [self setAudioOn:YES];
-    }
-}
 %end
 
 %hook YTInlineMutedPlaybackPlayerOverlayView
@@ -862,14 +856,12 @@ static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
 }
 - (void)layoutSubviews {
     %orig;
-    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-        [self setAudioSoundOn:YES];
-    }
     if (IS_ENABLED(FeedPreviewCCDisabled)) {
-        [self setCaptionsActive:NO];
         @try {
-            UIView *c = [self captionOverlayView];
-            if (c) c.hidden = YES;
+            UIView *captionBtn = [self valueForKey:@"_captionButton"];
+            if (captionBtn && !captionBtn.hidden) {
+                captionBtn.hidden = YES;
+            }
         } @catch (id ex) {}
     }
 }

@@ -641,8 +641,6 @@
 "DEARROW_REPLACE_THUMBNAILS_DESC" = "Заменяет кликбейтные значки на реальные кадры из видео.";
 "DEARROW_FALLBACK_ORIGINAL" = "Возврат к оригиналу";
 "DEARROW_FALLBACK_ORIGINAL_DESC" = "Показывает оригинальное название и превью, если в DeArrow нет данных.";
-"DEARROW_QUICK_SWAP" = "Быстрое переключение в ленте";
-"DEARROW_QUICK_SWAP_DESC" = "Добавляет значок и жест долгого нажатия для мгновенного переключения между оригиналом и DeArrow в ленте.";
 
 /* Return YouTube Dislike */
 "RYD_ENABLED" = "Включить Return YouTube Dislike";

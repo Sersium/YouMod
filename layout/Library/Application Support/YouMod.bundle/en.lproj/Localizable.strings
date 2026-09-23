@@ -645,8 +645,6 @@
 "DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
 "DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
 "DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";
-"DEARROW_QUICK_SWAP" = "Feed quick swap";
-"DEARROW_QUICK_SWAP_DESC" = "Adds a quick swap button and long-press gesture to feed previews to instantly toggle between original and DeArrow versions.";
 
 /* Return YouTube Dislike */
 "RYD_ENABLED" = "Enable Return YouTube Dislike";

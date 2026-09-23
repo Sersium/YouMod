@@ -546,7 +546,6 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         YMToggle(YMLOC(@"DEARROW_REPLACE_TITLES"), YMLOC(@"DEARROW_REPLACE_TITLES_DESC"), DeArrowReplaceTitles),
         YMToggle(YMLOC(@"DEARROW_REPLACE_THUMBNAILS"), YMLOC(@"DEARROW_REPLACE_THUMBNAILS_DESC"), DeArrowReplaceThumbnails),
         YMToggle(YMLOC(@"DEARROW_FALLBACK_ORIGINAL"), YMLOC(@"DEARROW_FALLBACK_ORIGINAL_DESC"), DeArrowFallbackToOriginal),
-        YMToggle(YMLOC(@"DEARROW_QUICK_SWAP"), YMLOC(@"DEARROW_QUICK_SWAP_DESC"), DeArrowQuickSwap),
     ];
     YMRegisterSettingsGroup(@"DeArrow", dearrowItems);
     YTSettingsSectionItem *dearrowgroup = [YTSettingsSectionItemClass itemWithTitle:@"DeArrow" accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
@@ -700,7 +699,6 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         DeArrowReplaceTitles: @YES,
         DeArrowReplaceThumbnails: @YES,
         DeArrowFallbackToOriginal: @YES,
-        DeArrowQuickSwap: @YES,
         HideMixPlaylists: @NO,
         HideAISummaries: @NO,
         RemoveShortsDislikeButton: @NO,

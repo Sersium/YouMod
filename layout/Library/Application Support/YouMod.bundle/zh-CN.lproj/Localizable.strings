@@ -641,8 +641,6 @@
 "DEARROW_REPLACE_THUMBNAILS_DESC" = "用干净的视频帧截图替换吸睛缩略图。";
 "DEARROW_FALLBACK_ORIGINAL" = "无数据时保留原样";
 "DEARROW_FALLBACK_ORIGINAL_DESC" = "若没有社区 DeArrow 提交，则显示原始标题与缩略图。";
-"DEARROW_QUICK_SWAP" = "信息流快捷切换";
-"DEARROW_QUICK_SWAP_DESC" = "在信息流预览中添加快捷切换按钮和长按手势，以在原版与 DeArrow 版本之间即时切换。";
 
 /* Return YouTube Dislike */
 "RYD_ENABLED" = "启用 Return YouTube Dislike";

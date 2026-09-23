@@ -258,7 +258,6 @@
 #define DeArrowReplaceTitles @"YouModDeArrowReplaceTitles"
 #define DeArrowReplaceThumbnails @"YouModDeArrowReplaceThumbnails"
 #define DeArrowFallbackToOriginal @"YouModDeArrowFallbackToOriginal"
-#define DeArrowQuickSwap @"YouModDeArrowQuickSwap"
 
 // Feed Previews Defaults
 #define FeedPreviewSoundOn @"YouModFeedPreviewSoundOn"
@@ -462,7 +461,40 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 @property (nonatomic, retain) UIPinchGestureRecognizer *YouModFullscreenGesture;
 @end
 
+typedef NS_ENUM(int, YTLikeStatus) {
+    YTLikeStatusLike = 0,
+    YTLikeStatusDislike = 1,
+    YTLikeStatusNeutral = 2
+};
+
+@interface YTILikeTarget : NSObject
+@property (nonatomic, copy, readwrite) NSString *videoId;
+@end
+
+@interface YTILikeButtonRenderer : NSObject
+@property (nonatomic, strong, readwrite) YTILikeTarget *target;
+@property (nonatomic, strong, readwrite) YTIFormattedString *likeCountText;
+@property (nonatomic, strong, readwrite) YTIFormattedString *likeCountWithLikeText;
+@property (nonatomic, strong, readwrite) YTIFormattedString *likeCountWithUnlikeText;
+@property (nonatomic, strong, readwrite) YTIFormattedString *dislikeCountText;
+@property (nonatomic, strong, readwrite) YTIFormattedString *dislikeCountWithDislikeText;
+@property (nonatomic, strong, readwrite) YTIFormattedString *dislikeCountWithUndislikeText;
+@property (nonatomic, assign, readwrite) BOOL hasLikeCountText;
+@property (nonatomic, assign, readwrite) BOOL hasLikeCountWithLikeText;
+@property (nonatomic, assign, readwrite) BOOL hasLikeCountWithUnlikeText;
+@property (nonatomic, assign, readwrite) BOOL hasDislikeCountText;
+@property (nonatomic, assign, readwrite) BOOL hasDislikeCountWithDislikeText;
+@property (nonatomic, assign, readwrite) BOOL hasDislikeCountWithUndislikeText;
+@property (nonatomic, assign, readwrite) BOOL likesAllowed;
+@property (nonatomic, assign, readwrite) YTLikeStatus likeStatus;
+@property (nonatomic, assign, readwrite) int likeCount;
+@property (nonatomic, assign, readwrite) int dislikeCount;
+@end
+
 @interface YTReelWatchLikesController : NSObject
+@property (nonatomic, strong, readonly) YTQTMButton *likeButton;
+@property (nonatomic, strong, readonly) YTQTMButton *dislikeButton;
+- (void)updateLikeButtonWithRenderer:(YTILikeButtonRenderer *)renderer;
 @end
 
 @interface YTReelContentView (YouMod) <UIGestureRecognizerDelegate>

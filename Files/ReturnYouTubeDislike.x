@@ -396,28 +396,58 @@ static BOOL isVideoDescriptionHeader(ASCollectionView *collectionView, ELMCellNo
     }
     // Main video action bar (contains thumbs up and thumbs down)
     else {
-        ELMContainerNode *likeNode = YouModFindNodeWithIdentifier(node, @"id.video.like.button");
+        ASDisplayNode *containerNode = node;
+        ELMContainerNode *likeNode = nil;
+        ELMContainerNode *dislikeNode = nil;
+
+        if ([containerNode isKindOfClass:%c(ELMCellNode)]) {
+            while (containerNode.yogaChildren.count == 1 || containerNode.yogaChildren.count == 2) {
+                if (containerNode.yogaChildren.count == 2) {
+                    ASDisplayNode *first = [containerNode.yogaChildren firstObject];
+                    if ([first.accessibilityIdentifier isEqualToString:@"id.video.like.button"] ||
+                        containerNode.yogaChildren.count == 2) {
+                        likeNode = (ELMContainerNode *)first;
+                        dislikeNode = (ELMContainerNode *)[containerNode.yogaChildren lastObject];
+                        break;
+                    }
+                    containerNode = containerNode.yogaChildren[1];
+                } else {
+                    containerNode = [containerNode.yogaChildren firstObject];
+                }
+            }
+        }
+        if (!likeNode) {
+            likeNode = YouModFindNodeWithIdentifier(node, @"id.video.like.button");
+            dislikeNode = YouModFindNodeWithIdentifier(node, @"id.video.dislike.button");
+        }
         if (likeNode) {
             @try {
-                ELMContainerNode *dislikeNode = YouModFindNodeWithIdentifier(node, @"id.video.dislike.button");
+                if (!dislikeNode) {
+                    dislikeNode = YouModFindNodeWithIdentifier(node, @"id.video.dislike.button");
+                }
                 NSString *videoId = getVideoId(node);
                 if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
                 if (videoId.length == 0) return node;
 
                 // Find text or rolling number node in likeNode
                 id targetNode = nil;
-                for (ASDisplayNode *child in likeNode.yogaChildren) {
-                    if ([child isKindOfClass:%c(YTRollingNumberNode)] || [child isKindOfClass:%c(ELMTextNode)]) {
-                        targetNode = child;
-                        break;
-                    }
-                    for (ASDisplayNode *grandchild in child.yogaChildren) {
-                        if ([grandchild isKindOfClass:%c(YTRollingNumberNode)] || [grandchild isKindOfClass:%c(ELMTextNode)]) {
-                            targetNode = grandchild;
+                if (likeNode.yogaChildren.count >= 2) {
+                    targetNode = likeNode.yogaChildren[1];
+                }
+                if (!targetNode) {
+                    for (ASDisplayNode *child in likeNode.yogaChildren) {
+                        if ([child isKindOfClass:%c(YTRollingNumberNode)] || [child isKindOfClass:%c(ELMTextNode)]) {
+                            targetNode = child;
                             break;
                         }
+                        for (ASDisplayNode *grandchild in child.yogaChildren) {
+                            if ([grandchild isKindOfClass:%c(YTRollingNumberNode)] || [grandchild isKindOfClass:%c(ELMTextNode)]) {
+                                targetNode = grandchild;
+                                break;
+                            }
+                        }
+                        if (targetNode) break;
                     }
-                    if (targetNode) break;
                 }
 
                 __strong YTRollingNumberNode *likeRollingNumberNode = [targetNode isKindOfClass:%c(YTRollingNumberNode)] ? (YTRollingNumberNode *)targetNode : nil;
@@ -698,6 +728,70 @@ static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, N
 
 %end
 
+#pragma mark - Protobuf Model Hooks
+
+%hook YTILikeButtonRenderer
+
+- (BOOL)hasDislikeCountText {
+    if (IS_ENABLED(ReturnYouTubeDislike)) return YES;
+    return %orig;
+}
+
+- (YTIFormattedString *)dislikeCountText {
+    if (!IS_ENABLED(ReturnYouTubeDislike)) return %orig;
+    NSString *videoId = self.target.videoId;
+    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+    if (videoId.length == 0) return %orig;
+
+    NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoId];
+    if (votes) {
+        NSInteger dislikes = [votes[@"dislikes"] integerValue];
+        return [%c(YTIFormattedString) formattedStringWithString:YouModFormatVoteCount(dislikes)];
+    }
+    [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoId completion:nil];
+    return %orig;
+}
+
+- (BOOL)hasDislikeCountWithDislikeText {
+    if (IS_ENABLED(ReturnYouTubeDislike)) return YES;
+    return %orig;
+}
+
+- (YTIFormattedString *)dislikeCountWithDislikeText {
+    if (!IS_ENABLED(ReturnYouTubeDislike)) return %orig;
+    NSString *videoId = self.target.videoId;
+    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+    if (videoId.length == 0) return %orig;
+
+    NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoId];
+    if (votes) {
+        NSInteger dislikes = [votes[@"dislikes"] integerValue] + 1;
+        return [%c(YTIFormattedString) formattedStringWithString:YouModFormatVoteCount(dislikes)];
+    }
+    return %orig;
+}
+
+- (BOOL)hasDislikeCountWithUndislikeText {
+    if (IS_ENABLED(ReturnYouTubeDislike)) return YES;
+    return %orig;
+}
+
+- (YTIFormattedString *)dislikeCountWithUndislikeText {
+    if (!IS_ENABLED(ReturnYouTubeDislike)) return %orig;
+    NSString *videoId = self.target.videoId;
+    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+    if (videoId.length == 0) return %orig;
+
+    NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoId];
+    if (votes) {
+        NSInteger dislikes = [votes[@"dislikes"] integerValue];
+        return [%c(YTIFormattedString) formattedStringWithString:YouModFormatVoteCount(dislikes)];
+    }
+    return %orig;
+}
+
+%end
+
 // YouTube Shorts like/dislike counts
 static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
     if (!overlayView || !IS_ENABLED(ReturnYouTubeDislike)) return;
@@ -712,7 +806,67 @@ static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
             videoId = [entry valueForKey:@"videoId"];
         } @catch (id ex) {}
     }
+    if (videoId.length == 0) {
+        @try {
+            id model = [spvc valueForKey:@"_model"];
+            videoId = [model valueForKeyPath:@"endpoint.reelWatchEndpoint.videoId"];
+            if (videoId.length == 0) videoId = [model valueForKeyPath:@"command.reelWatchEndpoint.videoId"];
+        } @catch (id ex) {}
+    }
+    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
     if (videoId.length == 0) return;
+
+    // Elements path for Shorts
+    YTELMView *elmView = nil;
+    @try { elmView = [overlayView valueForKey:@"_actionBarView"]; } @catch (id ex) {}
+    if (!elmView) {
+        @try {
+            id view = [overlayView valueForKey:@"_actionBarComponentView"];
+            elmView = [view valueForKey:@"_elementView"];
+        } @catch (id ex) {}
+    }
+    BOOL isNested = NO;
+    if (!elmView) {
+        @try {
+            id pView = [overlayView valueForKey:@"_playerOverlayView"];
+            elmView = [pView valueForKey:@"_elementView"];
+            isNested = YES;
+        } @catch (id ex) {}
+    }
+
+    ELMTextNode *__block shortLikeTextNode = nil;
+    ELMTextNode *__block shortDislikeTextNode = nil;
+
+    if (elmView) {
+        @try {
+            ELMContainerNode *containerNode = nil;
+            if (isNested) {
+                ELMContainerNode *node = [elmView valueForKey:@"_rootNode"];
+                node = [node.yogaChildren firstObject];
+                if (node.yogaChildren.count >= 2) containerNode = node.yogaChildren[1];
+            } else {
+                containerNode = [elmView valueForKey:@"_rootNode"];
+            }
+            if (containerNode && containerNode.yogaChildren.count >= 2) {
+                ELMContainerNode *likeNode = [containerNode.yogaChildren firstObject];
+                ELMContainerNode *dislikeNode = containerNode.yogaChildren[1];
+                while (likeNode.yogaChildren.count == 1) likeNode = [likeNode.yogaChildren firstObject];
+                while (dislikeNode.yogaChildren.count == 1) dislikeNode = [dislikeNode.yogaChildren firstObject];
+
+                NSArray *likeChildren = likeNode.yogaChildren;
+                if (likeChildren.count == 1) likeChildren = ((ASDisplayNode *)[likeNode.yogaChildren firstObject]).yogaChildren;
+                if (likeChildren.count >= 2 && [likeChildren[1] isKindOfClass:%c(ELMTextNode)]) {
+                    shortLikeTextNode = likeChildren[1];
+                }
+
+                NSArray *dislikeChildren = dislikeNode.yogaChildren;
+                if (dislikeChildren.count == 1) dislikeChildren = ((ASDisplayNode *)[dislikeNode.yogaChildren firstObject]).yogaChildren;
+                if (dislikeChildren.count >= 2 && [dislikeChildren[1] isKindOfClass:%c(ELMTextNode)]) {
+                    shortDislikeTextNode = dislikeChildren[1];
+                }
+            }
+        } @catch (id ex) {}
+    }
 
     [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoId completion:^(NSDictionary *votes) {
         if (!votes) return;
@@ -722,6 +876,21 @@ static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
         NSString *likesText = YouModFormatVoteCount(likes);
 
         dispatch_async(dispatch_get_main_queue(), ^{
+            // Update Elements nodes
+            if (shortLikeTextNode && IS_ENABLED(RYDShowLikes)) {
+                NSMutableAttributedString *mLike = [[NSMutableAttributedString alloc] initWithAttributedString:shortLikeTextNode.attributedText];
+                mLike.mutableString.string = likesText;
+                shortLikeTextNode.attributedText = mLike;
+                shortLikeTextNode.accessibilityLabel = likesText;
+            }
+            if (shortDislikeTextNode && IS_ENABLED(RYDShowDislikes)) {
+                NSMutableAttributedString *mDis = [[NSMutableAttributedString alloc] initWithAttributedString:shortDislikeTextNode.attributedText];
+                mDis.mutableString.string = dislikesText;
+                shortDislikeTextNode.attributedText = mDis;
+                shortDislikeTextNode.accessibilityLabel = dislikesText;
+            }
+
+            // Update UIKit fallback buttons
             for (UIView *v in overlayView.subviews) {
                 if ([v.accessibilityIdentifier isEqualToString:@"id.reel_dislike_button"] || [v.accessibilityIdentifier isEqualToString:@"id.video.dislike.button"]) {
                     if ([v respondsToSelector:@selector(setTitle:forState:)]) {
@@ -765,6 +934,7 @@ static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
         vID = [renderer valueForKeyPath:@"target.videoId"];
     } @catch (id ex) {}
 
+    if (vID.length == 0) vID = YouModGetCurrentVideoID();
     if (vID.length == 0) return;
 
     YTQTMButton *dislikeBtn = nil;
