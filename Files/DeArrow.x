@@ -1046,7 +1046,7 @@ static ASNetworkImageNode *YouModFindThumbnailNode(NSArray *imageNodes, NSString
             u = [inNode URL];
         }
         if (!u && [inNode respondsToSelector:@selector(imageURL)]) {
-            u = [inNode imageURL];
+            u = [(id)inNode imageURL];
         }
         if (u) {
             NSString *vid = YouModExtractDeArrowVideoID(u.absoluteString);

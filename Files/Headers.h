@@ -375,6 +375,9 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 @interface YTELMViewController : UIViewController
 @end
 
+@interface YTELMView : UIView
+@end
+
 @interface YTInlineScrubGestureView : UIView
 @end
 
@@ -605,8 +608,13 @@ typedef NS_ENUM(int, YTLikeStatus) {
 
 @interface ASDisplayNode (YouMod)
 - (void)removeYogaChild:(id)arg;
+- (void)addYogaChild:(id)child;
+- (id)element;
 @property (nonatomic, weak) ASDisplayNode *supernode;
 @property (nonatomic, copy) NSArray<ASDisplayNode *> *subnodes;
+@property (nonatomic, copy) NSArray *yogaChildren;
+@property (readonly, strong) UIView *view;
+- (void)setNeedsDisplay;
 @end
 
 @interface _ASDisplayView (YouMod)
@@ -800,6 +808,7 @@ typedef NS_ENUM(int, YTLikeStatus) {
 
 @interface ASNetworkImageNode : ASDisplayNode
 @property (nonatomic, strong) NSURL *URL;
+@property (nullable, nonatomic, strong) NSURL *imageURL;
 - (void)setURL:(NSURL *)URL;
 - (void)setURL:(NSURL *)URL resetToDefault:(BOOL)reset;
 @end

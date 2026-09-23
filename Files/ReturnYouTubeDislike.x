@@ -388,7 +388,7 @@ static BOOL isVideoDescriptionHeader(ASCollectionView *collectionView, ELMCellNo
                 ELMTextNode *infoLikeTextNode = likeContainerNode.yogaChildren[1];
                 if (![infoLikeTextNode.attributedText.string containsString:@"•"]) {
                     NSMutableAttributedString *likeText = [[NSMutableAttributedString alloc] initWithAttributedString:infoLikeTextNode.attributedText];
-                    likeText.mutableString.string = [likeText.string stringByAppendingString:@" • Dislike"];
+                    [likeText.mutableString appendString:@" • Dislike"];
                     infoLikeTextNode.attributedText = likeText;
                 }
             }
@@ -817,7 +817,7 @@ static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
     if (videoId.length == 0) return;
 
     // Elements path for Shorts
-    YTELMView *elmView = nil;
+    UIView *elmView = nil;
     @try { elmView = [overlayView valueForKey:@"_actionBarView"]; } @catch (id ex) {}
     if (!elmView) {
         @try {
@@ -879,15 +879,17 @@ static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
             // Update Elements nodes
             if (shortLikeTextNode && IS_ENABLED(RYDShowLikes)) {
                 NSMutableAttributedString *mLike = [[NSMutableAttributedString alloc] initWithAttributedString:shortLikeTextNode.attributedText];
-                mLike.mutableString.string = likesText;
+                [mLike.mutableString setString:likesText];
                 shortLikeTextNode.attributedText = mLike;
                 shortLikeTextNode.accessibilityLabel = likesText;
+                [shortLikeTextNode setNeedsDisplay];
             }
             if (shortDislikeTextNode && IS_ENABLED(RYDShowDislikes)) {
                 NSMutableAttributedString *mDis = [[NSMutableAttributedString alloc] initWithAttributedString:shortDislikeTextNode.attributedText];
-                mDis.mutableString.string = dislikesText;
+                [mDis.mutableString setString:dislikesText];
                 shortDislikeTextNode.attributedText = mDis;
                 shortDislikeTextNode.accessibilityLabel = dislikesText;
+                [shortDislikeTextNode setNeedsDisplay];
             }
 
             // Update UIKit fallback buttons
