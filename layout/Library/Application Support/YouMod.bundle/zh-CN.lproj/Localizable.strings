@@ -614,3 +614,30 @@
 "SB_ID_INVALID" = "ID must be at least 30 characters";
 "SB_ID_SAVE" = "Save";
 "SB_ID_CANCEL" = "Cancel";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "隐藏合辑播放列表";
+"HIDE_MIX_PLAYLISTS_DESC" = "从信息流中移除 YouTube 合辑与我的合辑。";
+"HIDE_AI_SUMMARIES" = "隐藏 AI 摘要";
+"HIDE_AI_SUMMARIES_DESC" = "在搜索和信息流中隐藏 AI 生成的视频摘要与重要时刻。";
+"SHORTS_AUTO_SPEED" = "Shorts 播放速度";
+"SHORTS_AUTO_SPEED_DESC" = "为 YouTube Shorts 独立应用所选播放速度。";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "移除不喜欢按钮";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "从 Shorts 操作栏中移除不喜欢按钮。";
+"REMOVE_SHORTS_SAVE_BUTTON" = "移除保存按钮";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "从 Shorts 操作栏中移除保存/书签按钮。";
+"CLEAN_URLS" = "清理复制的链接";
+"CLEAN_URLS_DESC" = "从分享和复制的 YouTube 链接中移除追踪参数（si、feature、pp、utm_* 等）。";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "启用“在队列中接下来播放”";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "无需 YouTube Premium 即可使用“在队列中接下来播放”和“添加到队列”。";
+"RELOAD_BUTTON" = "重新加载";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "启用 DeArrow";
+"DEARROW_ENABLED_DESC" = "使用来自 DeArrow API 的社区创建准确标题和快照替换标题党、噱头标题和缩略图。";
+"DEARROW_REPLACE_TITLES" = "替换标题";
+"DEARROW_REPLACE_TITLES_DESC" = "用众包的描述性标题替换视频标题。";
+"DEARROW_REPLACE_THUMBNAILS" = "替换缩略图";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "用干净的视频帧截图替换吸睛缩略图。";
+"DEARROW_FALLBACK_ORIGINAL" = "无数据时保留原样";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "若没有社区 DeArrow 提交，则显示原始标题与缩略图。";

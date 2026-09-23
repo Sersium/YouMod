@@ -5,12 +5,52 @@ NSBundle *YouModBundle() {
     static NSBundle *bundle = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSString *tweakBundlePath = [[NSBundle mainBundle] pathForResource:@"YouMod" ofType:@"bundle"];
-        if (tweakBundlePath) {
-            bundle = [NSBundle bundleWithPath:tweakBundlePath];
-        } else {
-            bundle = [NSBundle bundleWithPath:jbroot(@"/Library/Application Support/YouMod.bundle")];
+        NSString *mainResource = [[NSBundle mainBundle] pathForResource:@"YouMod" ofType:@"bundle"];
+        if (mainResource && [[NSFileManager defaultManager] fileExistsAtPath:mainResource]) {
+            bundle = [NSBundle bundleWithPath:mainResource];
+            return;
         }
+
+        NSString *mainBundleSubpath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"YouMod.bundle"];
+        if ([[NSFileManager defaultManager] fileExistsAtPath:mainBundleSubpath]) {
+            bundle = [NSBundle bundleWithPath:mainBundleSubpath];
+            return;
+        }
+
+        NSString *frameworksPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Frameworks/YouMod.bundle"];
+        if ([[NSFileManager defaultManager] fileExistsAtPath:frameworksPath]) {
+            bundle = [NSBundle bundleWithPath:frameworksPath];
+            return;
+        }
+
+        Class tweakClass = %c(YMOverlayButtonSpec);
+        if (tweakClass) {
+            NSBundle *classBundle = [NSBundle bundleForClass:tweakClass];
+            NSString *classBundlePath = [classBundle pathForResource:@"YouMod" ofType:@"bundle"];
+            if (classBundlePath && [[NSFileManager defaultManager] fileExistsAtPath:classBundlePath]) {
+                bundle = [NSBundle bundleWithPath:classBundlePath];
+                return;
+            }
+            if ([classBundle.bundlePath hasSuffix:@"YouMod.bundle"]) {
+                bundle = classBundle;
+                return;
+            }
+        }
+
+        NSString *jbPath = jbroot(@"/Library/Application Support/YouMod.bundle");
+        if ([[NSFileManager defaultManager] fileExistsAtPath:jbPath]) {
+            bundle = [NSBundle bundleWithPath:jbPath];
+            return;
+        }
+
+        NSString *prefBundlePath = jbroot(@"/Library/PreferenceBundles/YouMod.bundle");
+        if ([[NSFileManager defaultManager] fileExistsAtPath:prefBundlePath]) {
+            bundle = [NSBundle bundleWithPath:prefBundlePath];
+            return;
+        }
+
+        // Fallback to main bundle
+        bundle = [NSBundle mainBundle];
     });
     return bundle;
 }

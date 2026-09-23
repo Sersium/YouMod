@@ -102,14 +102,16 @@
 - (void)displayHUDViewForMessage:(id)arg { if (!IS_ENABLED(DisablesSnackBar)) %orig; }
 %end
 
-// Remove "Play next in queue" from the menu @PoomSmart (https://github.com/qnblackcat/uYouPlus/issues/1138#issuecomment-1606415080)
+// "Play next in queue" (icon 251) and "Add to queue" (icon 895)
 %hook YTMenuItemVisibilityHandler
 - (BOOL)shouldShowServiceItemRenderer:(YTIMenuConditionalServiceItemRenderer *)renderer {
     int iconnum = renderer.icon.iconType;
-    if (iconnum == 251 && IS_ENABLED(RemovePlayInNextQueueOption)) {
-        return NO;
-    } else if (iconnum == 895 && IS_ENABLED(RemoveAddToLastQueueOption)) {
-        return NO;
+    if (iconnum == 251) {
+        if (IS_ENABLED(RemovePlayInNextQueueOption)) return NO;
+        if (IS_ENABLED(EnablePlayNextInQueue)) return YES;
+    } else if (iconnum == 895) {
+        if (IS_ENABLED(RemoveAddToLastQueueOption)) return NO;
+        if (IS_ENABLED(EnablePlayNextInQueue)) return YES;
     }
     return %orig;
 }
@@ -118,10 +120,12 @@
 %hook YTMenuItemVisibilityHandlerImpl
 - (BOOL)shouldShowServiceItemRenderer:(YTIMenuConditionalServiceItemRenderer *)renderer {
     int iconnum = renderer.icon.iconType;
-    if (iconnum == 251 && IS_ENABLED(RemovePlayInNextQueueOption)) {
-        return NO;
-    } else if (iconnum == 895 && IS_ENABLED(RemoveAddToLastQueueOption)) {
-        return NO;
+    if (iconnum == 251) {
+        if (IS_ENABLED(RemovePlayInNextQueueOption)) return NO;
+        if (IS_ENABLED(EnablePlayNextInQueue)) return YES;
+    } else if (iconnum == 895) {
+        if (IS_ENABLED(RemoveAddToLastQueueOption)) return NO;
+        if (IS_ENABLED(EnablePlayNextInQueue)) return YES;
     }
     return %orig;
 }
@@ -233,3 +237,190 @@
     }
 }
 %end
+
+#pragma mark - Clean URLs
+
+static NSString *YouModCleanURLString(NSString *str) {
+    if (!str || str.length == 0) return str;
+    if (![str containsString:@"youtube.com"] && ![str containsString:@"youtu.be"]) return str;
+    
+    NSURLComponents *components = [NSURLComponents componentsWithString:str];
+    if (!components) return str;
+    
+    static NSSet *trackingParams = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        trackingParams = [NSSet setWithObjects:
+            @"si", @"feature", @"pp", @"fbclid", @"gclid", @"igshid",
+            @"ref", @"app", @"context", @"source", @"utm_source",
+            @"utm_medium", @"utm_campaign", @"utm_term", @"utm_content", nil
+        ];
+    });
+
+    NSMutableArray<NSURLQueryItem *> *cleanedItems = [NSMutableArray array];
+    for (NSURLQueryItem *item in components.queryItems) {
+        if (![trackingParams containsObject:item.name.lowercaseString]) {
+            [cleanedItems addObject:item];
+        }
+    }
+    components.queryItems = cleanedItems.count > 0 ? cleanedItems : nil;
+    return components.URL.absoluteString ?: str;
+}
+
+static NSURL *YouModCleanURL(NSURL *url) {
+    if (!url) return nil;
+    NSString *cleanedStr = YouModCleanURLString(url.absoluteString);
+    return [NSURL URLWithString:cleanedStr] ?: url;
+}
+
+%hook UIPasteboard
+- (void)setString:(NSString *)string {
+    if (IS_ENABLED(CleanURLs)) {
+        string = YouModCleanURLString(string);
+    }
+    %orig(string);
+}
+- (void)setURL:(NSURL *)url {
+    if (IS_ENABLED(CleanURLs)) {
+        url = YouModCleanURL(url);
+    }
+    %orig(url);
+}
+%end
+
+%hook UIActivityViewController
+- (instancetype)initWithActivityItems:(NSArray *)activityItems applicationActivities:(NSArray *)applicationActivities {
+    if (IS_ENABLED(CleanURLs)) {
+        NSMutableArray *cleaned = [NSMutableArray arrayWithCapacity:activityItems.count];
+        for (id item in activityItems) {
+            if ([item isKindOfClass:[NSString class]]) {
+                [cleaned addObject:YouModCleanURLString(item)];
+            } else if ([item isKindOfClass:[NSURL class]]) {
+                [cleaned addObject:YouModCleanURL(item)];
+            } else {
+                [cleaned addObject:item];
+            }
+        }
+        activityItems = cleaned;
+    }
+    return %orig(activityItems, applicationActivities);
+}
+%end
+
+#pragma mark - Comment replies mutation operations as item sections
+
+static YTIItemSectionRenderer *itemSectionRendererWithElements(NSArray *elements) {
+    if (elements.count == 0) return nil;
+    Class itemSecClass = %c(YTIItemSectionRenderer);
+    if (!itemSecClass) return nil;
+    YTIItemSectionRenderer *itemSectionRenderer = [[itemSecClass alloc] init];
+    NSMutableArray *contentsArray = itemSectionRenderer.contentsArray;
+    Class supportedClass = %c(YTIItemSectionSupportedRenderers);
+    for (id element in elements) {
+        if ([element isKindOfClass:supportedClass]) {
+            [contentsArray addObject:element];
+            continue;
+        }
+        if (supportedClass) {
+            YTIItemSectionSupportedRenderers *supported = [[supportedClass alloc] init];
+            supported.elementRenderer = element;
+            [contentsArray addObject:supported];
+        }
+    }
+    return contentsArray.count ? itemSectionRenderer : nil;
+}
+
+static void harvestSectionContent(id object, NSMutableArray *itemSectionRenderers, NSMutableArray *elements, NSHashTable *seen, NSInteger depth) {
+    if (!object || depth > 8) return;
+    if ([seen containsObject:object]) return;
+    if ([object isKindOfClass:[NSArray class]]) {
+        for (id item in object) harvestSectionContent(item, itemSectionRenderers, elements, seen, depth + 1);
+        return;
+    }
+    if (![object isKindOfClass:%c(GPBMessage)]) return;
+    [seen addObject:object];
+
+    if ([object isKindOfClass:%c(YTIItemSectionRenderer)]) {
+        [itemSectionRenderers addObject:object];
+        return;
+    }
+    if ([object isKindOfClass:%c(YTIElementRenderer)]) {
+        [elements addObject:object];
+        return;
+    }
+    if ([object isKindOfClass:%c(YTIItemSectionSupportedRenderers)]) {
+        YTIElementRenderer *elementRenderer = ((YTIItemSectionSupportedRenderers *)object).elementRenderer;
+        if (elementRenderer) [elements addObject:elementRenderer];
+        return;
+    }
+    if ([object isKindOfClass:%c(YTISectionListRenderer)]) {
+        harvestSectionContent(((YTISectionListRenderer *)object).contentsArray, itemSectionRenderers, elements, seen, depth + 1);
+        return;
+    }
+    if ([object isKindOfClass:%c(YTISectionListMutationOperations)]) {
+        harvestSectionContent(((YTISectionListMutationOperations *)object).operationsArray, itemSectionRenderers, elements, seen, depth + 1);
+        return;
+    }
+    if ([object isKindOfClass:%c(YTIInsertItemSectionContentOperation)]) {
+        harvestSectionContent(((YTIInsertItemSectionContentOperation *)object).contentsArray, itemSectionRenderers, elements, seen, depth + 1);
+        return;
+    }
+    @try {
+        harvestSectionContent(((GPBMessage *)object).firstSubmessage, itemSectionRenderers, elements, seen, depth + 1);
+    } @catch (id ex) {}
+}
+
+static NSArray *itemSectionRenderersFromObject(id object) {
+    NSMutableArray *itemSectionRenderers = [NSMutableArray array];
+    NSMutableArray *elements = [NSMutableArray array];
+    NSHashTable *seen = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+    harvestSectionContent(object, itemSectionRenderers, elements, seen, 0);
+    YTIItemSectionRenderer *wrapped = itemSectionRendererWithElements(elements);
+    if (wrapped) [itemSectionRenderers insertObject:wrapped atIndex:0];
+    return itemSectionRenderers.count ? itemSectionRenderers : nil;
+}
+
+static NSArray *normalizedSectionRenderers(NSArray *sectionRenderers) {
+    if (sectionRenderers.count == 0) return sectionRenderers;
+
+    NSMutableArray *normalized = [NSMutableArray arrayWithCapacity:sectionRenderers.count];
+    BOOL changed = NO;
+    for (id renderer in sectionRenderers) {
+        if ([renderer isKindOfClass:%c(YTIItemSectionRenderer)]) {
+            [normalized addObject:renderer];
+            continue;
+        }
+        BOOL shouldConvert = [renderer isKindOfClass:%c(YTISectionListMutationOperations)]
+            || [renderer isKindOfClass:%c(YTIElementRenderer)]
+            || [renderer isKindOfClass:%c(YTISectionListSupportedRenderers)];
+        NSArray *converted = shouldConvert ? itemSectionRenderersFromObject(renderer) : nil;
+        if (converted.count) {
+            [normalized addObjectsFromArray:converted];
+            changed = YES;
+        } else {
+            [normalized addObject:renderer];
+        }
+    }
+    return changed ? normalized : sectionRenderers;
+}
+
+%hook YTISectionListRenderer
+- (NSArray *)sectionRenderers {
+    NSArray *sectionRenderers = %orig;
+    return normalizedSectionRenderers(sectionRenderers);
+}
+%end
+
+%hook YTICommentsResponse
+- (NSArray *)sectionRenderers {
+    NSArray *sectionRenderers = %orig;
+    return normalizedSectionRenderers(sectionRenderers);
+}
+%end
+
+%ctor {
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
+        CleanURLs: @YES,
+        EnablePlayNextInQueue: @YES
+    }];
+}

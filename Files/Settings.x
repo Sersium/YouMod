@@ -260,6 +260,8 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     // Feed
     NSArray<YMSettingsItem *> *feedItems = @[
             YMToggle(YMLOC(@"REMOVE_ADS"), YMLOC(@"REMOVE_ADS_DESC"), RemoveAds),
+            YMToggle(YMLOC(@"HIDE_MIX_PLAYLISTS"), YMLOC(@"HIDE_MIX_PLAYLISTS_DESC"), HideMixPlaylists),
+            YMToggle(YMLOC(@"HIDE_AI_SUMMARIES"), YMLOC(@"HIDE_AI_SUMMARIES_DESC"), HideAISummaries),
             YMToggle(YMLOC(@"HIDE_SUBBAR"), YMLOC(@"HIDE_SUBBAR_DESC"), HideSubbar),
             YMToggle(YMLOC(@"HIDE_HORI_SHELF"), YMLOC(@"HIDE_HORI_SHELF_DESC"), HideHoriShelf),
             YMToggle(YMLOC(@"HIDE_MUSIC_PLAYLISTS"), YMLOC(@"HIDE_MUSIC_PLAYLISTS_DESC"), HideGenMusicShelf),
@@ -380,6 +382,7 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     // Shorts
     NSArray<YMSettingsItem *> *shortsItems = @[
             YMTextSegment(YMLOC(@"SHORTS_ACTION"), ShortsActionIndex, (@[YMLOC(@"LOOP"), YMLOC(@"SKIP_TO_NEXT_SHORTS"), YMLOC(@"PAUSE_SHORTS")]), 0),
+            YMPicker(YMLOC(@"SHORTS_AUTO_SPEED"), YMLOC(@"SHORTS_AUTO_SPEED_DESC"), ShortsAutoSpeedIndex, (@[YMLOC(@"DEFAULT"), @"0.01x", @"0.25x", @"0.5x", @"0.75x", @"1.0x", @"1.25x", @"1.5x", @"1.75x", @"2.0x", @"3.0x", @"4.0x", @"5.0x"]), 0),
             YMToggle(YMLOC(@"ENABLES_SHORTS_QUALITY"), YMLOC(@"ENABLES_SHORTS_QUALITY_DESC"), EnablesShortsQuality),
             YMToggle(YMLOC(@"SHOW_SHORTS_SEEKBAR"), YMLOC(@"SHOW_SHORTS_SEEKBAR_DESC"), ShowShortsSeekbar),
             YMToggle(YMLOC(@"SHORTS_ONLY"), YMLOC(@"SHORTS_ONLY_DESC"), ShortsOnly),
@@ -393,6 +396,8 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"HIDE_SHORTS_RECBAR"), YMLOC(@"HIDE_SHORTS_RECBAR_DESC"), HideShortsRecbar),
             YMToggle(YMLOC(@"HIDE_SHORTS_DISCLOSURE"), YMLOC(@"HIDE_SHORTS_DISCLOSURE_DESC"), RemoveShortsDisclosure),
             YMToggle(YMLOC(@"REMOVE_SHORTS_LIKE_BUTTON"), YMLOC(@"REMOVE_SHORTS_LIKE_BUTTON_DESC"), RemoveShortsLikeButton),
+            YMToggle(YMLOC(@"REMOVE_SHORTS_DISLIKE_BUTTON"), YMLOC(@"REMOVE_SHORTS_DISLIKE_BUTTON_DESC"), RemoveShortsDislikeButton),
+            YMToggle(YMLOC(@"REMOVE_SHORTS_SAVE_BUTTON"), YMLOC(@"REMOVE_SHORTS_SAVE_BUTTON_DESC"), RemoveShortsSaveButton),
             YMToggle(YMLOC(@"REMOVE_SHORTS_COMMENT_BUTTON"), YMLOC(@"REMOVE_SHORTS_COMMENT_BUTTON_DESC"), RemoveShortsCommentButton),
             YMToggle(YMLOC(@"REMOVE_SHORTS_SHARE_BUTTON"), YMLOC(@"REMOVE_SHORTS_SHARE_BUTTON_DESC"), RemoveShortsShareButton),
             YMToggle(YMLOC(@"REMOVE_SHORTS_REMIX_BUTTON"), YMLOC(@"REMOVE_SHORTS_REMIX_BUTTON_DESC"), RemoveShortsRemixButton),
@@ -512,6 +517,8 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"REMOVE_HELP_OPTION"), YMLOC(@"REMOVE_HELP_OPTION_DESC"), RemoveHelpOption),
             YMToggle(YMLOC(@"REMOVE_NOTIFY_OPTION"), YMLOC(@"REMOVE_NOTIFY_OPTION_DESC"), RemoveNotifyOption),
             YMToggle(YMLOC(@"REMOVE_CLEARSCREEN_OPTION"), YMLOC(@"REMOVE_CLEARSCREEN_OPTION_DESC"), RemoveClearScreenOption),
+            YMToggle(YMLOC(@"CLEAN_URLS"), YMLOC(@"CLEAN_URLS_DESC"), CleanURLs),
+            YMToggle(YMLOC(@"ENABLE_PLAY_NEXT_IN_QUEUE"), YMLOC(@"ENABLE_PLAY_NEXT_IN_QUEUE_DESC"), EnablePlayNextInQueue),
     ];
     YMRegisterSettingsGroup(YMLOC(@"MISCELLANEOUS"), miscItems);
     YTSettingsSectionItem *othergroup = [YTSettingsSectionItemClass itemWithTitle:YMLOC(@"MISCELLANEOUS") accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
@@ -532,6 +539,23 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     iconSB.iconType = 610;
     sponsorblockgroup.settingIcon = iconSB;
     [sectionItems addObject:sponsorblockgroup];
+
+    // Section: DeArrow
+    NSArray<YMSettingsItem *> *dearrowItems = @[
+        YMToggle(YMLOC(@"DEARROW_ENABLED"), YMLOC(@"DEARROW_ENABLED_DESC"), DeArrowEnabled),
+        YMToggle(YMLOC(@"DEARROW_REPLACE_TITLES"), YMLOC(@"DEARROW_REPLACE_TITLES_DESC"), DeArrowReplaceTitles),
+        YMToggle(YMLOC(@"DEARROW_REPLACE_THUMBNAILS"), YMLOC(@"DEARROW_REPLACE_THUMBNAILS_DESC"), DeArrowReplaceThumbnails),
+        YMToggle(YMLOC(@"DEARROW_FALLBACK_ORIGINAL"), YMLOC(@"DEARROW_FALLBACK_ORIGINAL_DESC"), DeArrowFallbackToOriginal),
+    ];
+    YMRegisterSettingsGroup(@"DeArrow", dearrowItems);
+    YTSettingsSectionItem *dearrowgroup = [YTSettingsSectionItemClass itemWithTitle:@"DeArrow" accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
+        YMPushSubSettings(@"DeArrow", dearrowItems, settingsViewController, [self parentResponder]);
+        return YES;
+    }];
+    YTIIcon *iconDA = [%c(YTIIcon) new];
+    iconDA.iconType = 67;
+    dearrowgroup.settingIcon = iconDA;
+    [sectionItems addObject:dearrowgroup];
 
     // Section 9
     // Perferences
@@ -652,7 +676,18 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         SBButtonKey: @YES,
         DisableHints: @YES,
         RewindSeconds: @10.0,
-        ForwardSeconds: @10.0
+        ForwardSeconds: @10.0,
+        CleanURLs: @YES,
+        EnablePlayNextInQueue: @YES,
+        DeArrowEnabled: @YES,
+        DeArrowReplaceTitles: @YES,
+        DeArrowReplaceThumbnails: @YES,
+        DeArrowFallbackToOriginal: @YES,
+        HideMixPlaylists: @NO,
+        HideAISummaries: @NO,
+        RemoveShortsDislikeButton: @NO,
+        RemoveShortsSaveButton: @NO,
+        ShortsAutoSpeedIndex: @0
     }];
     %init;
 }

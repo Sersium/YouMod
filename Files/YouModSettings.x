@@ -1832,9 +1832,10 @@ static NSString * const kYMOverlayButtonIDs[] = {
     @"quality.video",
     @"share.video",
     @"loop.video",
-    @"caption.video"
+    @"caption.video",
+    @"reload.video"
 };
-static const NSInteger kYMOverlayButtonCount = 8;
+static const NSInteger kYMOverlayButtonCount = 9;
 
 @interface YMOverlayButtonOrderViewController : UIViewController <UITableViewDelegate, UITableViewDataSource>
 - (UITableView *)tableView;
@@ -1869,6 +1870,7 @@ static const void *kYMOverlaySavedScrollEdgeAppearanceKey = &kYMOverlaySavedScro
     if ([buttonID isEqualToString:@"share.video"]) return LOC(@"SHARE_BUTTON");
     if ([buttonID isEqualToString:@"loop.video"]) return LOC(@"LOOP_BUTTON");
     if ([buttonID isEqualToString:@"caption.video"]) return LOC(@"CAPTION_BUTTON");
+    if ([buttonID isEqualToString:@"reload.video"]) return LOC(@"RELOAD_BUTTON");
     return buttonID;
 }
 
@@ -1894,6 +1896,7 @@ static const void *kYMOverlaySavedScrollEdgeAppearanceKey = &kYMOverlaySavedScro
     else if ([buttonID isEqualToString:@"share.video"]) symbol = @"arrowshape.turn.up.right";
     else if ([buttonID isEqualToString:@"loop.video"]) symbol = @"repeat";
     else if ([buttonID isEqualToString:@"caption.video"]) symbol = @"captions.bubble";
+    else if ([buttonID isEqualToString:@"reload.video"]) symbol = @"arrow.clockwise";
 
     UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightMedium];
     return [[UIImage systemImageNamed:symbol withConfiguration:config] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];

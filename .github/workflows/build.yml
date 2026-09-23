@@ -1,17 +1,17 @@
 name: Build YouMod
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "pre-release", "fix-all-issues" ]
   workflow_dispatch:
     inputs:
       repo:
         description: 'Repository to build from'
         required: true
-        default: 'Tonwalter888/YouMod'
+        default: 'Sersium/YouMod'
       branch:
         description: 'Branch to build from'
         required: true
-        default: 'main'
+        default: 'fix-all-issues'
    
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,8 +28,8 @@ jobs:
       - name: Checkout YouMod
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.branch }}
-          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.branch || github.ref_name }}
+          repository: ${{ inputs.repo || github.repository }}
           path: YouMod
 
       - name: Install dependencies

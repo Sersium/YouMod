@@ -230,6 +230,8 @@
 #define ShortsActionIndex @"YouModMakeAShortsAction"
 #define ShortsOnly @"YouModShortsOnly"
 #define RemoveShortsLikeButton @"YouModRemoveShortsLikeButton"
+#define RemoveShortsDislikeButton @"YouModRemoveShortsDislikeButton"
+#define RemoveShortsSaveButton @"YouModRemoveShortsSaveButton"
 #define RemoveShortsCommentButton @"YouModRemoveShortsCommentButton"
 #define RemoveShortsShareButton @"YouModRemoveShortsShareButton"
 #define RemoveShortsRemixButton @"YouModRemoveShortsRemixButton"
@@ -238,6 +240,17 @@
 #define RemoveShortsPausedLiveButton @"YouModRemoveShortsPausedLiveButton"
 #define RemoveShortsPausedLensButton @"YouModRemoveShortsPausedLensButton"
 #define RemoveShortsPausedTrendsButton @"YouModRemoveShortsPausedTrendsButton"
+#define ShortsAutoSpeedIndex @"YouModShortsAutoSpeedIndex"
+#define CleanURLs @"YouModCleanURLs"
+#define HideMixPlaylists @"YouModHideMixPlaylists"
+#define HideAISummaries @"YouModHideAISummaries"
+#define EnablePlayNextInQueue @"YouModEnablePlayNextInQueue"
+
+// DeArrow
+#define DeArrowEnabled @"YouModDeArrowEnabled"
+#define DeArrowReplaceTitles @"YouModDeArrowReplaceTitles"
+#define DeArrowReplaceThumbnails @"YouModDeArrowReplaceThumbnails"
+#define DeArrowFallbackToOriginal @"YouModDeArrowFallbackToOriginal"
 #define RemoveShortsDisclosure @"YouModRemoveShortsDisclosure"
 // Tab bar
 #define DefaultTab @"YouModDefaultStartupTab"
@@ -654,6 +667,7 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 @end
 
 @interface YTIPlayerResponse (YouMod)
+- (YTIVideoDetails *)videoDetails;
 - (YTIStreamingData *)streamingData;
 - (YTICaptionsSupportedRenderers *)captions;
 @end
@@ -673,15 +687,34 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 @end
 
 @interface YTIFormattedString (YouMod)
++ (instancetype)formattedStringWithString:(NSString *)string;
 - (NSString *)dropdownOptionTitle;
 @end
 
 @interface YTIVideoDetails (YouMod)
+- (NSString *)videoId;
 - (NSString *)title;
 - (NSString *)author;
 - (NSString *)channelId;
 - (NSString *)shortDescription;
 - (YTIThumbnailDetails *)thumbnail;
+@end
+
+@class YTICompactVideoRenderer, YTIPlaylistVideoRenderer, YTIPlaylistPanelVideoRenderer;
+
+@interface YTICompactVideoRenderer (YouMod)
+- (NSString *)videoId;
+- (YTIFormattedString *)title;
+@end
+
+@interface YTIPlaylistVideoRenderer (YouMod)
+- (NSString *)videoId;
+- (YTIFormattedString *)title;
+@end
+
+@interface YTIPlaylistPanelVideoRenderer (YouMod)
+- (NSString *)videoId;
+- (YTIFormattedString *)title;
 @end
 
 @interface YTDataUtils : NSObject
@@ -900,7 +933,15 @@ extern void YouModConfigureSharePopover(UIActivityViewController *activityVC, UI
 extern void YouModApplyPrevNextReplacement(YTMainAppControlsOverlayView *overlay);
 extern void YouModConfigureRemoteSkipCommands();
 
-#define LOC(x) [YouModBundle() localizedStringForKey:x value:nil table:nil]
+static inline NSString *YouModLocalizedString(NSString *key) {
+    if (!key) return @"";
+    NSBundle *bundle = YouModBundle();
+    if (!bundle) return key;
+    NSString *val = [bundle localizedStringForKey:key value:key table:nil];
+    return (val && val.length > 0) ? val : key;
+}
+
+#define LOC(x) YouModLocalizedString(x)
 
 @interface YMDownloadProgressView : UIView
 @property (nonatomic, strong) UILabel *titleLabel;

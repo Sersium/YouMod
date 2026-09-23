@@ -29,8 +29,18 @@
 
 static void YouModMakeAShortsAction(YTReelPlayerViewController *self, YTSingleVideoController *video, YTSingleVideoTime *time) {
     if (INTFORVAL(ShortsActionIndex) == 0) return;
+    if (!video || video.totalMediaTime <= 0) return;
 
-    if (floor(time.time) >= floor(video.totalMediaTime)) {
+    static void *lastVideoPtr = NULL;
+    static BOOL hasTriggeredForCurrentVideo = NO;
+
+    if (lastVideoPtr != (__bridge void *)video || time.time < 0.5) {
+        lastVideoPtr = (__bridge void *)video;
+        hasTriggeredForCurrentVideo = NO;
+    }
+
+    if (!hasTriggeredForCurrentVideo && (time.time >= (video.totalMediaTime - 0.4) || (time.time >= video.totalMediaTime))) {
+        hasTriggeredForCurrentVideo = YES;
         if (INTFORVAL(ShortsActionIndex) == 1) {
             [self reelContentViewRequestsAdvanceToNextVideo:nil];
         } else if (INTFORVAL(ShortsActionIndex) == 2) {
@@ -46,6 +56,9 @@ static void YouModRemoveShortsOverlayButton(_ASDisplayView *dpView) {
     NSDictionary *buttonsList = @{
         @"id.reel_like_button": @(IS_ENABLED(RemoveShortsLikeButton)),
         @"id.reel_like_toggled_button": @(IS_ENABLED(RemoveShortsLikeButton)),
+        @"id.reel_dislike_button": @(IS_ENABLED(RemoveShortsDislikeButton)),
+        @"id.reel_dislike_toggled_button": @(IS_ENABLED(RemoveShortsDislikeButton)),
+        @"id.reel_save_button": @(IS_ENABLED(RemoveShortsSaveButton)),
         @"id.reel_comment_button": @(IS_ENABLED(RemoveShortsCommentButton)),
         @"id.reel_share_button": @(IS_ENABLED(RemoveShortsShareButton)),
         @"id.reel_remix_button" : @(IS_ENABLED(RemoveShortsRemixButton)),
@@ -80,7 +93,11 @@ static void YouModRemoveShortsOverlayButton(_ASDisplayView *dpView) {
     if ((isShortsOnlyOn && IS_ENABLED(ShortsOnly)) || (isFullscreenEnabled && IS_ENABLED(FullScreenShorts))) [[self valueForKey:@"_pivotBarProvider"] performSelector:@selector(hidePivotBar)];
     YTPlayerViewController *main = self.player;
     if (INTFORVAL(CaptionTrack) != 0) [main performSelector:@selector(YouModAutoCaptions) withObject:nil afterDelay:0.5];
-    if (INTFORVAL(AutoSpeedIndex) != 0) [main performSelector:@selector(YouModSetAutoSpeed) withObject:nil afterDelay:0.5];
+    if (INTFORVAL(ShortsAutoSpeedIndex) != 0) {
+        [main performSelector:@selector(YouModSetShortsAutoSpeed) withObject:nil afterDelay:0.5];
+    } else if (INTFORVAL(AutoSpeedIndex) != 0) {
+        [main performSelector:@selector(YouModSetAutoSpeed) withObject:nil afterDelay:0.5];
+    }
     if (INTFORVAL(AudioTrack) != 0) [self performSelector:@selector(YouModAutoAudioTrack:) withObject:main afterDelay:0.5];
 }
 %new
@@ -236,7 +253,7 @@ void YouModFilterShortsDisplayView(_ASDisplayView *view, NSString *iden) {
 // Filtering Shorts overlay buttons
 - (void)layoutActionBar {
     %orig;
-    if (!IS_ENABLED(RemoveShortsLikeButton) && !IS_ENABLED(RemoveShortsLikeButton) && !IS_ENABLED(RemoveShortsCommentButton) && !IS_ENABLED(RemoveShortsShareButton) && !IS_ENABLED(RemoveShortsRemixButton) && !IS_ENABLED(RemoveShortsSoundMetadataButton)) return;
+    if (!IS_ENABLED(RemoveShortsLikeButton) && !IS_ENABLED(RemoveShortsDislikeButton) && !IS_ENABLED(RemoveShortsSaveButton) && !IS_ENABLED(RemoveShortsCommentButton) && !IS_ENABLED(RemoveShortsShareButton) && !IS_ENABLED(RemoveShortsRemixButton) && !IS_ENABLED(RemoveShortsSoundMetadataButton)) return;
     YTReelElementAsyncComponentView *view = nil;
     @try {
         view = [self valueForKey:@"_playerOverlayView"];

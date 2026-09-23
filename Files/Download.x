@@ -2212,7 +2212,8 @@ void YouModHandleDownloadButtonAction(_ASDisplayView *view) {
 %new
 - (void)didTapYouModShortsDownload:(YTQTMButton *)button {
     YTShortsPlayerViewController *shortsPlayerView = (YTShortsPlayerViewController *)self._viewControllerForAncestor;
-    YTPlayerViewController *player = (YTPlayerViewController *)shortsPlayerView.childViewControllers[0];
+    if (shortsPlayerView.childViewControllers.count == 0) return;
+    YTPlayerViewController *player = (YTPlayerViewController *)shortsPlayerView.childViewControllers.firstObject;
     UIViewController *presenter = button._viewControllerForAncestor;
     parentResponder = [presenter valueForKey:@"_parentResponder"];
     YouModShowDownloadManager(player, presenter, button, YES);

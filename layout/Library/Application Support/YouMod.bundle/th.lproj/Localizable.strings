@@ -615,3 +615,30 @@
 "SB_ID_CANCEL" = "ยกเลิก";
 "AUDIO" = "เสียง";
 
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "Hide Mix playlists";
+"HIDE_MIX_PLAYLISTS_DESC" = "Removes YouTube Mix and My Mix playlists from feeds.";
+"HIDE_AI_SUMMARIES" = "Hide AI summaries";
+"HIDE_AI_SUMMARIES_DESC" = "Hides AI-generated video summaries and key moments in search and feeds.";
+"SHORTS_AUTO_SPEED" = "Shorts playback speed";
+"SHORTS_AUTO_SPEED_DESC" = "Automatically applies the selected playback speed for YouTube Shorts independently of regular videos.";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "Remove Dislike button";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "Removes the Dislike button from the Shorts action bar.";
+"REMOVE_SHORTS_SAVE_BUTTON" = "Remove Save button";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "Removes the Save/Bookmark button from the Shorts action bar.";
+"CLEAN_URLS" = "Clean copied links";
+"CLEAN_URLS_DESC" = "Strips tracking parameters (si, feature, pp, utm_*, etc.) from shared and copied YouTube URLs.";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "Enable 'Play next in queue'";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "Enables 'Play next in queue' and 'Add to queue' without requiring YouTube Premium.";
+"RELOAD_BUTTON" = "Reload";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "Enable DeArrow";
+"DEARROW_ENABLED_DESC" = "Replaces sensationalized, clickbait titles and thumbnails with community-created accurate titles and snapshots from the DeArrow API.";
+"DEARROW_REPLACE_TITLES" = "Replace titles";
+"DEARROW_REPLACE_TITLES_DESC" = "Replaces video titles with crowd-sourced descriptive titles.";
+"DEARROW_REPLACE_THUMBNAILS" = "Replace thumbnails";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
+"DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";
+

@@ -27,47 +27,60 @@ void YouModApplyOLEDToDisplayView(_ASDisplayView *view, NSString *iden) {
     if (!IS_ENABLED(OLEDTheme)) return;
     UIViewController *controller = view._viewControllerForAncestor;
     if ([controller isKindOfClass:%c(YTRelatedVideosCollectionViewController)]) return;
-    NSSet *blackViews = [NSSet setWithObjects:
-        @"id.elements.components.comment_composer",
-        @"id.subs.subscriptions_channel_bar",
-        @"eml.cvr",
-        @"eml.vwc",
-        @"intro_dialog",
-        @"PAmedia_hub_device_picker.engagement_panel_header", nil
-    ];  
-    if ([blackViews containsObject:iden]) {
+    
+    static NSSet *blackViews = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        blackViews = [NSSet setWithObjects:
+            @"id.elements.components.comment_composer",
+            @"id.subs.subscriptions_channel_bar",
+            @"eml.cvr",
+            @"eml.vwc",
+            @"intro_dialog",
+            @"PAmedia_hub_device_picker.engagement_panel_header", nil
+        ];
+    });
+
+    if (iden.length > 0 && [blackViews containsObject:iden]) {
         view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull traitCollection) {
             return isDarkMode(view) ? [UIColor blackColor] : [UIColor clearColor];
         }];
-    } else if ([iden isEqualToString:@"id.elements.components.filter_chip_bar"]) {
+        return;
+    } else if (iden.length > 0 && [iden isEqualToString:@"id.elements.components.filter_chip_bar"]) {
         UIColor *dynamicColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull traitCollection) {
             return isDarkMode(view) ? [UIColor blackColor] : [UIColor clearColor];
         }];
         view.backgroundColor = dynamicColor;
         view.superview.backgroundColor = dynamicColor;
+        return;
     } else if ([controller isKindOfClass:%c(YTActionSheetDialogViewController)] || [controller isKindOfClass:%c(YTBottomSheetController)]) {
         if ([view.superview.accessibilityIdentifier isEqualToString:@"eml.animated_subscribe_button"]) return;
         view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull traitCollection) {
             return isDarkMode(view) ? [UIColor blackColor] : [UIColor clearColor];
         }];
-    } else if ([iden isEqualToString:@"eml.live_chat_text_message"] && [controller isKindOfClass:%c(YCHAsyncLiveChatCollectionViewController)]) {
+        return;
+    } else if (iden.length > 0 && [iden isEqualToString:@"eml.live_chat_text_message"] && [controller isKindOfClass:%c(YCHAsyncLiveChatCollectionViewController)]) {
         YCHAsyncLiveChatCollectionViewController *con = (YCHAsyncLiveChatCollectionViewController *)controller;
         if ([con.view isKindOfClass:%c(YCHAsyncLiveChatImmersiveCollectionView)]) return;
         view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull traitCollection) {
             return isDarkMode(view) ? [UIColor blackColor] : [UIColor whiteColor];
         }];
-    }
-    ASDisplayNode *node = view.keepalive_node;
-    NSString *desc = nil;
-    @try {
-        desc = [[[[node performSelector:@selector(nodeController)] performSelector:@selector(parent)] performSelector:@selector(owningComponent)] description];
-    } @catch (id ex) {
         return;
     }
-    if ([desc containsString:@"live_chat_buy_flow_panel_header.eml"] || [desc containsString:@"missing_content_view.eml"]) {
-        view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull traitCollection) {
-            return isDarkMode(view) ? [UIColor blackColor] : [UIColor clearColor];
-        }];
+
+    if ([controller isKindOfClass:%c(YCHAsyncLiveChatCollectionViewController)]) {
+        ASDisplayNode *node = view.keepalive_node;
+        NSString *desc = nil;
+        @try {
+            desc = [[[[node performSelector:@selector(nodeController)] performSelector:@selector(parent)] performSelector:@selector(owningComponent)] description];
+        } @catch (id ex) {
+            return;
+        }
+        if ([desc containsString:@"live_chat_buy_flow_panel_header.eml"] || [desc containsString:@"missing_content_view.eml"]) {
+            view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull traitCollection) {
+                return isDarkMode(view) ? [UIColor blackColor] : [UIColor clearColor];
+            }];
+        }
     }
 }
 

@@ -89,6 +89,8 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
     const BOOL hideGenMusic = IS_ENABLED(HideGenMusicShelf);
     const BOOL hideSurveys = IS_ENABLED(HideSurveys);
     const BOOL hideComments = IS_ENABLED(HideCommentsSection);
+    const BOOL hideMixPlaylists = IS_ENABLED(HideMixPlaylists);
+    const BOOL hideAISummaries = IS_ENABLED(HideAISummaries);
 
     NSMutableArray <YTIItemSectionRenderer *> *newArray = [array mutableCopy];
     NSIndexSet *removeIndexes = [newArray indexesOfObjectsPassingTest:^BOOL(YTIItemSectionRenderer *sectionRenderer, NSUInteger idx, BOOL *stop) {
@@ -183,6 +185,12 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
             if (hideComments && [description containsString:@"comment-item-section"] && [description containsString:@"comments-entry-point"]) {
                 return YES;
             }
+            if (hideMixPlaylists && ([description containsString:@"radio_renderer.eml"] || [description containsString:@"compact_radio_renderer.eml"] || [description containsString:@"\"playlistId\":\"RD"])) {
+                return YES;
+            }
+            if (hideAISummaries && ([description containsString:@"ai_summary"] || [description containsString:@"expandable_metadata.vpp"] || [description containsString:@"ai_key_moments"])) {
+                return YES;
+            }
             
             NSMutableArray <YTIItemSectionSupportedRenderers *> *contentsArray = sectionRenderer.contentsArray;
             if (contentsArray.count > 1) {
@@ -238,17 +246,11 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
 %end
 
 %hook YTAdsInnerTubeContextDecorator
-- (void)decorateContext:(id)context { 
-    context = nil;
-    %orig(context);
-}
+- (void)decorateContext:(id)context {}
 %end
 
 %hook YTAccountScopedAdsInnerTubeContextDecorator
-- (void)decorateContext:(id)context { 
-    context = nil;
-    %orig(context);
-}
+- (void)decorateContext:(id)context {}
 %end
 
 %hook YTLocalPlaybackController
@@ -401,7 +403,7 @@ void YouModRemoveDrawerAds(YTELMViewController *self) {
     if (coll == nil) return;
     _ASCollectionViewCell *premiumCell = nil;
     for (_ASCollectionViewCell *vc in coll.subviews) {
-        if ([vc isKindOfClass:%c(_ASCollectionViewCell)]) {
+        if ([vc isKindOfClass:%c(_ASCollectionViewCell)] && vc.subviews.count > 0) {
             UIView *svtemp = vc.subviews[0];
             while (svtemp != nil && svtemp.subviews.count == 1) {
                 svtemp = svtemp.subviews[0];
@@ -464,12 +466,14 @@ void YouModRemoveDrawerAds(YTELMViewController *self) {
 - (NSArray <YTSettingsSectionItem *> *)items {
     NSArray <YTSettingsSectionItem *> *orig = %orig;
     if (orig && orig.count > 0) {
+        NSMutableArray <YTSettingsSectionItem *> *mutableItems = [orig mutableCopy];
         for (YTSettingsSectionItem *item in orig) {
             if ([item.categoryId integerValue] == 31) {
-                [orig removeObject:item];
+                [mutableItems removeObject:item];
                 break;
             }
         }
+        return [mutableItems copy];
     }
     return orig;
 }

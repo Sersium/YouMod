@@ -111,7 +111,9 @@ BOOL YMIsOverlayButtonEnabled(NSString *identifier) {
         if (!IS_ENABLED(DownloadManager)) return NO;
         return INTFORVAL(DownloadButtonPosition) != DownloadButtonPositionUnderPlayer;
     }
-    if ([identifier isEqualToString:@"sponsorblock.toggle"]) return IS_ENABLED(SBEnabled) && IS_ENABLED(SBShowButton);
+    if ([identifier isEqualToString:@"sponsorblock.toggle"]) {
+        if (!IS_ENABLED(SBEnabled) || !IS_ENABLED(SBShowButton)) return NO;
+    }
     NSArray *savedOrder = [[NSUserDefaults standardUserDefaults] arrayForKey:OverlayButtonOrder];
     if (savedOrder.count > 0) {
         for (NSDictionary *entry in savedOrder) {
@@ -128,6 +130,7 @@ BOOL YMIsOverlayButtonEnabled(NSString *identifier) {
     if ([identifier isEqualToString:@"share.video"]) return IS_ENABLED(ShareButton);
     if ([identifier isEqualToString:@"loop.video"]) return IS_ENABLED(LoopButton);
     if ([identifier isEqualToString:@"caption.video"]) return IS_ENABLED(CaptionButton);
+    if ([identifier isEqualToString:@"reload.video"]) return YES;
     if ([identifier isEqualToString:@"download.video"]) return IS_ENABLED(DownloadManager) && INTFORVAL(DownloadButtonPosition) != DownloadButtonPositionUnderPlayer;
     return YES;
 }
@@ -396,6 +399,7 @@ static BOOL isRelatedVideosExpanded = NO;
     [self updateSpeedButton:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateSpeedButton:) name:YouModUpdateSpeedLabel object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateQualityButton:) name:YouModUpdateNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(setNeedsLayout) name:@"YouModUpdateOverlayButtons" object:nil];
     return self;
 }
 
@@ -404,12 +408,14 @@ static BOOL isRelatedVideosExpanded = NO;
     [self updateSpeedButton:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateSpeedButton:) name:YouModUpdateSpeedLabel object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateQualityButton:) name:YouModUpdateNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(setNeedsLayout) name:@"YouModUpdateOverlayButtons" object:nil];
     return self;
 }
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self name:YouModUpdateSpeedLabel object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:YouModUpdateNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModUpdateOverlayButtons" object:nil];
     %orig;
 }
 
@@ -467,6 +473,7 @@ static BOOL isRelatedVideosExpanded = NO;
     if (self && [self._viewControllerForAncestor isKindOfClass:%c(YTMainAppVideoPlayerOverlayViewController)]) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(ymUpdateBarButtonLabels:) name:YouModUpdateSpeedLabel object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(ymUpdateBarButtonLabels:) name:YouModUpdateNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(setNeedsLayout) name:@"YouModUpdateOverlayButtons" object:nil];
         if (IS_ENABLED(SBShowButton)) {
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateTimeLabels) name:@"YouModUpdateTimeLabel" object:nil];
         }
@@ -585,6 +592,7 @@ static BOOL isRelatedVideosExpanded = NO;
     if ([self._viewControllerForAncestor isKindOfClass:%c(YTMainAppVideoPlayerOverlayViewController)]) {
         [[NSNotificationCenter defaultCenter] removeObserver:self name:YouModUpdateSpeedLabel object:nil];
         [[NSNotificationCenter defaultCenter] removeObserver:self name:YouModUpdateNotification object:nil];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModUpdateOverlayButtons" object:nil];
         if (IS_ENABLED(SBShowButton)) {
             [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModUpdateTimeLabel" object:nil];
         }
@@ -796,5 +804,20 @@ static NSString *getCompactQualityLabel(MLFormat *format) {
         showTranscript(cvc);
     };
     YMRegisterOverlayButton(caption);
+    YMOverlayButtonSpec *reload = [[YMOverlayButtonSpec alloc] init];
+    reload.identifier = @"reload.video";
+    reload.symbolName = @"arrow.clockwise";
+    reload.settingsSymbolName = @"arrow.clockwise";
+    reload.displayName = LOC(@"RELOAD_BUTTON");
+    reload.sortOrder = 900;
+    reload.isVisible = ^BOOL(YTPlayerViewController *player) {
+        return YMIsOverlayButtonEnabled(@"reload.video");
+    };
+    reload.onTap = ^(YTPlayerViewController *player, YTQTMButton *button) {
+        if ([player.UIDelegate isKindOfClass:%c(YTWatchController)]) {
+            [(YTWatchController *)player.UIDelegate reload];
+        }
+    };
+    YMRegisterOverlayButton(reload);
     %init;
 }

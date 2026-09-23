@@ -822,8 +822,11 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 // Disable Fullscreen Actions
 %hook YTFullscreenActionsView
 - (CGSize)sizeThatFits:(CGSize)size { 
-    if (IS_ENABLED(HideFullAction)) self.hidden = YES;
-    return IS_ENABLED(HideFullAction) ? CGSizeMake(1, 35) : %orig;
+    if (IS_ENABLED(HideFullAction)) {
+        self.hidden = YES;
+        return CGSizeZero;
+    }
+    return %orig;
 }
 %end
 
@@ -949,15 +952,17 @@ static CGFloat YouModSpeedForHoldIndex(NSInteger index) {
     if (IS_ENABLED(HideCastButtonPlayer) && self.playbackRouteButton != nil) self.playbackRouteButton.hidden = YES;
 }
 - (void)setFullscreenActionsView:(YTFullscreenActionsView *)actionsView {
-    if (IS_ENABLED(HideFullAction) && actionsView == nil) actionsView = [%c(YTFullscreenActionsView) new];
+    if (IS_ENABLED(HideFullAction)) {
+        actionsView.hidden = YES;
+    }
     %orig(actionsView);
 }
 %end
 
-// Hide related videos in fullscreen
+// Hide related videos in fullscreen / Disables engagement panel
 %hook YTFullscreenEngagementOverlayController
 - (void)setEnabled:(BOOL)enabled { 
-    if (IS_ENABLED(HideRelatedVideos)) enabled = NO;
+    if (IS_ENABLED(HideRelatedVideos) || IS_ENABLED(DisablesEngagementPanel)) enabled = NO;
     %orig(enabled);
 }
 %end
@@ -1480,6 +1485,20 @@ static UISlider *YouModVolumeSlider(void) {
     [self setPlaybackRate:[speedLabels[INTFORVAL(AutoSpeedIndex)] floatValue]];
 }
 
+%new
+- (void)YouModSetShortsAutoSpeed {
+    if (INTFORVAL(ShortsAutoSpeedIndex) == 0) return;
+    static NSArray *speedLabels = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        speedLabels = @[@0.01, @0.25, @0.5, @0.75, @1.0, @1.25, @1.5, @1.75, @2.0, @3.0, @4.0, @5.0];
+    });
+    NSInteger idx = INTFORVAL(ShortsAutoSpeedIndex);
+    if (idx < (NSInteger)speedLabels.count) {
+        [self setPlaybackRate:[speedLabels[idx] floatValue]];
+    }
+}
+
 - (void)setMuted:(BOOL)muted { 
     if ([self.activeVideoPlayerOverlay isKindOfClass:%c(YTMainAppVideoPlayerOverlayViewController)]
         && YMIsOverlayButtonEnabled(@"mute.video")) muted = IS_ENABLED(KeepMutedKey);
@@ -1813,6 +1832,7 @@ void YouModFilterNonScrollableVideoButtons(_ASDisplayView *view, NSString *iden)
 }
 
 void YouModRemoveFullscreenActionsButtons(YTELMViewController *controller) {
+    if (!controller.view || controller.view.subviews.count == 0) return;
     _ASDisplayView *view = (_ASDisplayView *)controller.view.subviews[0];
     ASDisplayNode *node = view.keepalive_node;
     NSDictionary *buttonsList = @{
