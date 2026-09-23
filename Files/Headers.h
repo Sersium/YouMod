@@ -253,6 +253,10 @@
 #define DeArrowFallbackToOriginal @"YouModDeArrowFallbackToOriginal"
 #define DeArrowQuickSwap @"YouModDeArrowQuickSwap"
 
+// Feed Previews Defaults
+#define FeedPreviewSoundOn @"YouModFeedPreviewSoundOn"
+#define FeedPreviewCCDisabled @"YouModFeedPreviewCCDisabled"
+
 // Return YouTube Dislike
 #define ReturnYouTubeDislike @"YouModReturnYouTubeDislike"
 #define RYDShowLikes @"YouModRYDShowLikes"
@@ -710,6 +714,21 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 - (YTIThumbnailDetails *)thumbnail;
 @end
 
+@interface YTIVideoRenderer : NSObject
+- (NSString *)videoId;
+- (YTIFormattedString *)title;
+@end
+
+@interface YTIVideoWithContextRenderer : NSObject
+- (NSString *)videoId;
+- (YTIFormattedString *)headline;
+@end
+
+@interface YTIGridVideoRenderer : NSObject
+- (NSString *)videoId;
+- (YTIFormattedString *)title;
+@end
+
 @interface YTICompactVideoRenderer : NSObject
 - (NSString *)videoId;
 - (YTIFormattedString *)title;
@@ -723,6 +742,16 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 @interface YTIPlaylistPanelVideoRenderer : NSObject
 - (NSString *)videoId;
 - (YTIFormattedString *)title;
+@end
+
+@interface ASNetworkImageNode : ASDisplayNode
+@property (nonatomic, strong) NSURL *URL;
+- (void)setURL:(NSURL *)URL;
+- (void)setURL:(NSURL *)URL resetToDefault:(BOOL)reset;
+@end
+
+@interface YTImageView : UIImageView
+- (void)setImageWithURL:(NSURL *)url;
 @end
 
 @interface YTISectionListMutationOperations : NSObject

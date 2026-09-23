@@ -346,6 +346,8 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"STOP_AUTOPLAY_VIDEO"), YMLOC(@"STOP_AUTOPLAY_VIDEO_DESC"), StopAutoplayVideo),
             YMToggle(YMLOC(@"AUTO_FULLSCREEN"), YMLOC(@"AUTO_FULLSCREEN_DESC"), AutoFullScreen),
             YMToggle(YMLOC(@"AUTO_EXIT_FULLSCREEN"), YMLOC(@"AUTO_EXIT_FULLSCREEN_DESC"), AutoExitFullScreen),
+            YMToggle(YMLOC(@"FEED_PREVIEW_SOUND"), YMLOC(@"FEED_PREVIEW_SOUND_DESC"), FeedPreviewSoundOn),
+            YMToggle(YMLOC(@"FEED_PREVIEW_CC_DISABLED"), YMLOC(@"FEED_PREVIEW_CC_DISABLED_DESC"), FeedPreviewCCDisabled),
             YMToggle(YMLOC(@"AUTO_FEED_MUTE"), YMLOC(@"AUTO_FEED_MUTE_DESC"), AutoFeedMute),
             YMHeader(YMLOC(@"GESTURE_HEADER")),
             YMToggle(YMLOC(@"GESTURES"), YMLOC(@"GESTURES_DESC"), GestureControls),
@@ -706,7 +708,12 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         ShortsAutoSpeedIndex: @0,
         ReturnYouTubeDislike: @YES,
         RYDShowLikes: @YES,
-        RYDShowDislikes: @YES
+        RYDShowDislikes: @YES,
+        FeedPreviewSoundOn: @YES,
+        FeedPreviewCCDisabled: @YES,
+        AutoFeedMute: @NO,
+        QualityButton: @YES,
+        OldQualityPicker: @YES
     }];
     %init;
 }

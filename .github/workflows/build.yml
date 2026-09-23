@@ -40,7 +40,6 @@ jobs:
           echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
           echo "THEOS=${{ github.workspace }}/theos" >> $GITHUB_ENV
 
-      # Original from YTweaks
       - name: Get Theos commit
         run: |
           get_commit_hash() {
@@ -59,12 +58,12 @@ jobs:
       - name: Setup Theos
         if: ${{ steps.cache-theos.outputs.cache-hit != 'true' }}
         run: |
-            git clone --quiet --depth=1 --recurse-submodules https://github.com/roothide/theos.git
-            git clone --quiet --depth=1 -n --filter=tree:0 https://github.com/Tonwalter888/iOS-SDKs.git
-            cd iOS-SDKs
-            git sparse-checkout set --no-cone iPhoneOS26.5.sdk
-            git checkout --quiet
-            mv *.sdk "$THEOS/sdks"
+          git clone --quiet --depth=1 --recurse-submodules https://github.com/roothide/theos.git
+          git clone --quiet --depth=1 -n --filter=tree:0 https://github.com/Tonwalter888/iOS-SDKs.git
+          cd iOS-SDKs
+          git sparse-checkout set --no-cone iPhoneOS26.5.sdk
+          git checkout --quiet
+          mv *.sdk "$THEOS/sdks"
             
       - name: Clone headers
         run: |
@@ -75,6 +74,9 @@ jobs:
             git pull --quiet --force
             cd ${{ github.workspace }}
           fi
+
+          rm -rf "$THEOS/include/YTHeaders"
+          cp -r "$THEOS/include/YouTubeHeader" "$THEOS/include/YTHeaders"
           
           if [ ! -d "$THEOS/include/PSHeader" ]; then
             git clone --quiet --depth=1 https://github.com/PoomSmart/PSHeader.git "$THEOS/include/PSHeader"
@@ -86,6 +88,51 @@ jobs:
 
       - name: Fix Theos od broken pipe issue
         run: sed -i '' 's/od -c "$i" | head/od -c "$i" 2>\/dev\/null | head/g' $THEOS/bin/convert_xml_plist.sh || true
+
+      - name: Clone Safe Extra Tweaks
+        run: |
+          cd ${{ github.workspace }}
+          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/BillyCurtis/OpenYouTubeSafariExtension.git
+          cd OpenYouTubeSafariExtension
+          git sparse-checkout set --no-cone OpenYouTubeSafariExtension.appex
+          git checkout --quiet
+          mv *.appex ${{ github.workspace }}
+          cd ${{ github.workspace }}
+
+          git clone --quiet --depth=1 https://github.com/PoomSmart/YouPiP.git
+          git clone --quiet --depth=1 --recurse-submodules https://github.com/PoomSmart/YTUHD.git
+          git clone --quiet --depth=1 https://github.com/PoomSmart/Return-YouTube-Dislikes.git
+          git clone --quiet --depth=1 https://github.com/therealFoxster/DontEatMyContent.git
+
+      - name: Build Safe Extra Tweaks
+        run: |
+          cd ${{ github.workspace }}
+
+          # Build YouPiP
+          cd YouPiP
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/youpip.deb
+          cd ${{ github.workspace }}
+
+          # Build YTUHD
+          cd YTUHD
+          brew install meson ninja
+          make libvpx dav1d
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless SIDELOAD=1
+          mv packages/*.deb ${{ github.workspace }}/ytuhd.deb
+          cd ${{ github.workspace }}
+
+          # Build Return-YouTube-Dislikes
+          cd Return-YouTube-Dislikes
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/ryd.deb
+          cd ${{ github.workspace }}
+
+          # Build DontEatMyContent
+          cd DontEatMyContent
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/demc.deb
+          cd ${{ github.workspace }}
 
       - name: Build YouMod
         run: |
@@ -113,14 +160,19 @@ jobs:
           pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip || true
           sudo wget --quiet --no-verbose "https://github.com/inoahdev/tbd/releases/download/2.2/tbd-mac" -O /usr/local/bin/tbd && sudo chmod +x /usr/local/bin/tbd || true
 
-      - name: Inject YouMod into YouTube IPA
+      - name: Inject Tweaks into YouTube IPA
         run: |
           cd ${{ github.workspace }}
-          DEB_FILE="dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb"
 
+          tweaks="OpenYouTubeSafariExtension.appex"
+          for f in *.deb; do
+            tweaks="$tweaks $f"
+          done
+
+          echo "Injecting: $tweaks"
           # Try cyan injection first
           if command -v cyan &>/dev/null; then
-            cyan -i youtube.ipa -o YouTube_YouMod.ipa -uwef "$DEB_FILE" -n "YouTube" -b "com.google.ios.youtube" || true
+            cyan -i youtube.ipa -o YouTube_YouMod.ipa -uwef $tweaks -n "YouTube" -b "com.google.ios.youtube" || true
           fi
 
           # If cyan did not produce YouTube_YouMod.ipa, use direct fallback injection
@@ -130,18 +182,23 @@ jobs:
             unzip -q youtube.ipa -d ytextracted
             mkdir -p ytextracted/Payload/YouTube.app/Frameworks
 
-            rm -rf deb_extracted
-            mkdir -p deb_extracted
-            dpkg-deb -x "$DEB_FILE" deb_extracted/
+            for d in *.deb; do
+              rm -rf deb_extracted
+              mkdir -p deb_extracted
+              dpkg-deb -x "$d" deb_extracted/
 
-            cp -r deb_extracted/var/jb/Library/Application\ Support/YouMod.bundle ytextracted/Payload/YouTube.app/ 2>/dev/null || cp -r deb_extracted/Library/Application\ Support/YouMod.bundle ytextracted/Payload/YouTube.app/ 2>/dev/null || true
-            find deb_extracted -name "YouMod.dylib" -exec cp {} ytextracted/Payload/YouTube.app/Frameworks/ \;
+              cp -r deb_extracted/var/jb/Library/Application\ Support/*.bundle ytextracted/Payload/YouTube.app/ 2>/dev/null || cp -r deb_extracted/Library/Application\ Support/*.bundle ytextracted/Payload/YouTube.app/ 2>/dev/null || true
+              find deb_extracted -name "*.dylib" -exec cp {} ytextracted/Payload/YouTube.app/Frameworks/ \;
+            done
 
-            if [ -x "$THEOS/bin/opool" ]; then
-              "$THEOS/bin/opool" insert -b @rpath/Frameworks/YouMod.dylib -p @executable_path/Frameworks/YouMod.dylib ytextracted/Payload/YouTube.app/YouTube
-            fi
+            for dylib in ytextracted/Payload/YouTube.app/Frameworks/*.dylib; do
+              dylib_name=$(basename "$dylib")
+              if [ -x "$THEOS/bin/opool" ]; then
+                "$THEOS/bin/opool" insert -b "@rpath/Frameworks/$dylib_name" -p "@executable_path/Frameworks/$dylib_name" ytextracted/Payload/YouTube.app/YouTube
+              fi
+              ldid -S "$dylib" 2>/dev/null || true
+            done
 
-            ldid -S ytextracted/Payload/YouTube.app/Frameworks/YouMod.dylib 2>/dev/null || true
             ldid -S ytextracted/Payload/YouTube.app/YouTube 2>/dev/null || true
 
             cd ytextracted
@@ -150,6 +207,17 @@ jobs:
           fi
 
           ls -lh YouTube_YouMod.ipa
+
+          IPA_SIZE=$(stat -f%z YouTube_YouMod.ipa 2>/dev/null || stat -c%s YouTube_YouMod.ipa)
+          echo "IPA size: $IPA_SIZE"
+          python3 -c "
+          import json
+          with open('YouMod/feather.json', 'r') as f:
+              data = json.load(f)
+          data['apps'][0]['size'] = int('$IPA_SIZE')
+          with open('YouMod/feather.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          "
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -170,6 +238,10 @@ jobs:
              ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm.deb
              ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb
              ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
+             ${{ github.workspace }}/youpip.deb
+             ${{ github.workspace }}/ytuhd.deb
+             ${{ github.workspace }}/ryd.deb
+             ${{ github.workspace }}/demc.deb
              ${{ github.workspace }}/YouTube_YouMod.ipa
              YouMod/feather.json
           draft: false

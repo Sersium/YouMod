@@ -289,6 +289,10 @@
 "AUTO_EXIT_FULLSCREEN_DESC" = "Automatically exit fullscreen after the video ends.";
 "AUTO_FEED_MUTE" = "Auto mute feed videos";
 "AUTO_FEED_MUTE_DESC" = "Automatically mute videos playing in feeds.";
+"FEED_PREVIEW_SOUND" = "Sound on in feed previews";
+"FEED_PREVIEW_SOUND_DESC" = "Automatically unmutes video previews when scrolling in feeds.";
+"FEED_PREVIEW_CC_DISABLED" = "Disable captions in feed previews";
+"FEED_PREVIEW_CC_DISABLED_DESC" = "Prevents captions from automatically appearing during feed preview playback.";
 "DISABLES_SHOW_REMAINING" = "Disable remaining time";
 "DISABLES_SHOW_REMAINING_DESC" = "Disable the feature that shows how much time is left in a video when tapping the timestamp.";
 "ALWAYS_SHOW_REMAINING" = "Always show remaining time";

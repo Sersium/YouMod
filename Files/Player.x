@@ -778,11 +778,54 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 %hook YTInlineMutedPlaybackScrubberViewController
 - (void)setActiveSingleVideoObservable:(YTSingleVideoController *)singleVideoController {
     %orig;
-    if (singleVideoController && IS_ENABLED(AutoFeedMute)) {
-        [singleVideoController setMuted:YES];
-        UIView *soundView = [self.view.superview valueForKey:@"_audioSoundIconView"];
-        [soundView performSelector:@selector(setAudioOn:) withObject:@NO];
+    if (singleVideoController) {
+        BOOL shouldSoundOn = IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute);
+        [singleVideoController setMuted:!shouldSoundOn];
+        @try {
+            UIView *soundView = [self.view.superview valueForKey:@"_audioSoundIconView"];
+            if ([soundView respondsToSelector:@selector(setAudioOn:)]) {
+                [soundView performSelector:@selector(setAudioOn:) withObject:@(shouldSoundOn)];
+            }
+        } @catch (id ex) {}
     }
+}
+%end
+
+%hook YTInlineMutedPlaybackPlayerOverlayViewController
+- (void)loadView {
+    %orig;
+    if (IS_ENABLED(FeedPreviewCCDisabled)) {
+        @try {
+            UIView *captionBtn = [self.view valueForKey:@"_captionButton"];
+            if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
+                [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
+            }
+        } @catch (id ex) {}
+    }
+}
+%end
+
+%hook YTCaptionViewController
+- (void)loadView {
+    %orig;
+    if (IS_ENABLED(FeedPreviewCCDisabled)) {
+        UIViewController *parent = self.parentViewController;
+        if ([parent isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)] ||
+            [parent.parentViewController isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) {
+            self.view.hidden = YES;
+        }
+    }
+}
+- (void)setCaptionsHidden:(BOOL)hidden {
+    if (IS_ENABLED(FeedPreviewCCDisabled)) {
+        UIViewController *parent = self.parentViewController;
+        if ([parent isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)] ||
+            [parent.parentViewController isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) {
+            %orig(YES);
+            return;
+        }
+    }
+    %orig(hidden);
 }
 %end
 
@@ -1971,6 +2014,12 @@ void YouModFilterVideoButtons(_ASDisplayView *view, NSString *iden) {
 %end
 
 %ctor {
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
+        OldQualityPicker: @YES,
+        FeedPreviewSoundOn: @YES,
+        FeedPreviewCCDisabled: @YES,
+        AutoFeedMute: @NO
+    }];
     %init;
     YouModConfigureRemoteSkipCommands();
     if (INTFORVAL(WifiQualityIndex) != 0 || INTFORVAL(CellQualityIndex) != 0) {

@@ -217,6 +217,14 @@ static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, N
     });
 }
 
+static BOOL YouModIsPoomSmartRYDLoaded(void) {
+    Class ascv = objc_getClass("ASCollectionView");
+    if (ascv && class_getInstanceMethod(ascv, NSSelectorFromString(@"hasDislikeIntent")) != NULL) {
+        return YES;
+    }
+    return NO;
+}
+
 // Update main player action bar buttons (ASDisplayView)
 %hook _ASDisplayView
 
@@ -227,6 +235,7 @@ static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, N
         return;
     }
     if (!IS_ENABLED(ReturnYouTubeDislike)) return;
+    if (YouModIsPoomSmartRYDLoaded()) return;
 
     NSString *iden = self.accessibilityIdentifier;
     if (![iden isEqualToString:@"id.video.dislike.button"] && ![iden isEqualToString:@"id.video.like.button"]) return;
@@ -303,6 +312,7 @@ static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, N
 - (void)updateLikeButtonWithRenderer:(id)renderer {
     %orig;
     if (!IS_ENABLED(ReturnYouTubeDislike)) return;
+    if (YouModIsPoomSmartRYDLoaded()) return;
 
     NSString *vID = nil;
     @try {
@@ -344,6 +354,9 @@ static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, N
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{
         ReturnYouTubeDislike: @YES,
         RYDShowLikes: @YES,
-        RYDShowDislikes: @YES
+        RYDShowDislikes: @YES,
+        @"RYD-ENABLED": @YES,
+        @"RYD-USE-LIKE-DATA": @YES,
+        @"RYD-EXACT-NUMBER": @NO
     }];
 }
