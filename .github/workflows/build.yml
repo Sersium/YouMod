@@ -2,6 +2,11 @@ name: Build YouMod
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
+      - '*.md'
+      - 'feather.json'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       repo:
