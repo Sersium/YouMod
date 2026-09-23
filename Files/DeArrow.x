@@ -795,7 +795,7 @@ static void YouModUpdateIndicatorBadge(UIButton *badgeBtn, NSString *videoID) {
         deArrowBtn.tintColor = [UIColor colorWithWhite:0.6 alpha:1.0];
         deArrowBtn.alpha = 0.6;
     } else {
-        deArrowBtn.tintColor = [UIColor colorWithRed:0.24 blue:0.65 green:1.0 alpha:1.0]; // YouTube blue tint
+        deArrowBtn.tintColor = [UIColor colorWithRed:0.24 green:0.65 blue:1.0 alpha:1.0]; // YouTube blue tint
         deArrowBtn.alpha = 1.0;
     }
 
