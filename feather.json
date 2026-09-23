@@ -11,21 +11,21 @@
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
       "version": "21.38.2-2.1.4",
-      "versionDate": "2026-09-23T20:41:00Z",
-      "versionDescription": "YouMod v2.1.4: Fixed feed preview freeze & crash, active DeArrow thumbnail & title replacement with web-style toggle button, and complete Return YouTube Dislike counters next to thumbs up/down.",
+      "versionDate": "2026-09-23T20:52:15Z",
+      "versionDescription": "YouMod v2.1.4: Universal DeArrow titles, web-style feed indicator, RYD action bar & details dislike counters, feed audio ON & CC disabled, and embedded tweak preferences.",
       "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.4/YouTube_YouMod.ipa",
       "localizedDescription": "All-in-one YouTube for iOS with ad blocking, background playback, OLED dark mode, DeArrow title/thumbnail replacement with web-style title indicator button, and Return YouTube Dislike counts on videos and Shorts.",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 129320000,
+      "size": 129319524,
       "screenshotURLs": [],
       "versions": [
         {
           "version": "21.38.2-2.1.4",
-          "date": "2026-09-23T20:41:00Z",
+          "date": "2026-09-23T20:52:15Z",
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.4/YouTube_YouMod.ipa",
-          "size": 129320000,
-          "localizedDescription": "YouMod v2.1.4: Fixed feed preview freeze & crash, active DeArrow thumbnail & title replacement with web-style toggle button, and complete Return YouTube Dislike counters next to thumbs up/down."
+          "size": 129319524,
+          "localizedDescription": "YouMod v2.1.4: Universal DeArrow titles, web-style feed indicator, RYD action bar & details dislike counters, feed audio ON & CC disabled, and embedded tweak preferences."
         },
         {
           "version": "21.38.2-2.1.3",
