@@ -97,47 +97,17 @@ jobs:
       - name: Clone Safe Extra Tweaks
         run: |
           cd ${{ github.workspace }}
-          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/BillyCurtis/OpenYouTubeSafariExtension.git
-          cd OpenYouTubeSafariExtension
-          git sparse-checkout set --no-cone OpenYouTubeSafariExtension.appex
-          git checkout --quiet
-          mv *.appex ${{ github.workspace }}
-          cd ${{ github.workspace }}
-
           git clone --quiet --depth=1 https://github.com/PoomSmart/YTVideoOverlay.git
-          git clone --quiet --depth=1 https://github.com/PoomSmart/YouPiP.git
-          git clone --quiet --depth=1 --recurse-submodules https://github.com/PoomSmart/YTUHD.git
-          git clone --quiet --depth=1 https://github.com/PoomSmart/Return-YouTube-Dislikes.git
           git clone --quiet --depth=1 https://github.com/therealFoxster/DontEatMyContent.git
 
       - name: Build Safe Extra Tweaks
         run: |
           cd ${{ github.workspace }}
 
-          # Build YTVideoOverlay (prerequisite for YouPiP)
+          # Build YTVideoOverlay
           cd YTVideoOverlay
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
           mv packages/*.deb ${{ github.workspace }}/ytvo.deb
-          cd ${{ github.workspace }}
-
-          # Build YouPiP
-          cd YouPiP
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
-          mv packages/*.deb ${{ github.workspace }}/youpip.deb
-          cd ${{ github.workspace }}
-
-          # Build YTUHD
-          cd YTUHD
-          brew install meson ninja
-          make libvpx dav1d
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless SIDELOAD=1
-          mv packages/*.deb ${{ github.workspace }}/ytuhd.deb
-          cd ${{ github.workspace }}
-
-          # Build Return-YouTube-Dislikes
-          cd Return-YouTube-Dislikes
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
-          mv packages/*.deb ${{ github.workspace }}/ryd.deb
           cd ${{ github.workspace }}
 
           # Build DontEatMyContent
@@ -149,11 +119,18 @@ jobs:
       - name: Build YouMod
         run: |
           cd YouMod
-          echo "YOUMOD_VERSION=$(grep '^Version:' control | cut -d ' ' -f2)" >> $GITHUB_ENV
-          make clean package DEBUG=0 FINALPACKAGE=1
+          VERSION=$(grep '^Version:' control | cut -d ' ' -f2)
+          echo "YOUMOD_VERSION=$VERSION" >> $GITHUB_ENV
+
+          # Build rootless deb for IPA injection
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/youmod.deb
+
+          # Build rootful and roothide debs for jailbreak release assets
+          make clean package DEBUG=0 FINALPACKAGE=1
+          mv packages/*.deb ${{ github.workspace }}/dev.water888.youmod_${VERSION}_iphoneos-arm.deb
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
-          mv packages/*.deb ${{ github.workspace }}
+          mv packages/*.deb ${{ github.workspace }}/dev.water888.youmod_${VERSION}_iphoneos-arm64e.deb
 
       - name: Cache Decrypted YouTube IPA
         id: cache-ipa
@@ -176,15 +153,10 @@ jobs:
         run: |
           cd ${{ github.workspace }}
 
-          tweaks="OpenYouTubeSafariExtension.appex"
-          for f in *.deb; do
-            tweaks="$tweaks $f"
-          done
-
-          echo "Injecting: $tweaks"
-          # Try cyan injection first
+          echo "Injecting safe rootless tweaks: youmod.deb demc.deb ytvo.deb"
+          # -u (remove UISupportedDevices), -w (no watch), -e (remove extensions), -s (fakesign with ldid), -q (thin to arm64)
           if command -v cyan &>/dev/null; then
-            cyan -i youtube.ipa -o YouTube_YouMod.ipa -uwef $tweaks -n "YouTube" -b "com.google.ios.youtube" || true
+            cyan -i youtube.ipa -o YouTube_YouMod.ipa -uwesq -f youmod.deb demc.deb ytvo.deb -n "YouTube" -b "com.google.ios.youtube" || true
           fi
 
           # If cyan did not produce YouTube_YouMod.ipa, use direct fallback injection
@@ -194,7 +166,7 @@ jobs:
             unzip -q youtube.ipa -d ytextracted
             mkdir -p ytextracted/Payload/YouTube.app/Frameworks
 
-            for d in *.deb; do
+            for d in youmod.deb demc.deb ytvo.deb; do
               rm -rf deb_extracted
               mkdir -p deb_extracted
               dpkg-deb -x "$d" deb_extracted/
@@ -224,12 +196,49 @@ jobs:
           echo "IPA size: $IPA_SIZE"
           python3 -c "
           import json
+          from datetime import datetime, timezone
+
           with open('YouMod/feather.json', 'r') as f:
               data = json.load(f)
-          data['apps'][0]['size'] = int('$IPA_SIZE')
+
+          app = data['apps'][0]
+          ym_ver = '${{ env.YOUMOD_VERSION }}'
+          yt_ver = '21.38.2'
+          ver_str = f'{yt_ver}-{ym_ver}'
+          ipa_size = int('$IPA_SIZE')
+          download_url = f'https://github.com/Sersium/YouMod/releases/download/v{ym_ver}/YouTube_YouMod.ipa'
+          now_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+          new_entry = {
+              'version': ver_str,
+              'date': now_iso,
+              'downloadURL': download_url,
+              'size': ipa_size,
+              'localizedDescription': f'YouMod v{ym_ver}: Fixed crash on launch, removed conflicting tweaks/extensions, fakesigned arm64 binaries, and added multi-version history.'
+          }
+
+          versions = app.get('versions', [])
+          filtered = [v for v in versions if v.get('version') != ver_str]
+          app['versions'] = [new_entry] + filtered
+
+          app['version'] = ver_str
+          app['versionDate'] = now_iso
+          app['versionDescription'] = new_entry['localizedDescription']
+          app['downloadURL'] = download_url
+          app['size'] = ipa_size
+
           with open('YouMod/feather.json', 'w') as f:
               json.dump(data, f, indent=2)
           "
+
+          # Commit and push updated feather.json to main
+          cd YouMod
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add feather.json
+          git commit -m "Update feather.json with v${{ env.YOUMOD_VERSION }} [skip ci]" || true
+          git push origin main || true
+          cd ..
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -238,6 +247,7 @@ jobs:
           path: |
             ${{ github.workspace }}/*.deb
             ${{ github.workspace }}/YouTube_YouMod.ipa
+            YouMod/feather.json
           if-no-files-found: error
           overwrite: true
 
@@ -247,14 +257,11 @@ jobs:
           tag_name: v${{ env.YOUMOD_VERSION }}
           name: v${{ env.YOUMOD_VERSION }} 
           files: |
-             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm.deb
-             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb
-             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
-             ${{ github.workspace }}/youpip.deb
+             ${{ github.workspace }}/youmod.deb
              ${{ github.workspace }}/ytvo.deb
-             ${{ github.workspace }}/ytuhd.deb
-             ${{ github.workspace }}/ryd.deb
              ${{ github.workspace }}/demc.deb
+             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm.deb
+             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
              ${{ github.workspace }}/YouTube_YouMod.ipa
              YouMod/feather.json
           draft: false

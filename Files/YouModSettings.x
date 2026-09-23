@@ -2369,6 +2369,7 @@ void YMPushSubSettings(NSString *title, NSArray<YMSettingsItem *> *items, id set
 
 static void ymRegisterStyledSubclass(Class sourceClass, const char *name) {
     Class ytStyled = %c(YTStyledViewController);
+    if (!ytStyled) ytStyled = [UIViewController class];
     Class newClass = objc_allocateClassPair(ytStyled, name, 0);
     if (!newClass) return;
 

@@ -1,6 +1,7 @@
 // Some are adapted from https://github.com/Mark02-2012/YTPlaybackFix
 #import "Headers.h"
 
+%group FixPlaybackIssuesGroup
 %hook YTMainAppVideoPlayerOverlayViewController
 - (void)handleError:(NSError *)error {
     if (error && [error.domain isEqualToString:@"com.google.ios.youtube.ErrorDomain.playback"] && error.code == 14) {
@@ -15,8 +16,10 @@
     %orig;
 }
 %end
+%end
 
 %ctor {
-    if (!IS_ENABLED(FixPlaybackIssues)) return;
-    %init;
+    if (IS_ENABLED(FixPlaybackIssues)) {
+        %init(FixPlaybackIssuesGroup);
+    }
 }
