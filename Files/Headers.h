@@ -808,7 +808,7 @@ typedef NS_ENUM(int, YTLikeStatus) {
 
 @interface ASNetworkImageNode : ASDisplayNode
 @property (nonatomic, strong) NSURL *URL;
-@property (nullable, nonatomic, strong) NSURL *imageURL;
+@property (nonatomic, strong) NSURL *imageURL;
 - (void)setURL:(NSURL *)URL;
 - (void)setURL:(NSURL *)URL resetToDefault:(BOOL)reset;
 @end
