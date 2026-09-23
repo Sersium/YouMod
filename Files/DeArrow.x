@@ -257,14 +257,14 @@ static NSString *currentInlinePreviewVideoID = nil;
 static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     if (!urlStr || urlStr.length < 15) return nil;
     
-    NSArray *prefixes = @[@"/vi/", @"/vi_webp/", @"/an_webp/"];
+    NSArray *prefixes = @[@"/vi/", @"/vi_webp/", @"/an_webp/", @"/v/", @"video_id=", @"v="];
     for (NSString *prefix in prefixes) {
         NSRange range = [urlStr rangeOfString:prefix];
         if (range.location != NSNotFound) {
             NSUInteger start = range.location + prefix.length;
             if (start + 11 <= urlStr.length) {
                 NSString *candidate = [urlStr substringWithRange:NSMakeRange(start, 11)];
-                if (![candidate containsString:@"/"] && ![candidate containsString:@"?"]) {
+                if (![candidate containsString:@"/"] && ![candidate containsString:@"?"] && ![candidate containsString:@"&"]) {
                     return candidate;
                 }
             }
@@ -278,34 +278,39 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
 // AsyncDisplayKit network image hook
 %hook ASNetworkImageNode
 
-- (void)setURL:(NSURL *)url {
+- (void)setURL:(NSURL *)url resetToDefault:(BOOL)reset {
     if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowReplaceThumbnails) || !url) {
-        %orig(url);
+        %orig(url, reset);
         return;
     }
 
     NSString *urlStr = url.absoluteString;
     NSString *videoID = YouModExtractDeArrowVideoID(urlStr);
     if (!videoID || videoID.length != 11) {
-        %orig(url);
+        %orig(url, reset);
         return;
     }
 
     objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(self, "kYMDeArrowOrigURLKey", url, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
+    if ([self respondsToSelector:@selector(view)]) {
+        UIView *v = [self performSelector:@selector(view)];
+        if (v) objc_setAssociatedObject(v, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+
     if ([[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID]) {
-        %orig(url);
+        %orig(url, reset);
         return;
     }
 
     NSString *deArrowURL = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:videoID];
     if (deArrowURL.length > 0) {
-        %orig([NSURL URLWithString:deArrowURL]);
+        %orig([NSURL URLWithString:deArrowURL], reset);
         return;
     }
 
-    %orig(url);
+    %orig(url, reset);
     __weak ASNetworkImageNode *weakSelf = self;
     [[YouModDeArrowManager sharedInstance] fetchBrandingForVideoID:videoID completion:^(NSDictionary *branding) {
         ASNetworkImageNode *strongSelf = weakSelf;
@@ -314,11 +319,24 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
         if (thumb.length > 0 && ![[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID]) {
             NSString *curID = objc_getAssociatedObject(strongSelf, "kYMDeArrowVideoIDKey");
             if ([curID isEqualToString:videoID]) {
-                [strongSelf setURL:[NSURL URLWithString:thumb]];
+                [strongSelf setURL:[NSURL URLWithString:thumb] resetToDefault:NO];
                 [strongSelf setNeedsDisplay];
             }
         }
     }];
+}
+
+- (void)setURL:(NSURL *)url {
+    [self setURL:url resetToDefault:YES];
+}
+
+- (void)didLoad {
+    %orig;
+    NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
+    if (videoID && [self respondsToSelector:@selector(view)]) {
+        UIView *v = [self performSelector:@selector(view)];
+        if (v) objc_setAssociatedObject(v, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
 }
 
 %end
@@ -647,6 +665,62 @@ static void YouModUpdateIndicatorBadge(UIButton *badgeBtn, NSString *videoID) {
     }
 }
 
+// Robust helper to extract video ID from an ASDisplayView or its hierarchy
+static NSString *YouModFindVideoIDFromView(UIView *view) {
+    if (!view) return nil;
+    NSString *vID = objc_getAssociatedObject(view, "kYMDeArrowVideoIDKey");
+    if (vID.length == 11) return vID;
+
+    // Check node associated with view
+    id node = nil;
+    if ([view respondsToSelector:@selector(node)]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        node = [view performSelector:@selector(node)];
+        #pragma clang diagnostic pop
+    }
+    if (!node) {
+        @try { node = [view valueForKey:@"asyncdisplaykit_node"]; } @catch (id ex) {}
+    }
+    if (node) {
+        NSString *nodeVID = objc_getAssociatedObject(node, "kYMDeArrowVideoIDKey");
+        if (nodeVID.length == 11) return nodeVID;
+        if ([node respondsToSelector:@selector(URL)]) {
+            NSURL *u = [node performSelector:@selector(URL)];
+            NSString *extracted = YouModExtractDeArrowVideoID(u.absoluteString);
+            if (extracted.length == 11) return extracted;
+        }
+    }
+
+    // Check subviews
+    for (UIView *sub in view.subviews) {
+        NSString *subVID = objc_getAssociatedObject(sub, "kYMDeArrowVideoIDKey");
+        if (subVID.length == 11) return subVID;
+        id subNode = nil;
+        if ([sub respondsToSelector:@selector(node)]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            subNode = [sub performSelector:@selector(node)];
+            #pragma clang diagnostic pop
+        }
+        if (!subNode) {
+            @try { subNode = [sub valueForKey:@"asyncdisplaykit_node"]; } @catch (id ex) {}
+        }
+        if (subNode) {
+            NSString *snVID = objc_getAssociatedObject(subNode, "kYMDeArrowVideoIDKey");
+            if (snVID.length == 11) return snVID;
+            if ([subNode respondsToSelector:@selector(URL)]) {
+                NSURL *u = [subNode performSelector:@selector(URL)];
+                NSString *extracted = YouModExtractDeArrowVideoID(u.absoluteString);
+                if (extracted.length == 11) return extracted;
+            }
+        }
+    }
+
+    // Fallback to description inspection
+    return YouModExtractDeArrowVideoID([view description]);
+}
+
 #pragma mark - Visual Indicator & Feed Preview Cell Overlay
 
 %hook _ASDisplayView
@@ -662,14 +736,8 @@ static void YouModUpdateIndicatorBadge(UIButton *badgeBtn, NSString *videoID) {
     NSString *iden = self.accessibilityIdentifier;
     if (iden.length == 0) return;
 
-    if ([iden containsString:@"id.video.thumbnail"] || [iden containsString:@"compact_video"] || [iden containsString:@"video_with_context"]) {
-        NSString *videoID = YouModExtractDeArrowVideoID([self description]);
-        if (!videoID) {
-            for (UIView *sub in self.subviews) {
-                videoID = YouModExtractDeArrowVideoID([sub description]);
-                if (videoID) break;
-            }
-        }
+    if ([iden containsString:@"thumbnail"] || [iden containsString:@"compact_video"] || [iden containsString:@"video_with_context"]) {
+        NSString *videoID = YouModFindVideoIDFromView(self);
         if (videoID && videoID.length == 11) {
             objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
@@ -690,12 +758,12 @@ static void YouModUpdateIndicatorBadge(UIButton *badgeBtn, NSString *videoID) {
             }
 
             // Indicator Badge
-            if ([iden containsString:@"id.video.thumbnail"]) {
+            if ([iden containsString:@"thumbnail"]) {
                 UIButton *badgeBtn = (UIButton *)[self viewWithTag:0xDEA220];
                 if (!badgeBtn) {
                     badgeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
                     badgeBtn.tag = 0xDEA220;
-                    badgeBtn.frame = CGRectMake(6, 6, 68, 20);
+                    badgeBtn.frame = CGRectMake(6, 6, 74, 22);
                     badgeBtn.layer.cornerRadius = 4;
                     badgeBtn.layer.masksToBounds = YES;
                     badgeBtn.titleLabel.font = [UIFont systemFontOfSize:10 weight:UIFontWeightBold];
