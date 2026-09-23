@@ -641,3 +641,13 @@
 "DEARROW_REPLACE_THUMBNAILS_DESC" = "用干净的视频帧截图替换吸睛缩略图。";
 "DEARROW_FALLBACK_ORIGINAL" = "无数据时保留原样";
 "DEARROW_FALLBACK_ORIGINAL_DESC" = "若没有社区 DeArrow 提交，则显示原始标题与缩略图。";
+"DEARROW_QUICK_SWAP" = "信息流快捷切换";
+"DEARROW_QUICK_SWAP_DESC" = "在信息流预览中添加快捷切换按钮和长按手势，以在原版与 DeArrow 版本之间即时切换。";
+
+/* Return YouTube Dislike */
+"RYD_ENABLED" = "启用 Return YouTube Dislike";
+"RYD_ENABLED_DESC" = "使用 Return YouTube Dislike API 直接在点踩按钮旁恢复公开的不喜欢计数与数据。";
+"RYD_SHOW_DISLIKES" = "显示不喜欢数量";
+"RYD_SHOW_DISLIKES_DESC" = "在视频与 Shorts 的不喜欢按钮旁显示具体数量。";
+"RYD_SHOW_LIKES" = "显示验证的点赞数量";
+"RYD_SHOW_LIKES_DESC" = "与不喜欢数量一起显示验证的点赞数量。";

@@ -107,7 +107,6 @@
 - (BOOL)shouldShowServiceItemRenderer:(YTIMenuConditionalServiceItemRenderer *)renderer {
     int iconnum = renderer.icon.iconType;
     if (iconnum == 251) {
-        if (IS_ENABLED(RemovePlayInNextQueueOption)) return NO;
         if (IS_ENABLED(EnablePlayNextInQueue)) return YES;
     } else if (iconnum == 895) {
         if (IS_ENABLED(RemoveAddToLastQueueOption)) return NO;
@@ -121,7 +120,6 @@
 - (BOOL)shouldShowServiceItemRenderer:(YTIMenuConditionalServiceItemRenderer *)renderer {
     int iconnum = renderer.icon.iconType;
     if (iconnum == 251) {
-        if (IS_ENABLED(RemovePlayInNextQueueOption)) return NO;
         if (IS_ENABLED(EnablePlayNextInQueue)) return YES;
     } else if (iconnum == 895) {
         if (IS_ENABLED(RemoveAddToLastQueueOption)) return NO;

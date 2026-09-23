@@ -1,0 +1,25 @@
+{
+  "name": "YouMod Sideload Repo",
+  "identifier": "com.sersium.youmod.source",
+  "subtitle": "YouMod with all fixes, iPhone 17 optimizations, DeArrow & Return YouTube Dislike",
+  "description": "Official Feather repository for YouTube (YouMod) - modified YouTube iOS app with background playback, ad removal, DeArrow title/thumbnail swapping, and Return YouTube Dislike.",
+  "website": "https://github.com/Sersium/YouMod",
+  "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
+  "apps": [
+    {
+      "name": "YouTube (YouMod)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "21.38.2-2.1.0",
+      "versionDate": "2026-09-23T05:00:00Z",
+      "versionDescription": "YouMod v2.1.0: Full bug fixes, iPhone 17 ProMotion optimizations, DeArrow with feed quick-swap, and Return YouTube Dislike.",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/latest/download/YouTube_YouMod.ipa",
+      "localizedDescription": "All-in-one YouTube for iOS with ad blocking, background playback, OLED dark mode, DeArrow title/thumbnail replacement with feed quick-swap, and Return YouTube Dislike counts on videos and Shorts.",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 139172965,
+      "screenshotURLs": []
+    }
+  ],
+  "news": []
+}

@@ -601,9 +601,7 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 }
 // Disable toggle time remaining - @bhackel
 - (void)setShouldDisplayTimeRemaining:(BOOL)arg {
-    if (IS_ENABLED(DisablesShowRemaining)) {
-        arg = NO;
-    } else if (IS_ENABLED(AlwaysShowRemaining)) {
+    if (IS_ENABLED(AlwaysShowRemaining)) {
         arg = YES;
     }
     %orig(arg);
@@ -798,7 +796,7 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 // When a new video is played, enable time remaining flag
 - (void)setActiveSingleVideo:(YTSingleVideoController *)singleVideoController {
     %orig;
-    if (IS_ENABLED(AlwaysShowRemaining) && !IS_ENABLED(DisablesShowRemaining)) {
+    if (IS_ENABLED(AlwaysShowRemaining)) {
         // Get the player bar view
         YTInlinePlayerBarContainerView *playerBar = self.playerBar;
         if (playerBar) {

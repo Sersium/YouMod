@@ -641,3 +641,13 @@
 "DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
 "DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
 "DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";
+"DEARROW_QUICK_SWAP" = "Feed quick swap";
+"DEARROW_QUICK_SWAP_DESC" = "Adds a quick swap button and long-press gesture to feed previews to instantly toggle between original and DeArrow versions.";
+
+/* Return YouTube Dislike */
+"RYD_ENABLED" = "Enable Return YouTube Dislike";
+"RYD_ENABLED_DESC" = "Restores public dislike numbers and statistics directly next to the thumbs down button using the Return YouTube Dislike API.";
+"RYD_SHOW_DISLIKES" = "Show dislike counts";
+"RYD_SHOW_DISLIKES_DESC" = "Displays dislike counts next to the thumbs down button on videos and Shorts.";
+"RYD_SHOW_LIKES" = "Show verified like counts";
+"RYD_SHOW_LIKES_DESC" = "Verifies and displays like numbers alongside dislike counts.";

@@ -251,6 +251,13 @@
 #define DeArrowReplaceTitles @"YouModDeArrowReplaceTitles"
 #define DeArrowReplaceThumbnails @"YouModDeArrowReplaceThumbnails"
 #define DeArrowFallbackToOriginal @"YouModDeArrowFallbackToOriginal"
+#define DeArrowQuickSwap @"YouModDeArrowQuickSwap"
+
+// Return YouTube Dislike
+#define ReturnYouTubeDislike @"YouModReturnYouTubeDislike"
+#define RYDShowLikes @"YouModRYDShowLikes"
+#define RYDShowDislikes @"YouModRYDShowDislikes"
+
 #define RemoveShortsDisclosure @"YouModRemoveShortsDisclosure"
 // Tab bar
 #define DefaultTab @"YouModDefaultStartupTab"

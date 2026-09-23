@@ -1,7 +1,7 @@
 name: Build YouMod
 on:
   push:
-    branches: [ "main", "pre-release", "fix-all-issues" ]
+    branches: [ "main" ]
   workflow_dispatch:
     inputs:
       repo:
@@ -11,7 +11,7 @@ on:
       branch:
         description: 'Branch to build from'
         required: true
-        default: 'fix-all-issues'
+        default: 'main'
    
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -96,21 +96,80 @@ jobs:
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
           mv packages/*.deb ${{ github.workspace }}
 
-      - name: Upload the tweak .deb(s)
+      - name: Cache Decrypted YouTube IPA
+        id: cache-ipa
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/youtube.ipa
+          key: youtube-ipa-21.38.2
+
+      - name: Download Decrypted YouTube IPA
+        if: steps.cache-ipa.outputs.cache-hit != 'true'
+        run: |
+          curl -fSL "https://archive.org/download/com.google.ios.youtube-21.38.2-544007664-891605195-US_decrypt_1790006718/com.google.ios.youtube-21.38.2-544007664-891605195-US_decrypt_1790006718.ipa" -o ${{ github.workspace }}/youtube.ipa
+
+      - name: Install cyan and tbd
+        run: |
+          pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip || true
+          sudo wget --quiet --no-verbose "https://github.com/inoahdev/tbd/releases/download/2.2/tbd-mac" -O /usr/local/bin/tbd && sudo chmod +x /usr/local/bin/tbd || true
+
+      - name: Inject YouMod into YouTube IPA
+        run: |
+          cd ${{ github.workspace }}
+          DEB_FILE="dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb"
+
+          # Try cyan injection first
+          if command -v cyan &>/dev/null; then
+            cyan -i youtube.ipa -o YouTube_YouMod.ipa -uwef "$DEB_FILE" -n "YouTube" -b "com.google.ios.youtube" || true
+          fi
+
+          # If cyan did not produce YouTube_YouMod.ipa, use direct fallback injection
+          if [ ! -f "YouTube_YouMod.ipa" ]; then
+            echo "Using direct dylib injection fallback..."
+            rm -rf ytextracted
+            unzip -q youtube.ipa -d ytextracted
+            mkdir -p ytextracted/Payload/YouTube.app/Frameworks
+
+            rm -rf deb_extracted
+            mkdir -p deb_extracted
+            dpkg-deb -x "$DEB_FILE" deb_extracted/
+
+            cp -r deb_extracted/var/jb/Library/Application\ Support/YouMod.bundle ytextracted/Payload/YouTube.app/ 2>/dev/null || cp -r deb_extracted/Library/Application\ Support/YouMod.bundle ytextracted/Payload/YouTube.app/ 2>/dev/null || true
+            find deb_extracted -name "YouMod.dylib" -exec cp {} ytextracted/Payload/YouTube.app/Frameworks/ \;
+
+            if [ -x "$THEOS/bin/opool" ]; then
+              "$THEOS/bin/opool" insert -b @rpath/Frameworks/YouMod.dylib -p @executable_path/Frameworks/YouMod.dylib ytextracted/Payload/YouTube.app/YouTube
+            fi
+
+            ldid -S ytextracted/Payload/YouTube.app/Frameworks/YouMod.dylib 2>/dev/null || true
+            ldid -S ytextracted/Payload/YouTube.app/YouTube 2>/dev/null || true
+
+            cd ytextracted
+            zip -qr ../YouTube_YouMod.ipa Payload
+            cd ..
+          fi
+
+          ls -lh YouTube_YouMod.ipa
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-         name: YouMod v${{ env.YOUMOD_VERSION }}
-         path: ${{ github.workspace }}/*.deb
-         if-no-files-found: error
-         overwrite: true
+          name: YouMod v${{ env.YOUMOD_VERSION }}
+          path: |
+            ${{ github.workspace }}/*.deb
+            ${{ github.workspace }}/YouTube_YouMod.ipa
+          if-no-files-found: error
+          overwrite: true
 
-      - name: Create a draft release
+      - name: Create or update release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ env.YOUMOD_VERSION }}
           name: v${{ env.YOUMOD_VERSION }} 
           files: |
-             dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm.deb
-             dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb
-             dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
-          draft: true
+             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm.deb
+             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb
+             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
+             ${{ github.workspace }}/YouTube_YouMod.ipa
+             YouMod/feather.json
+          draft: false

@@ -7,11 +7,14 @@
 @interface YouModDeArrowManager : NSObject
 @property (nonatomic, strong) NSCache<NSString *, NSDictionary *> *brandingCache;
 @property (nonatomic, strong) NSMutableSet<NSString *> *inFlightRequests;
+@property (nonatomic, strong) NSMutableSet<NSString *> *toggledOriginalVideoIDs;
 + (instancetype)sharedInstance;
 - (void)fetchBrandingForVideoID:(NSString *)videoID completion:(void (^)(NSDictionary *branding))completion;
 - (void)prefetchBrandingForVideoID:(NSString *)videoID;
 - (NSString *)titleForVideoID:(NSString *)videoID;
 - (NSString *)thumbnailURLForVideoID:(NSString *)videoID;
+- (BOOL)isOriginalToggledForVideoID:(NSString *)videoID;
+- (BOOL)toggleDeArrowForVideoID:(NSString *)videoID;
 @end
 
 @implementation YouModDeArrowManager
@@ -31,12 +34,39 @@
         _brandingCache = [[NSCache alloc] init];
         _brandingCache.countLimit = 500;
         _inFlightRequests = [NSMutableSet set];
+        _toggledOriginalVideoIDs = [NSMutableSet set];
     }
     return self;
 }
 
+- (BOOL)isOriginalToggledForVideoID:(NSString *)videoID {
+    if (!videoID) return NO;
+    @synchronized (_toggledOriginalVideoIDs) {
+        return [_toggledOriginalVideoIDs containsObject:videoID];
+    }
+}
+
+- (BOOL)toggleDeArrowForVideoID:(NSString *)videoID {
+    if (!videoID) return NO;
+    BOOL nowOriginal = NO;
+    @synchronized (_toggledOriginalVideoIDs) {
+        if ([_toggledOriginalVideoIDs containsObject:videoID]) {
+            [_toggledOriginalVideoIDs removeObject:videoID];
+            nowOriginal = NO;
+        } else {
+            [_toggledOriginalVideoIDs addObject:videoID];
+            nowOriginal = YES;
+        }
+    }
+    return nowOriginal;
+}
+
 - (NSString *)titleForVideoID:(NSString *)videoID {
     if (!videoID || videoID.length == 0) return nil;
+    if ([self isOriginalToggledForVideoID:videoID]) {
+        NSDictionary *entry = [_brandingCache objectForKey:videoID];
+        return entry[@"originalTitle"];
+    }
     NSDictionary *entry = [_brandingCache objectForKey:videoID];
     if (entry) {
         NSString *title = entry[@"title"];
@@ -50,6 +80,9 @@
 
 - (NSString *)thumbnailURLForVideoID:(NSString *)videoID {
     if (!videoID || videoID.length == 0) return nil;
+    if ([self isOriginalToggledForVideoID:videoID]) {
+        return nil;
+    }
     NSDictionary *entry = [_brandingCache objectForKey:videoID];
     if (entry) {
         NSString *thumb = entry[@"thumbnailURL"];
@@ -339,11 +372,129 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
 }
 %end
 
+@interface YouModDeArrowSwapHandler : NSObject
++ (instancetype)sharedHandler;
+- (void)handleSwapGesture:(UILongPressGestureRecognizer *)gesture;
+- (void)handleSwapButtonTap:(UIButton *)button;
+@end
+
+@implementation YouModDeArrowSwapHandler
+
++ (instancetype)sharedHandler {
+    static YouModDeArrowSwapHandler *instance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        instance = [[YouModDeArrowSwapHandler alloc] init];
+    });
+    return instance;
+}
+
+- (void)triggerSwapForVideoID:(NSString *)videoID fromView:(UIView *)targetView {
+    if (!videoID || videoID.length == 0) return;
+    BOOL isNowOriginal = [[YouModDeArrowManager sharedInstance] toggleDeArrowForVideoID:videoID];
+
+    UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [feedback prepare];
+    [feedback impactOccurred];
+
+    NSString *status = isNowOriginal ? @"DeArrow: Original" : @"DeArrow: Replaced";
+    Class hudClass = %c(GOOHUDManagerInternal);
+    if ([hudClass respondsToSelector:@selector(showMessageWithText:)]) {
+        [hudClass showMessageWithText:status];
+    }
+
+    if (targetView) {
+        [targetView setNeedsLayout];
+        [targetView setNeedsDisplay];
+        UIView *parent = targetView.superview;
+        while (parent && ![parent isKindOfClass:%c(_ASCollectionViewCell)]) {
+            parent = parent.superview;
+        }
+        if (parent) {
+            [parent setNeedsLayout];
+            [parent setNeedsDisplay];
+        }
+    }
+}
+
+- (void)handleSwapGesture:(UILongPressGestureRecognizer *)gesture {
+    if (gesture.state != UIGestureRecognizerStateBegan) return;
+    UIView *view = gesture.view;
+    NSString *videoID = objc_getAssociatedObject(view, "kYMDeArrowVideoIDKey");
+    if (!videoID) return;
+    [self triggerSwapForVideoID:videoID fromView:view];
+}
+
+- (void)handleSwapButtonTap:(UIButton *)button {
+    NSString *videoID = objc_getAssociatedObject(button, "kYMDeArrowVideoIDKey");
+    if (!videoID) return;
+    [self triggerSwapForVideoID:videoID fromView:button.superview];
+}
+
+@end
+
+%hook _ASDisplayView
+- (void)didMoveToWindow {
+    %orig;
+    if (!self.window) return;
+    if (!IS_ENABLED(DeArrowEnabled) || !IS_ENABLED(DeArrowQuickSwap)) return;
+
+    NSString *iden = self.accessibilityIdentifier;
+    if (iden.length == 0) return;
+
+    if ([iden containsString:@"id.video.thumbnail"] || [iden containsString:@"compact_video"] || [iden containsString:@"video_with_context"]) {
+        NSString *videoID = YouModExtractDeArrowVideoID([self description]);
+        if (!videoID) {
+            for (UIView *sub in self.subviews) {
+                videoID = YouModExtractDeArrowVideoID([sub description]);
+                if (videoID) break;
+            }
+        }
+        if (videoID && videoID.length == 11) {
+            objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+            BOOL hasLongPress = NO;
+            for (UIGestureRecognizer *gr in self.gestureRecognizers) {
+                if ([gr isKindOfClass:[UILongPressGestureRecognizer class]] && [gr.name isEqualToString:@"YMDeArrowSwap"]) {
+                    hasLongPress = YES;
+                    break;
+                }
+            }
+            if (!hasLongPress) {
+                UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc] initWithTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapGesture:)];
+                lp.name = @"YMDeArrowSwap";
+                lp.minimumPressDuration = 0.35;
+                [self addGestureRecognizer:lp];
+            }
+
+            if ([iden containsString:@"id.video.thumbnail"] && ![self viewWithTag:0xDEA220]) {
+                UIButton *badgeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+                badgeBtn.tag = 0xDEA220;
+                badgeBtn.frame = CGRectMake(6, 6, 26, 26);
+                badgeBtn.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.65];
+                badgeBtn.layer.cornerRadius = 13;
+                badgeBtn.layer.masksToBounds = YES;
+                objc_setAssociatedObject(badgeBtn, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                [badgeBtn addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapButtonTap:) forControlEvents:UIControlEventTouchUpInside];
+
+                UIImageSymbolConfiguration *symConfig = [UIImageSymbolConfiguration configurationWithPointSize:12 weight:UIFontWeightBold];
+                UIImage *swapImg = [UIImage systemImageNamed:@"arrow.triangle.swap" withConfiguration:symConfig];
+                if (!swapImg) swapImg = [UIImage systemImageNamed:@"arrow.2.squarepath" withConfiguration:symConfig];
+                [badgeBtn setImage:swapImg forState:UIControlStateNormal];
+                badgeBtn.tintColor = [UIColor whiteColor];
+                [self addSubview:badgeBtn];
+            }
+        }
+    }
+}
+%end
+
 %ctor {
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{
         DeArrowEnabled: @YES,
         DeArrowReplaceTitles: @YES,
         DeArrowReplaceThumbnails: @YES,
-        DeArrowFallbackToOriginal: @YES
+        DeArrowFallbackToOriginal: @YES,
+        DeArrowQuickSwap: @YES
     }];
 }

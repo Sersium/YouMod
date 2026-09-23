@@ -316,7 +316,6 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"HIDE_WATERMARK"), YMLOC(@"HIDE_WATERMARK_DESC"), HideWaterMark),
             YMToggle(YMLOC(@"HIDE_FULLSCREEN_ACTIONS"), YMLOC(@"HIDE_FULLSCREEN_ACTIONS_DESC"), HideFullAction),
             YMToggle(YMLOC(@"FORCE_SEEKBAR"), YMLOC(@"FORCE_SEEKBAR_DESC"), AlwaysShowSeekbar),
-            YMToggle(YMLOC(@"DISABLES_SHOW_REMAINING"), YMLOC(@"DISABLES_SHOW_REMAINING_DESC"), DisablesShowRemaining),
             YMToggle(YMLOC(@"ALWAYS_SHOW_REMAINING"), YMLOC(@"ALWAYS_SHOW_REMAINING_DESC"), AlwaysShowRemaining),
             YMToggle(YMLOC(@"SHOW_REMAINING_EXTRA"), YMLOC(@"SHOW_REMAINING_EXTRA_DESC"), ShowExtraTimeRemaining),
             [YMToggle(YMLOC(@"USES_24_HOURS_TIME"), YMLOC(@"USES_24_HOURS_TIME_DESC"), Uses24HoursTime) visibleWhenBoolKey:ShowExtraTimeRemaining], 
@@ -496,7 +495,6 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMTextSegment(YMLOC(@"DEVICE_UI"), DeviceUIIndex, (@[YMLOC(@"DEFAULT"), @"iPad", @"iPhone"]), 0),
             YMToggle(YMLOC(@"AUTO_OPEN_LINK"), YMLOC(@"AUTO_OPEN_LINK_DESC"), AutoOpenLink),
             YMHeader(YMLOC(@"FLYOUT_MENU")),
-            YMToggle(YMLOC(@"REMOVE_PLAY_IN_NEXT_QUEUE_OPTION"), YMLOC(@"REMOVE_PLAY_IN_NEXT_QUEUE_OPTION_DESC"), RemovePlayInNextQueueOption),
             YMToggle(YMLOC(@"REMOVE_PLAY_IN_LAST_QUEUE_OPTION"), YMLOC(@"REMOVE_PLAY_IN_LAST_QUEUE_OPTION_DESC"), RemoveAddToLastQueueOption),
             YMToggle(YMLOC(@"REMOVE_DOWNLOAD_OPTION"), YMLOC(@"REMOVE_DOWNLOAD_OPTION_DESC"), RemoveDownloadOption),
             YMToggle(YMLOC(@"REMOVE_WATCH_LATER_OPTION"), YMLOC(@"REMOVE_WATCH_LATER_OPTION_DESC"), RemoveWatchLaterOption),
@@ -546,6 +544,7 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         YMToggle(YMLOC(@"DEARROW_REPLACE_TITLES"), YMLOC(@"DEARROW_REPLACE_TITLES_DESC"), DeArrowReplaceTitles),
         YMToggle(YMLOC(@"DEARROW_REPLACE_THUMBNAILS"), YMLOC(@"DEARROW_REPLACE_THUMBNAILS_DESC"), DeArrowReplaceThumbnails),
         YMToggle(YMLOC(@"DEARROW_FALLBACK_ORIGINAL"), YMLOC(@"DEARROW_FALLBACK_ORIGINAL_DESC"), DeArrowFallbackToOriginal),
+        YMToggle(YMLOC(@"DEARROW_QUICK_SWAP"), YMLOC(@"DEARROW_QUICK_SWAP_DESC"), DeArrowQuickSwap),
     ];
     YMRegisterSettingsGroup(@"DeArrow", dearrowItems);
     YTSettingsSectionItem *dearrowgroup = [YTSettingsSectionItemClass itemWithTitle:@"DeArrow" accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
@@ -556,6 +555,22 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     iconDA.iconType = 67;
     dearrowgroup.settingIcon = iconDA;
     [sectionItems addObject:dearrowgroup];
+
+    // Section: Return YouTube Dislike
+    NSArray<YMSettingsItem *> *rydItems = @[
+        YMToggle(YMLOC(@"RYD_ENABLED"), YMLOC(@"RYD_ENABLED_DESC"), ReturnYouTubeDislike),
+        YMToggle(YMLOC(@"RYD_SHOW_DISLIKES"), YMLOC(@"RYD_SHOW_DISLIKES_DESC"), RYDShowDislikes),
+        YMToggle(YMLOC(@"RYD_SHOW_LIKES"), YMLOC(@"RYD_SHOW_LIKES_DESC"), RYDShowLikes),
+    ];
+    YMRegisterSettingsGroup(@"Return YouTube Dislike", rydItems);
+    YTSettingsSectionItem *rydgroup = [YTSettingsSectionItemClass itemWithTitle:@"Return YouTube Dislike" accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
+        YMPushSubSettings(@"Return YouTube Dislike", rydItems, settingsViewController, [self parentResponder]);
+        return YES;
+    }];
+    YTIIcon *iconRYD = [%c(YTIIcon) new];
+    iconRYD.iconType = 62;
+    rydgroup.settingIcon = iconRYD;
+    [sectionItems addObject:rydgroup];
 
     // Section 9
     // Perferences
@@ -683,11 +698,15 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         DeArrowReplaceTitles: @YES,
         DeArrowReplaceThumbnails: @YES,
         DeArrowFallbackToOriginal: @YES,
+        DeArrowQuickSwap: @YES,
         HideMixPlaylists: @NO,
         HideAISummaries: @NO,
         RemoveShortsDislikeButton: @NO,
         RemoveShortsSaveButton: @NO,
-        ShortsAutoSpeedIndex: @0
+        ShortsAutoSpeedIndex: @0,
+        ReturnYouTubeDislike: @YES,
+        RYDShowLikes: @YES,
+        RYDShowDislikes: @YES
     }];
     %init;
 }

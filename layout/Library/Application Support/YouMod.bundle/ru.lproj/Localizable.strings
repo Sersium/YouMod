@@ -641,3 +641,13 @@
 "DEARROW_REPLACE_THUMBNAILS_DESC" = "Заменяет кликбейтные значки на реальные кадры из видео.";
 "DEARROW_FALLBACK_ORIGINAL" = "Возврат к оригиналу";
 "DEARROW_FALLBACK_ORIGINAL_DESC" = "Показывает оригинальное название и превью, если в DeArrow нет данных.";
+"DEARROW_QUICK_SWAP" = "Быстрое переключение в ленте";
+"DEARROW_QUICK_SWAP_DESC" = "Добавляет значок и жест долгого нажатия для мгновенного переключения между оригиналом и DeArrow в ленте.";
+
+/* Return YouTube Dislike */
+"RYD_ENABLED" = "Включить Return YouTube Dislike";
+"RYD_ENABLED_DESC" = "Восстанавливает счетчик дизлайков прямо возле кнопки «Не нравится» через Return YouTube Dislike API.";
+"RYD_SHOW_DISLIKES" = "Показывать дизлайки";
+"RYD_SHOW_DISLIKES_DESC" = "Отображает количество дизлайков возле кнопки «Не нравится» на видео и в Shorts.";
+"RYD_SHOW_LIKES" = "Показывать проверенные лайки";
+"RYD_SHOW_LIKES_DESC" = "Отображает точное количество лайков.";
