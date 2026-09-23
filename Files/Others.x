@@ -358,15 +358,21 @@ static void harvestSectionContent(id object, NSMutableArray *itemSectionRenderer
         return;
     }
     if ([object isKindOfClass:%c(YTISectionListMutationOperations)]) {
-        harvestSectionContent(((YTISectionListMutationOperations *)object).operationsArray, itemSectionRenderers, elements, seen, depth + 1);
+        if ([object respondsToSelector:@selector(operationsArray)]) {
+            harvestSectionContent([(id)object operationsArray], itemSectionRenderers, elements, seen, depth + 1);
+        }
         return;
     }
     if ([object isKindOfClass:%c(YTIInsertItemSectionContentOperation)]) {
-        harvestSectionContent(((YTIInsertItemSectionContentOperation *)object).contentsArray, itemSectionRenderers, elements, seen, depth + 1);
+        if ([object respondsToSelector:@selector(contentsArray)]) {
+            harvestSectionContent([(id)object contentsArray], itemSectionRenderers, elements, seen, depth + 1);
+        }
         return;
     }
     @try {
-        harvestSectionContent(((GPBMessage *)object).firstSubmessage, itemSectionRenderers, elements, seen, depth + 1);
+        if ([object respondsToSelector:@selector(firstSubmessage)]) {
+            harvestSectionContent([(id)object firstSubmessage], itemSectionRenderers, elements, seen, depth + 1);
+        }
     } @catch (id ex) {}
 }
 

@@ -715,6 +715,14 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 - (YTIFormattedString *)title;
 @end
 
+@interface YTISectionListMutationOperations : NSObject
+- (NSArray *)operationsArray;
+@end
+
+@interface YTIInsertItemSectionContentOperation : NSObject
+- (NSArray *)contentsArray;
+@end
+
 @interface YTDataUtils : NSObject
 + (instancetype)generateClientSideNonce;
 @end
