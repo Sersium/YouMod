@@ -893,7 +893,9 @@ static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
     %orig;
     if (IS_ENABLED(FeedPreviewCCDisabled)) {
         @try {
-            [self.view setCaptionsActive:NO];
+            if ([self.view respondsToSelector:@selector(setCaptionsActive:)]) {
+                [(id)self.view setCaptionsActive:NO];
+            }
             UIView *captionBtn = [self.view valueForKey:@"_captionButton"];
             if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
                 [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
