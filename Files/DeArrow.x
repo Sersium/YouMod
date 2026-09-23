@@ -400,7 +400,7 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     NSString *status = isNowOriginal ? @"DeArrow: Original" : @"DeArrow: Replaced";
     Class hudClass = %c(GOOHUDManagerInternal);
     if ([hudClass respondsToSelector:@selector(showMessageWithText:)]) {
-        [hudClass showMessageWithText:status];
+        [(id)hudClass showMessageWithText:status];
     }
 
     if (targetView) {
