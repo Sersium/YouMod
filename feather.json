@@ -10,16 +10,23 @@
       "name": "YouTube (YouMod)",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "21.38.2-2.1.2",
-      "versionDate": "2026-09-23T18:43:21Z",
-      "versionDescription": "YouMod v2.1.2: Universal DeArrow titles, web-style feed indicator, RYD action bar & details dislike counters, feed audio ON & CC disabled, and embedded tweak preferences.",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.2/YouTube_YouMod.ipa",
-      "localizedDescription": "All-in-one YouTube for iOS with ad blocking, background playback, OLED dark mode, DeArrow title/thumbnail replacement with feed quick-swap, and Return YouTube Dislike counts on videos and Shorts.",
+      "version": "21.38.2-2.1.3",
+      "versionDate": "2026-09-23T19:20:00Z",
+      "versionDescription": "YouMod v2.1.3: Web-style DeArrow bullseye button on feed/channel titles, universal title formatting, zero grey thumbnails, unmuted preview audio icon & disabled CC, and RYD counters next to thumbs up/down.",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.3/YouTube_YouMod.ipa",
+      "localizedDescription": "All-in-one YouTube for iOS with ad blocking, background playback, OLED dark mode, DeArrow title/thumbnail replacement with web-style title indicator button, and Return YouTube Dislike counts on videos and Shorts.",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
       "size": 129309848,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "21.38.2-2.1.3",
+          "date": "2026-09-23T19:20:00Z",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.3/YouTube_YouMod.ipa",
+          "size": 129309848,
+          "localizedDescription": "YouMod v2.1.3: Web-style DeArrow bullseye button on feed/channel titles, universal title formatting, zero grey thumbnails, unmuted preview audio icon & disabled CC, and RYD counters next to thumbs up/down."
+        },
         {
           "version": "21.38.2-2.1.2",
           "date": "2026-09-23T18:43:21Z",

@@ -540,10 +540,23 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 - (void)setLoopMode:(NSInteger)loopMode;
 @end
 
+@interface YTInlineMutedPlaybackAudioIconView : UIView
+- (void)setAudioOn:(BOOL)audioOn;
+@end
+
 @interface YTInlineMutedPlaybackPlayerOverlayViewController : UIViewController
+- (BOOL)inlinePlaybackUnmutedAtStart;
+- (void)setActiveCaptionTrack:(id)track;
 @end
 
 @interface YTInlineMutedPlaybackPlayerOverlayView : UIView
+- (void)setAudioSoundOn:(BOOL)soundOn;
+- (void)setCaptionsActive:(BOOL)active;
+- (BOOL)captionsActive;
+- (UIView *)captionOverlayView;
+@end
+
+@interface YTReelWatchPlaybackOverlayViewSub : YTReelWatchPlaybackOverlayView
 @end
 
 @interface YTWatchFloatingMiniplayerViewController : UIViewController
@@ -560,6 +573,8 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 
 @interface ASDisplayNode (YouMod)
 - (void)removeYogaChild:(id)arg;
+@property (nonatomic, weak) ASDisplayNode *supernode;
+@property (nonatomic, copy) NSArray<ASDisplayNode *> *subnodes;
 @end
 
 @interface _ASDisplayView (YouMod)

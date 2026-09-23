@@ -291,8 +291,16 @@ static NSString *getElementDescription(ELMCellNode *node) {
     }
 }
 
-static BOOL isVideoScrollableActionBar(ASCollectionView *collectionView, ELMCellNode *node) {
-    return [collectionView.accessibilityIdentifier isEqualToString:@"id.video.scrollable_action_bar"];
+static ELMContainerNode *YouModFindNodeWithIdentifier(ASDisplayNode *root, NSString *targetId) {
+    if (!root) return nil;
+    if ([root.accessibilityIdentifier isEqualToString:targetId]) {
+        return (ELMContainerNode *)root;
+    }
+    for (ASDisplayNode *child in root.yogaChildren) {
+        ELMContainerNode *found = YouModFindNodeWithIdentifier(child, targetId);
+        if (found) return found;
+    }
+    return nil;
 }
 
 static BOOL isVideoDescriptionHeader(ASCollectionView *collectionView, ELMCellNode *node) {
@@ -320,6 +328,7 @@ static BOOL isVideoDescriptionHeader(ASCollectionView *collectionView, ELMCellNo
     // Video details description header panel
     if (self.isProbablyVideoDescriptionHeaderPanel && isVideoDescriptionHeader(self, node)) {
         NSString *videoId = getVideoId(node);
+        if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
         if (videoId.length == 0) return node;
 
         @try {
@@ -385,116 +394,114 @@ static BOOL isVideoDescriptionHeader(ASCollectionView *collectionView, ELMCellNo
             }
         } @catch (id ex) {}
     }
-    // Main video scrollable action bar (thumbs up and thumbs down)
-    else if (isVideoScrollableActionBar(self, node)) {
-        @try {
-            int pairMode = -1;
-            BOOL isDislikeButtonModified = NO;
-            ASDisplayNode *containerNode = node;
-            ELMContainerNode *likeNode = nil;
+    // Main video action bar (contains thumbs up and thumbs down)
+    else {
+        ELMContainerNode *likeNode = YouModFindNodeWithIdentifier(node, @"id.video.like.button");
+        if (likeNode) {
+            @try {
+                ELMContainerNode *dislikeNode = YouModFindNodeWithIdentifier(node, @"id.video.dislike.button");
+                NSString *videoId = getVideoId(node);
+                if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+                if (videoId.length == 0) return node;
 
-            if (![containerNode isKindOfClass:%c(ELMCellNode)]) return node;
-
-            do {
-                containerNode = [containerNode.yogaChildren firstObject];
-                if (containerNode.yogaChildren.count == 2)
-                    containerNode = containerNode.yogaChildren[1];
-            } while (containerNode.yogaChildren.count == 1);
-
-            likeNode = [containerNode.yogaChildren firstObject];
-            if (![likeNode.accessibilityIdentifier isEqualToString:@"id.video.like.button"]) return node;
-
-            NSString *videoId = getVideoId(node);
-            if (videoId.length == 0) return node;
-
-            ELMContainerNode *dislikeNode = [containerNode.yogaChildren lastObject];
-            isDislikeButtonModified = dislikeNode.yogaChildren.count == 2;
-
-            __strong YTRollingNumberNode *likeRollingNumberNode = nil;
-            __strong YTRollingNumberNode *dislikeRollingNumberNode = nil;
-            __strong ELMTextNode *likeTextNode = nil;
-            __strong ELMTextNode *dislikeTextNode = nil;
-
-            if (likeNode.yogaChildren.count == 2) {
-                id targetNode = likeNode.yogaChildren[1];
-                if ([targetNode isKindOfClass:%c(YTRollingNumberNode)]) {
-                    likeRollingNumberNode = (YTRollingNumberNode *)targetNode;
-                    if (isDislikeButtonModified) {
-                        dislikeRollingNumberNode = dislikeNode.yogaChildren[1];
-                    } else {
-                        id elementContext = [likeRollingNumberNode valueForKey:@"_context"];
-                        overrideNodeCreation = 1;
-                        dislikeRollingNumberNode = [[%c(ELMNodeFactory) sharedInstance] nodeWithElement:likeRollingNumberNode.element materializationContext:&elementContext];
-                        overrideNodeCreation = 0;
-                        dislikeRollingNumberNode.updatedCount = @"...";
-                        dislikeRollingNumberNode.updatedCountNumber = @(0);
-                        if ([dislikeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) {
-                            [dislikeRollingNumberNode updateRollingNumberView];
-                        }
-                        [dislikeNode addYogaChild:dislikeRollingNumberNode];
-                        if (dislikeRollingNumberNode.view && dislikeNode.view) {
-                            [dislikeNode.view addSubview:dislikeRollingNumberNode.view];
-                        }
-                        pairMode = 0;
+                // Find text or rolling number node in likeNode
+                id targetNode = nil;
+                for (ASDisplayNode *child in likeNode.yogaChildren) {
+                    if ([child isKindOfClass:%c(YTRollingNumberNode)] || [child isKindOfClass:%c(ELMTextNode)]) {
+                        targetNode = child;
+                        break;
                     }
-                } else if ([targetNode isKindOfClass:%c(ELMTextNode)]) {
-                    likeTextNode = (ELMTextNode *)targetNode;
-                    if (isDislikeButtonModified) {
-                        dislikeTextNode = dislikeNode.yogaChildren[1];
-                    } else {
-                        id elementContext = [likeTextNode valueForKey:@"_context"];
-                        overrideNodeCreation = 2;
-                        dislikeTextNode = [[%c(ELMNodeFactory) sharedInstance] nodeWithElement:likeTextNode.element materializationContext:&elementContext];
-                        overrideNodeCreation = 0;
-                        NSMutableAttributedString *mDisText = [[NSMutableAttributedString alloc] initWithAttributedString:likeTextNode.attributedText];
-                        mDisText.mutableString.string = @"...";
-                        dislikeTextNode.attributedText = mDisText;
-                        [dislikeNode addYogaChild:dislikeTextNode];
-                        if (dislikeTextNode.view && dislikeNode.view) {
-                            [dislikeNode.view addSubview:dislikeTextNode.view];
+                    for (ASDisplayNode *grandchild in child.yogaChildren) {
+                        if ([grandchild isKindOfClass:%c(YTRollingNumberNode)] || [grandchild isKindOfClass:%c(ELMTextNode)]) {
+                            targetNode = grandchild;
+                            break;
                         }
-                        pairMode = 0;
+                    }
+                    if (targetNode) break;
+                }
+
+                __strong YTRollingNumberNode *likeRollingNumberNode = [targetNode isKindOfClass:%c(YTRollingNumberNode)] ? (YTRollingNumberNode *)targetNode : nil;
+                __strong ELMTextNode *likeTextNode = [targetNode isKindOfClass:%c(ELMTextNode)] ? (ELMTextNode *)targetNode : nil;
+
+                __strong YTRollingNumberNode *dislikeRollingNumberNode = nil;
+                __strong ELMTextNode *dislikeTextNode = nil;
+
+                if (dislikeNode) {
+                    // Check if dislikeNode already has a text/rolling child
+                    for (ASDisplayNode *dChild in dislikeNode.yogaChildren) {
+                        if ([dChild isKindOfClass:%c(YTRollingNumberNode)]) dislikeRollingNumberNode = (YTRollingNumberNode *)dChild;
+                        else if ([dChild isKindOfClass:%c(ELMTextNode)]) dislikeTextNode = (ELMTextNode *)dChild;
+                    }
+
+                    if (!dislikeRollingNumberNode && !dislikeTextNode && targetNode) {
+                        if (likeRollingNumberNode) {
+                            id elementContext = [likeRollingNumberNode valueForKey:@"_context"];
+                            overrideNodeCreation = 1;
+                            dislikeRollingNumberNode = [[%c(ELMNodeFactory) sharedInstance] nodeWithElement:likeRollingNumberNode.element materializationContext:&elementContext];
+                            overrideNodeCreation = 0;
+                            dislikeRollingNumberNode.updatedCount = @"...";
+                            dislikeRollingNumberNode.updatedCountNumber = @(0);
+                            if ([dislikeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) {
+                                [dislikeRollingNumberNode updateRollingNumberView];
+                            }
+                            [dislikeNode addYogaChild:dislikeRollingNumberNode];
+                            if (dislikeRollingNumberNode.view && dislikeNode.view) {
+                                [dislikeNode.view addSubview:dislikeRollingNumberNode.view];
+                            }
+                        } else if (likeTextNode) {
+                            id elementContext = [likeTextNode valueForKey:@"_context"];
+                            overrideNodeCreation = 2;
+                            dislikeTextNode = [[%c(ELMNodeFactory) sharedInstance] nodeWithElement:likeTextNode.element materializationContext:&elementContext];
+                            overrideNodeCreation = 0;
+                            NSMutableAttributedString *mDis = [[NSMutableAttributedString alloc] initWithAttributedString:likeTextNode.attributedText];
+                            mDis.mutableString.string = @"...";
+                            dislikeTextNode.attributedText = mDis;
+                            [dislikeNode addYogaChild:dislikeTextNode];
+                            if (dislikeTextNode.view && dislikeNode.view) {
+                                [dislikeNode.view addSubview:dislikeTextNode.view];
+                            }
+                        }
                     }
                 }
-            }
 
-            self.hasDislikeIntent = YES;
-            [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoId completion:^(NSDictionary *votes) {
-                if (!votes) return;
-                NSInteger dislikes = [votes[@"dislikes"] integerValue];
-                NSString *dislikeCount = YouModFormatVoteCount(dislikes);
-                NSInteger likes = [votes[@"likes"] integerValue];
-                NSString *likeCount = YouModFormatVoteCount(likes);
+                self.hasDislikeIntent = YES;
+                [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoId completion:^(NSDictionary *votes) {
+                    if (!votes) return;
+                    NSInteger dislikes = [votes[@"dislikes"] integerValue];
+                    NSString *dislikeCount = YouModFormatVoteCount(dislikes);
+                    NSInteger likes = [votes[@"likes"] integerValue];
+                    NSString *likeCount = YouModFormatVoteCount(likes);
 
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    if (IS_ENABLED(RYDShowLikes)) {
-                        if (likeRollingNumberNode) {
-                            likeRollingNumberNode.updatedCount = likeCount;
-                            likeRollingNumberNode.updatedCountNumber = @(likes);
-                            if ([likeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) [likeRollingNumberNode updateRollingNumberView];
-                            if ([likeRollingNumberNode respondsToSelector:@selector(relayoutNode)]) [likeRollingNumberNode relayoutNode];
-                        } else if (likeTextNode) {
-                            NSMutableAttributedString *mLike = [[NSMutableAttributedString alloc] initWithAttributedString:likeTextNode.attributedText];
-                            mLike.mutableString.string = likeCount;
-                            likeTextNode.attributedText = mLike;
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        if (IS_ENABLED(RYDShowLikes)) {
+                            if (likeRollingNumberNode) {
+                                likeRollingNumberNode.updatedCount = likeCount;
+                                likeRollingNumberNode.updatedCountNumber = @(likes);
+                                if ([likeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) [likeRollingNumberNode updateRollingNumberView];
+                                if ([likeRollingNumberNode respondsToSelector:@selector(relayoutNode)]) [likeRollingNumberNode relayoutNode];
+                            } else if (likeTextNode) {
+                                NSMutableAttributedString *mLike = [[NSMutableAttributedString alloc] initWithAttributedString:likeTextNode.attributedText];
+                                mLike.mutableString.string = likeCount;
+                                likeTextNode.attributedText = mLike;
+                            }
                         }
-                    }
-                    if (IS_ENABLED(RYDShowDislikes)) {
-                        NSString *dislikeString = (pairMode == 0) ? [NSString stringWithFormat:@"  %@ ", dislikeCount] : dislikeCount;
-                        if (dislikeRollingNumberNode) {
-                            dislikeRollingNumberNode.updatedCount = dislikeString;
-                            dislikeRollingNumberNode.updatedCountNumber = @(dislikes);
-                            if ([dislikeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) [dislikeRollingNumberNode updateRollingNumberView];
-                            if ([dislikeRollingNumberNode respondsToSelector:@selector(relayoutNode)]) [dislikeRollingNumberNode relayoutNode];
-                        } else if (dislikeTextNode) {
-                            NSMutableAttributedString *mDis = [[NSMutableAttributedString alloc] initWithAttributedString:dislikeTextNode.attributedText];
-                            mDis.mutableString.string = dislikeString;
-                            dislikeTextNode.attributedText = mDis;
+                        if (IS_ENABLED(RYDShowDislikes)) {
+                            NSString *dislikeString = [NSString stringWithFormat:@"  %@ ", dislikeCount];
+                            if (dislikeRollingNumberNode) {
+                                dislikeRollingNumberNode.updatedCount = dislikeString;
+                                dislikeRollingNumberNode.updatedCountNumber = @(dislikes);
+                                if ([dislikeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) [dislikeRollingNumberNode updateRollingNumberView];
+                                if ([dislikeRollingNumberNode respondsToSelector:@selector(relayoutNode)]) [dislikeRollingNumberNode relayoutNode];
+                            } else if (dislikeTextNode) {
+                                NSMutableAttributedString *mDis = [[NSMutableAttributedString alloc] initWithAttributedString:dislikeTextNode.attributedText];
+                                mDis.mutableString.string = dislikeString;
+                                dislikeTextNode.attributedText = mDis;
+                            }
                         }
-                    }
-                });
-            }];
-        } @catch (id ex) {}
+                    });
+                }];
+            } @catch (id ex) {}
+        }
     }
 
     return node;
@@ -512,39 +519,73 @@ static void YouModApplyRYDVotes(_ASDisplayView *view, NSDictionary *votes, NSStr
         if (view.superview) view.superview.clipsToBounds = NO;
 
         if ([iden isEqualToString:@"id.video.dislike.button"]) {
-            // If already handled by Texture yoga child, don't overlap with a UILabel
-            for (UIView *sub in view.subviews) {
-                if ([sub isKindOfClass:objc_getClass("YTRollingNumberView")] ||
-                    [sub isKindOfClass:objc_getClass("ASTextNodeView")] ||
-                    [sub isKindOfClass:objc_getClass("ELMTextNodeView")]) {
-                    return;
-                }
-            }
-
             NSInteger dislikes = [votes[@"dislikes"] integerValue];
             NSString *dislikesText = YouModFormatVoteCount(dislikes);
 
-            UILabel *lbl = [view viewWithTag:0xD1571CE];
-            if (!lbl) {
-                lbl = [[UILabel alloc] init];
-                lbl.tag = 0xD1571CE;
-                lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
-                lbl.textColor = [UIColor whiteColor];
-                lbl.textAlignment = NSTextAlignmentLeft;
-                [view addSubview:lbl];
+            BOOL updatedExisting = NO;
+            for (UIView *sub in view.subviews) {
+                if ([sub isKindOfClass:objc_getClass("YTRollingNumberView")]) {
+                    updatedExisting = YES;
+                    break;
+                }
+                if ([sub respondsToSelector:@selector(node)]) {
+                    id subNode = [sub performSelector:@selector(node)];
+                    if ([subNode isKindOfClass:%c(ELMTextNode)] || [subNode isKindOfClass:%c(ASTextNode)]) {
+                        NSAttributedString *orig = [subNode attributedText];
+                        NSMutableAttributedString *m = orig ? [orig mutableCopy] : [[NSMutableAttributedString alloc] initWithString:dislikesText];
+                        [m.mutableString setString:dislikesText];
+                        [subNode setAttributedText:m];
+                        [sub setNeedsDisplay];
+                        updatedExisting = YES;
+                        break;
+                    }
+                }
             }
-            lbl.text = dislikesText;
-            [lbl sizeToFit];
 
-            // Position label next to the thumbs down icon
-            CGFloat iconWidth = 24.0;
-            CGFloat padding = 4.0;
-            lbl.frame = CGRectMake(iconWidth + padding, (view.bounds.size.height - lbl.bounds.size.height) / 2.0, lbl.bounds.size.width, lbl.bounds.size.height);
+            if (!updatedExisting) {
+                UILabel *lbl = [view viewWithTag:0xD1571CE];
+                if (!lbl) {
+                    lbl = [[UILabel alloc] init];
+                    lbl.tag = 0xD1571CE;
+                    lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
+                    lbl.textColor = [UIColor whiteColor];
+                    lbl.textAlignment = NSTextAlignmentLeft;
+                    [view addSubview:lbl];
+                }
+                lbl.text = dislikesText;
+                [lbl sizeToFit];
+
+                CGFloat iconWidth = 24.0;
+                CGFloat padding = 4.0;
+                lbl.frame = CGRectMake(iconWidth + padding, (view.bounds.size.height - lbl.bounds.size.height) / 2.0, lbl.bounds.size.width, lbl.bounds.size.height);
+
+                CGRect f = view.frame;
+                CGFloat reqWidth = iconWidth + padding + lbl.bounds.size.width + 8.0;
+                if (f.size.width < reqWidth) {
+                    CGFloat diff = reqWidth - f.size.width;
+                    f.size.width = reqWidth;
+                    view.frame = f;
+                    if (view.superview) {
+                        CGRect pf = view.superview.frame;
+                        pf.size.width += diff;
+                        view.superview.frame = pf;
+                    }
+                }
+            }
         } else if ([iden isEqualToString:@"id.video.like.button"] && IS_ENABLED(RYDShowLikes)) {
             NSInteger likes = [votes[@"likes"] integerValue];
             NSString *likesText = YouModFormatVoteCount(likes);
             for (UIView *sub in view.subviews) {
-                if ([sub isKindOfClass:[UILabel class]] && sub.tag != 0xD1571CE) {
+                if ([sub respondsToSelector:@selector(node)]) {
+                    id subNode = [sub performSelector:@selector(node)];
+                    if ([subNode isKindOfClass:%c(ELMTextNode)] || [subNode isKindOfClass:%c(ASTextNode)]) {
+                        NSAttributedString *orig = [subNode attributedText];
+                        NSMutableAttributedString *m = orig ? [orig mutableCopy] : [[NSMutableAttributedString alloc] initWithString:likesText];
+                        [m.mutableString setString:likesText];
+                        [subNode setAttributedText:m];
+                        [sub setNeedsDisplay];
+                    }
+                } else if ([sub isKindOfClass:[UILabel class]] && sub.tag != 0xD1571CE) {
                     UILabel *likeLbl = (UILabel *)sub;
                     if (likeLbl.text.length > 0 && ![likeLbl.text isEqualToString:likesText]) {
                         likeLbl.text = likesText;
@@ -658,6 +699,61 @@ static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, N
 %end
 
 // YouTube Shorts like/dislike counts
+static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
+    if (!overlayView || !IS_ENABLED(ReturnYouTubeDislike)) return;
+    id spvc = [overlayView _viewControllerForAncestor];
+    NSString *videoId = nil;
+    @try {
+        videoId = [spvc valueForKeyPath:@"currentReelNonVideoContentModel.contentVideoId"];
+    } @catch (id ex) {}
+    if (videoId.length == 0) {
+        @try {
+            id entry = [spvc valueForKeyPath:@"currentReelVideoModel"];
+            videoId = [entry valueForKey:@"videoId"];
+        } @catch (id ex) {}
+    }
+    if (videoId.length == 0) return;
+
+    [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoId completion:^(NSDictionary *votes) {
+        if (!votes) return;
+        NSInteger dislikes = [votes[@"dislikes"] integerValue];
+        NSString *dislikesText = YouModFormatVoteCount(dislikes);
+        NSInteger likes = [votes[@"likes"] integerValue];
+        NSString *likesText = YouModFormatVoteCount(likes);
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            for (UIView *v in overlayView.subviews) {
+                if ([v.accessibilityIdentifier isEqualToString:@"id.reel_dislike_button"] || [v.accessibilityIdentifier isEqualToString:@"id.video.dislike.button"]) {
+                    if ([v respondsToSelector:@selector(setTitle:forState:)]) {
+                        [(UIButton *)v setTitle:dislikesText forState:UIControlStateNormal];
+                        [(UIButton *)v setTitle:dislikesText forState:UIControlStateSelected];
+                    }
+                }
+                if (IS_ENABLED(RYDShowLikes) && ([v.accessibilityIdentifier isEqualToString:@"id.reel_like_button"] || [v.accessibilityIdentifier isEqualToString:@"id.video.like.button"])) {
+                    if ([v respondsToSelector:@selector(setTitle:forState:)]) {
+                        [(UIButton *)v setTitle:likesText forState:UIControlStateNormal];
+                        [(UIButton *)v setTitle:likesText forState:UIControlStateSelected];
+                    }
+                }
+            }
+        });
+    }];
+}
+
+%hook YTReelWatchPlaybackOverlayView
+- (void)layoutActionBar {
+    %orig;
+    YouModApplyShortsOverlayVotes(self);
+}
+%end
+
+%hook YTReelWatchPlaybackOverlayViewSub
+- (void)layoutActionBar {
+    %orig;
+    YouModApplyShortsOverlayVotes((UIView *)self);
+}
+%end
+
 %hook YTReelWatchLikesController
 
 - (void)updateLikeButtonWithRenderer:(id)renderer {

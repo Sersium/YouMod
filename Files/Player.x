@@ -802,15 +802,6 @@ static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
         }
     }
     %orig;
-    if (singleVideoController) {
-        BOOL shouldSoundOn = IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute);
-        @try {
-            UIView *soundView = [self.view.superview valueForKey:@"_audioSoundIconView"];
-            if ([soundView respondsToSelector:@selector(setAudioOn:)]) {
-                [soundView performSelector:@selector(setAudioOn:) withObject:@(shouldSoundOn)];
-            }
-        } @catch (id ex) {}
-    }
 }
 %end
 
@@ -834,34 +825,75 @@ static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
 }
 %end
 
-%hook YTInlineMutedPlaybackPlayerOverlayView
+%hook YTInlineMutedPlaybackAudioIconView
+- (void)setAudioOn:(BOOL)audioOn {
+    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+        %orig(YES);
+        return;
+    }
+    %orig(audioOn);
+}
 - (void)layoutSubviews {
     %orig;
     if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-        @try {
-            UIView *soundView = [self valueForKey:@"_audioSoundIconView"];
-            if ([soundView respondsToSelector:@selector(setAudioOn:)]) {
-                [soundView performSelector:@selector(setAudioOn:) withObject:@YES];
-            }
-        } @catch (id ex) {}
+        [self setAudioOn:YES];
+    }
+}
+%end
+
+%hook YTInlineMutedPlaybackPlayerOverlayView
+- (void)setAudioSoundOn:(BOOL)soundOn {
+    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+        %orig(YES);
+        return;
+    }
+    %orig(soundOn);
+}
+- (void)setCaptionsActive:(BOOL)active {
+    if (IS_ENABLED(FeedPreviewCCDisabled)) {
+        %orig(NO);
+        return;
+    }
+    %orig(active);
+}
+- (BOOL)captionsActive {
+    if (IS_ENABLED(FeedPreviewCCDisabled)) return NO;
+    return %orig;
+}
+- (void)layoutSubviews {
+    %orig;
+    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+        [self setAudioSoundOn:YES];
     }
     if (IS_ENABLED(FeedPreviewCCDisabled)) {
+        [self setCaptionsActive:NO];
         @try {
-            UIView *captionBtn = [self valueForKey:@"_captionButton"];
-            if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
-                [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
-            }
-            captionBtn.hidden = YES;
+            UIView *c = [self captionOverlayView];
+            if (c) c.hidden = YES;
         } @catch (id ex) {}
     }
 }
 %end
 
 %hook YTInlineMutedPlaybackPlayerOverlayViewController
+- (BOOL)inlinePlaybackUnmutedAtStart {
+    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+        return YES;
+    }
+    return %orig;
+}
+- (void)setActiveCaptionTrack:(id)track {
+    if (IS_ENABLED(FeedPreviewCCDisabled)) {
+        %orig(nil);
+        return;
+    }
+    %orig(track);
+}
 - (void)loadView {
     %orig;
     if (IS_ENABLED(FeedPreviewCCDisabled)) {
         @try {
+            [self.view setCaptionsActive:NO];
             UIView *captionBtn = [self.view valueForKey:@"_captionButton"];
             if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
                 [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
