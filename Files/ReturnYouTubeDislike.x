@@ -161,6 +161,62 @@ static NSString *YouModGetCurrentVideoID(void) {
 }
 %end
 
+// Helpers to apply votes
+static void YouModApplyRYDVotes(_ASDisplayView *view, NSDictionary *votes, NSString *iden) {
+    if (!view || !votes) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if ([iden isEqualToString:@"id.video.dislike.button"]) {
+            NSInteger dislikes = [votes[@"dislikes"] integerValue];
+            NSString *dislikesText = YouModFormatVoteCount(dislikes);
+
+            UILabel *lbl = [view viewWithTag:0xD1571CE];
+            if (!lbl) {
+                lbl = [[UILabel alloc] init];
+                lbl.tag = 0xD1571CE;
+                lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
+                lbl.textColor = [UIColor whiteColor];
+                lbl.textAlignment = NSTextAlignmentLeft;
+                [view addSubview:lbl];
+            }
+            lbl.text = dislikesText;
+            [lbl sizeToFit];
+
+            // Position label next to the thumbs down icon
+            CGFloat iconWidth = 24.0;
+            CGFloat padding = 4.0;
+            lbl.frame = CGRectMake(iconWidth + padding, (view.bounds.size.height - lbl.bounds.size.height) / 2.0, lbl.bounds.size.width, lbl.bounds.size.height);
+        } else if ([iden isEqualToString:@"id.video.like.button"] && IS_ENABLED(RYDShowLikes)) {
+            NSInteger likes = [votes[@"likes"] integerValue];
+            NSString *likesText = YouModFormatVoteCount(likes);
+            for (UIView *sub in view.subviews) {
+                if ([sub isKindOfClass:[UILabel class]] && sub.tag != 0xD1571CE) {
+                    UILabel *likeLbl = (UILabel *)sub;
+                    if (likeLbl.text.length > 0 && ![likeLbl.text isEqualToString:likesText]) {
+                        likeLbl.text = likesText;
+                    }
+                }
+            }
+        }
+    });
+}
+
+static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, NSString *iden) {
+    if (!btn || !votes) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if ([iden isEqualToString:@"id.video.dislike.button"]) {
+            NSInteger dislikes = [votes[@"dislikes"] integerValue];
+            NSString *dislikesText = YouModFormatVoteCount(dislikes);
+            [btn setTitle:dislikesText forState:UIControlStateNormal];
+            [btn setTitle:dislikesText forState:UIControlStateSelected];
+        } else if ([iden isEqualToString:@"id.video.like.button"] && IS_ENABLED(RYDShowLikes)) {
+            NSInteger likes = [votes[@"likes"] integerValue];
+            NSString *likesText = YouModFormatVoteCount(likes);
+            [btn setTitle:likesText forState:UIControlStateNormal];
+            [btn setTitle:likesText forState:UIControlStateSelected];
+        }
+    });
+}
+
 // Update main player action bar buttons (ASDisplayView)
 %hook _ASDisplayView
 
@@ -182,11 +238,11 @@ static NSString *YouModGetCurrentVideoID(void) {
 
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID];
     if (votes) {
-        [self applyRYDVotes:votes forIdentifier:iden];
+        YouModApplyRYDVotes(self, votes, iden);
     } else {
         [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:^(NSDictionary *fetchedVotes) {
             if (fetchedVotes) {
-                [self applyRYDVotes:fetchedVotes forIdentifier:iden];
+                YouModApplyRYDVotes(self, fetchedVotes, iden);
             }
         }];
     }
@@ -208,46 +264,7 @@ static NSString *YouModGetCurrentVideoID(void) {
     NSString *videoID = note.userInfo[@"videoID"];
     if (!videoID || ![videoID isEqualToString:YouModGetCurrentVideoID()]) return;
     NSDictionary *votes = note.userInfo[@"votes"];
-    [self applyRYDVotes:votes forIdentifier:self.accessibilityIdentifier];
-}
-
-%new
-- (void)applyRYDVotes:(NSDictionary *)votes forIdentifier:(NSString *)iden {
-    if (!votes) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([iden isEqualToString:@"id.video.dislike.button"]) {
-            NSInteger dislikes = [votes[@"dislikes"] integerValue];
-            NSString *dislikesText = YouModFormatVoteCount(dislikes);
-
-            UILabel *lbl = [self viewWithTag:0xD1571CE];
-            if (!lbl) {
-                lbl = [[UILabel alloc] init];
-                lbl.tag = 0xD1571CE;
-                lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
-                lbl.textColor = [UIColor whiteColor];
-                lbl.textAlignment = NSTextAlignmentLeft;
-                [self addSubview:lbl];
-            }
-            lbl.text = dislikesText;
-            [lbl sizeToFit];
-
-            // Position label next to the thumbs down icon
-            CGFloat iconWidth = 24.0;
-            CGFloat padding = 4.0;
-            lbl.frame = CGRectMake(iconWidth + padding, (self.bounds.size.height - lbl.bounds.size.height) / 2.0, lbl.bounds.size.width, lbl.bounds.size.height);
-        } else if ([iden isEqualToString:@"id.video.like.button"] && IS_ENABLED(RYDShowLikes)) {
-            NSInteger likes = [votes[@"likes"] integerValue];
-            NSString *likesText = YouModFormatVoteCount(likes);
-            for (UIView *sub in self.subviews) {
-                if ([sub isKindOfClass:[UILabel class]] && sub.tag != 0xD1571CE) {
-                    UILabel *likeLbl = (UILabel *)sub;
-                    if (likeLbl.text.length > 0 && ![likeLbl.text isEqualToString:likesText]) {
-                        likeLbl.text = likesText;
-                    }
-                }
-            }
-        }
-    });
+    YouModApplyRYDVotes(self, votes, self.accessibilityIdentifier);
 }
 
 %end
@@ -268,32 +285,14 @@ static NSString *YouModGetCurrentVideoID(void) {
 
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID];
     if (votes) {
-        [self applyRYDVotesToButton:votes forIdentifier:iden];
+        YouModApplyRYDVotesToButton(self, votes, iden);
     } else {
         [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:^(NSDictionary *fetchedVotes) {
             if (fetchedVotes) {
-                [self applyRYDVotesToButton:fetchedVotes forIdentifier:iden];
+                YouModApplyRYDVotesToButton(self, fetchedVotes, iden);
             }
         }];
     }
-}
-
-%new
-- (void)applyRYDVotesToButton:(NSDictionary *)votes forIdentifier:(NSString *)iden {
-    if (!votes) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([iden isEqualToString:@"id.video.dislike.button"]) {
-            NSInteger dislikes = [votes[@"dislikes"] integerValue];
-            NSString *dislikesText = YouModFormatVoteCount(dislikes);
-            [self setTitle:dislikesText forState:UIControlStateNormal];
-            [self setTitle:dislikesText forState:UIControlStateSelected];
-        } else if ([iden isEqualToString:@"id.video.like.button"] && IS_ENABLED(RYDShowLikes)) {
-            NSInteger likes = [votes[@"likes"] integerValue];
-            NSString *likesText = YouModFormatVoteCount(likes);
-            [self setTitle:likesText forState:UIControlStateNormal];
-            [self setTitle:likesText forState:UIControlStateSelected];
-        }
-    });
 }
 
 %end
@@ -315,8 +314,8 @@ static NSString *YouModGetCurrentVideoID(void) {
     YTQTMButton *dislikeBtn = nil;
     YTQTMButton *likeBtn = nil;
     @try {
-        dislikeBtn = [self valueForKey:@"dislikeButton"];
-        likeBtn = [self valueForKey:@"likeButton"];
+        dislikeBtn = [(id)self valueForKey:@"dislikeButton"];
+        likeBtn = [(id)self valueForKey:@"likeButton"];
     } @catch (id ex) {}
 
     [[YouModRYDManager sharedInstance] fetchVotesForVideoID:vID completion:^(NSDictionary *votes) {

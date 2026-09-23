@@ -451,6 +451,9 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 @property (nonatomic, retain) UIPinchGestureRecognizer *YouModFullscreenGesture;
 @end
 
+@interface YTReelWatchLikesController : NSObject
+@end
+
 @interface YTReelContentView (YouMod) <UIGestureRecognizerDelegate>
 @property (nonatomic, retain) UILongPressGestureRecognizer *YouModExitShortsOnlyGesture;
 - (YTReelWatchPlaybackOverlayView *)playbackOverlay;
