@@ -79,5 +79,6 @@ assert '- (BOOL)inlinePlaybackUnmutedAtStart {' not in player, 'Leave audio gett
 assert 'setInlinePlaybackUnmutedAtStart:YES' in player and 'if (newVideo' in player
 assert '[container addYogaChild:added]' in ryd and '[container.style setMinWidth:' in ryd
 assert 'view.frame =' not in ryd and 'pf.size.width += diff' not in ryd
+assert 'didActivateNewPlaybackWithContentVideo:' in ryd and 'currentWatchPlayer.contentVideoID' in ryd
 assert '%hook ELMContainerNode' in ryd, 'Both action bars need counts, independent of collection ID'
 print('PASS: six card layouts, clipping, hit targets, and feed/audio/count regression guards')

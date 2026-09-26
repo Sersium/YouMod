@@ -940,16 +940,6 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
 }
 %end
 
-// Player response trigger to prefetch branding as soon as a video starts
-%hook YTPlayerViewController
-- (void)setPlayerResponse:(YTIPlayerResponse *)response {
-    %orig;
-    if (IS_ENABLED(DeArrowEnabled) && response.videoDetails.videoId.length > 0) {
-        [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:response.videoDetails.videoId];
-    }
-}
-%end
-
 #pragma mark - DeArrow Indicator (Web-Style) next to 3-dots Menu & Feed Quick Swap
 
 static BOOL YouModIsOverflowButtonView(UIView *view) {

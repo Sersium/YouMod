@@ -4,7 +4,7 @@
 // API: https://returnyoutubedislikeapi.com/votes?videoId={videoId}
 
 static NSString * const kYMReturnDislikeNotification = @"YouModReturnDislikeNotification";
-static NSString *currentActiveVideoID = nil;
+static __weak YTPlayerViewController *currentWatchPlayer = nil;
 
 static NSString *YouModFormatVoteCount(NSInteger count) {
     if (count < 0) return @"0";
@@ -163,15 +163,7 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
 #pragma mark - Hooks
 
 static NSString *YouModGetCurrentVideoID(void) {
-    if (currentActiveVideoID && currentActiveVideoID.length > 0) return currentActiveVideoID;
-    if (YouModCurrentPlayerViewController) {
-        @try {
-            YTIPlayerResponse *resp = [YouModCurrentPlayerViewController valueForKey:@"playerResponse"];
-            NSString *vid = resp.videoDetails.videoId;
-            if (vid.length > 0) return vid;
-        } @catch (id e) {}
-    }
-    return nil;
+    return currentWatchPlayer.contentVideoID;
 }
 
 static NSString *getVideoId(ASDisplayNode *containerNode) {
@@ -213,32 +205,28 @@ static NSString *getVideoId(ASDisplayNode *containerNode) {
     return YouModGetCurrentVideoID();
 }
 
-// Capture current video ID from player
-%hook YTPlayerViewController
-- (void)setPlayerResponse:(YTIPlayerResponse *)response {
-    %orig;
-    if ([self.activeVideoPlayerOverlay isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) return;
-    if (response.videoDetails.videoId.length > 0) {
-        currentActiveVideoID = [response.videoDetails.videoId copy];
-        if (IS_ENABLED(ReturnYouTubeDislike)) {
-            [[YouModRYDManager sharedInstance] fetchVotesForVideoID:currentActiveVideoID completion:nil];
-        }
-    }
+// These lifecycle selectors are present in YouTube 21.38.2. The old
+// setPlayerResponse:/loadVideoWithPlaybackData: hooks are no longer called.
+static void YouModWatchVideoChanged(YTPlayerViewController *player) {
+    if (player.isInlinePlaybackActive || [player.activeVideoPlayerOverlay isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) return;
+    NSString *videoID = player.contentVideoID;
+    if (!videoID.length) return;
+    currentWatchPlayer = player;
+    if (!IS_ENABLED(ReturnYouTubeDislike)) return;
+    [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:kYMReturnDislikeNotification object:nil userInfo:@{@"videoID": videoID}];
+    });
 }
 
-- (void)loadVideoWithPlaybackData:(id)data {
+%hook YTPlayerViewController
+- (void)viewDidAppear:(BOOL)animated {
     %orig;
-    if ([self.activeVideoPlayerOverlay isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) return;
-    NSString *vID = nil;
-    @try {
-        vID = [data valueForKey:@"videoId"];
-    } @catch (id ex) {}
-    if (vID.length > 0) {
-        currentActiveVideoID = [vID copy];
-        if (IS_ENABLED(ReturnYouTubeDislike)) {
-            [[YouModRYDManager sharedInstance] fetchVotesForVideoID:currentActiveVideoID completion:nil];
-        }
-    }
+    YouModWatchVideoChanged(self);
+}
+- (void)playbackController:(id)controller didActivateNewPlaybackWithContentVideo:(id)video {
+    %orig;
+    YouModWatchVideoChanged(self);
 }
 %end
 
@@ -359,7 +347,7 @@ static void YouModUpdateVoteNode(ASDisplayNode *button) {
         }
     } else {
         ASTextNode *label = (id)countNode;
-        UIColor *color = isDarkMode([UIApplication sharedApplication].keyWindow) ? UIColor.whiteColor : UIColor.blackColor;
+        UIColor *color = isDarkMode([container closestViewController].viewIfLoaded) ? UIColor.whiteColor : UIColor.blackColor;
         NSAttributedString *value = [[NSAttributedString alloc] initWithString:text attributes:@{
             NSFontAttributeName: [UIFont systemFontOfSize:12 weight:UIFontWeightMedium],
             NSForegroundColorAttributeName: color
@@ -394,6 +382,10 @@ static void YouModUpdateVoteNode(ASDisplayNode *button) {
     YouModUpdateVoteNode(self);
 }
 %end
+
+@interface YTQTMButton (YouModVoteTitle)
+- (void)youmod_updateVoteTitle:(NSNotification *)note;
+@end
 
 // Older UIKit action buttons still use their native title layout.
 %hook YTQTMButton
