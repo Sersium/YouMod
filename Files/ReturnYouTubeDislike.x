@@ -20,6 +20,7 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
 @interface YouModRYDManager : NSObject
 @property (nonatomic, strong) NSCache<NSString *, NSDictionary *> *votesCache;
 @property (nonatomic, strong) NSMutableSet<NSString *> *inFlightRequests;
+@property (nonatomic, strong) NSCache<NSString *, NSDate *> *requestDates;
 + (instancetype)sharedInstance;
 - (void)fetchVotesForVideoID:(NSString *)videoID completion:(void (^)(NSDictionary *votes))completion;
 - (NSDictionary *)cachedVotesForVideoID:(NSString *)videoID;
@@ -42,6 +43,8 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
         _votesCache = [[NSCache alloc] init];
         _votesCache.countLimit = 200;
         _inFlightRequests = [NSMutableSet set];
+        _requestDates = [[NSCache alloc] init];
+        _requestDates.countLimit = 200;
     }
     return self;
 }
@@ -64,11 +67,13 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
     }
 
     @synchronized (_inFlightRequests) {
-        if ([_inFlightRequests containsObject:videoID]) {
+        NSDate *lastRequest = [_requestDates objectForKey:videoID];
+        if ([_inFlightRequests containsObject:videoID] || (lastRequest && -lastRequest.timeIntervalSinceNow < 60)) {
             if (completion) completion(nil);
             return;
         }
         [_inFlightRequests addObject:videoID];
+        [_requestDates setObject:[NSDate date] forKey:videoID];
     }
 
     NSString *urlString = [NSString stringWithFormat:@"https://returnyoutubedislikeapi.com/votes?videoId=%@", videoID];
@@ -108,6 +113,10 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
         }
 
         NSDictionary *voteData = (NSDictionary *)json;
+        if (![voteData[@"likes"] isKindOfClass:[NSNumber class]] || ![voteData[@"dislikes"] isKindOfClass:[NSNumber class]]) {
+            if (completion) completion(nil);
+            return;
+        }
         [self.votesCache setObject:voteData forKey:videoID];
 
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -151,22 +160,6 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
 - (void)relayoutNode;
 @end
 
-@interface ELMNodeFactory (RYD)
-+ (instancetype)sharedInstance;
-- (id)nodeWithElement:(id)element materializationContext:(const void *)context;
-@end
-
-@interface ASDisplayNode (YouModRYDYoga)
-- (void)addYogaChild:(id)child;
-- (NSArray *)yogaChildren;
-- (id)closestViewController;
-@end
-
-@interface ASCollectionView (RYD)
-@property (nonatomic, assign) BOOL hasDislikeIntent;
-@property (nonatomic, assign) BOOL isProbablyVideoDescriptionHeaderPanel;
-@end
-
 #pragma mark - Hooks
 
 static NSString *YouModGetCurrentVideoID(void) {
@@ -182,9 +175,6 @@ static NSString *YouModGetCurrentVideoID(void) {
 }
 
 static NSString *getVideoId(ASDisplayNode *containerNode) {
-    NSString *current = YouModGetCurrentVideoID();
-    if (current && current.length > 0) return current;
-
     UIViewController *vc = [containerNode closestViewController];
     if (![vc isKindOfClass:%c(YTWatchNextResultsViewController)]) {
         UIViewController *parentViewController;
@@ -220,13 +210,14 @@ static NSString *getVideoId(ASDisplayNode *containerNode) {
         NSString *vid = [pvc contentVideoID];
         if (vid.length > 0) return vid;
     } @catch (id ex) {}
-    return nil;
+    return YouModGetCurrentVideoID();
 }
 
 // Capture current video ID from player
 %hook YTPlayerViewController
 - (void)setPlayerResponse:(YTIPlayerResponse *)response {
     %orig;
+    if ([self.activeVideoPlayerOverlay isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) return;
     if (response.videoDetails.videoId.length > 0) {
         currentActiveVideoID = [response.videoDetails.videoId copy];
         if (IS_ENABLED(ReturnYouTubeDislike)) {
@@ -237,24 +228,13 @@ static NSString *getVideoId(ASDisplayNode *containerNode) {
 
 - (void)loadVideoWithPlaybackData:(id)data {
     %orig;
+    if ([self.activeVideoPlayerOverlay isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)]) return;
     NSString *vID = nil;
     @try {
         vID = [data valueForKey:@"videoId"];
     } @catch (id ex) {}
     if (vID.length > 0) {
         currentActiveVideoID = [vID copy];
-        if (IS_ENABLED(ReturnYouTubeDislike)) {
-            [[YouModRYDManager sharedInstance] fetchVotesForVideoID:currentActiveVideoID completion:nil];
-        }
-    }
-}
-%end
-
-%hook YTSingleVideoController
-- (void)setPlayerResponse:(YTIPlayerResponse *)response {
-    %orig;
-    if (response.videoDetails.videoId.length > 0) {
-        currentActiveVideoID = [response.videoDetails.videoId copy];
         if (IS_ENABLED(ReturnYouTubeDislike)) {
             [[YouModRYDManager sharedInstance] fetchVotesForVideoID:currentActiveVideoID completion:nil];
         }
@@ -303,373 +283,145 @@ static NSString *getVideoId(ASDisplayNode *containerNode) {
 
 %end
 
-static int overrideNodeCreation = 0;
+@interface ASDisplayNode (YouModVoteRemoval)
+- (void)removeFromSupernode;
+@end
 
-%hook ELMNodeFactory
+// Texture's ASDimension ABI (unit: NSInteger, value: CGFloat).
+typedef struct { NSInteger unit; CGFloat value; } YMVoteDimension;
+@interface ASLayoutElementStyleYoga (YouModVotes)
+- (void)setMinWidth:(YMVoteDimension)width;
+- (void)setFlexDirection:(unsigned char)direction;
+@end
 
-- (Class)classForElement:(id)element materializationContext:(const void *)context {
-    switch (overrideNodeCreation) {
-        case 1:
-            return %c(YTRollingNumberNode);
-        case 2:
-            return %c(ELMTextNode);
-        default:
-            return %orig;
-    }
+// Both current action-bar designs can contain only an icon. Add a measured
+// Texture text node so Yoga reserves space instead of drawing outside a button.
+static BOOL YouModIsVoteButton(ASDisplayNode *node) {
+    return [node.accessibilityIdentifier isEqualToString:@"id.video.like.button"] ||
+           [node.accessibilityIdentifier isEqualToString:@"id.video.dislike.button"];
 }
 
-%end
-
-static ELMContainerNode *YouModFindNodeWithIdentifier(ASDisplayNode *root, NSString *targetId) {
-    if (!root) return nil;
-    if ([root.accessibilityIdentifier isEqualToString:targetId]) {
-        return (ELMContainerNode *)root;
-    }
-    for (ASDisplayNode *child in root.yogaChildren) {
-        ELMContainerNode *found = YouModFindNodeWithIdentifier(child, targetId);
-        if (found) return found;
+static ASDisplayNode *YouModFindVoteText(ASDisplayNode *node, NSUInteger depth) {
+    if ([node isKindOfClass:%c(ASTextNode)] || [node isKindOfClass:%c(YTRollingNumberNode)]) return node;
+    if (depth == 0) return nil;
+    for (ASDisplayNode *child in node.yogaChildren) {
+        ASDisplayNode *text = YouModFindVoteText(child, depth - 1);
+        if (text) return text;
     }
     return nil;
 }
 
-%hook ASCollectionView
-
-%property (nonatomic, assign) BOOL hasDislikeIntent;
-
-- (ELMCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath {
-    ELMCellNode *node = %orig;
-    if (!IS_ENABLED(ReturnYouTubeDislike)) return node;
-
-    // Strictly limit RYD modification to the video action bar!
-    // Comments, search, feeds, and channels return immediately without touching Yoga trees.
-    if (![self.accessibilityIdentifier isEqualToString:@"id.video.scrollable_action_bar"]) {
-        return node;
-    }
-
-    ELMContainerNode *likeNode = YouModFindNodeWithIdentifier(node, @"id.video.like.button");
-    ELMContainerNode *dislikeNode = YouModFindNodeWithIdentifier(node, @"id.video.dislike.button");
-
-    if (!likeNode) {
-        ASDisplayNode *containerNode = node;
-        if ([containerNode isKindOfClass:%c(ELMCellNode)]) {
-            while (containerNode.yogaChildren.count == 1 || containerNode.yogaChildren.count == 2) {
-                if (containerNode.yogaChildren.count == 2) {
-                    ASDisplayNode *first = [containerNode.yogaChildren firstObject];
-                    if ([first.accessibilityIdentifier isEqualToString:@"id.video.like.button"]) {
-                        likeNode = (ELMContainerNode *)first;
-                        dislikeNode = (ELMContainerNode *)[containerNode.yogaChildren lastObject];
-                        break;
-                    }
-                    containerNode = containerNode.yogaChildren[1];
-                } else {
-                    containerNode = [containerNode.yogaChildren firstObject];
-                }
-            }
+static void YouModUpdateVoteNode(ASDisplayNode *button) {
+    if (!YouModIsVoteButton(button)) return;
+    BOOL likes = [button.accessibilityIdentifier isEqualToString:@"id.video.like.button"];
+    BOOL enabled = IS_ENABLED(ReturnYouTubeDislike) && (likes ? IS_ENABLED(RYDShowLikes) : IS_ENABLED(RYDShowDislikes));
+    ASTextNode *added = objc_getAssociatedObject(button, "kYMVoteText");
+    if (!enabled) {
+        if (added) {
+            [added.yogaParent removeYogaChild:added];
+            [added removeFromSupernode];
+            objc_setAssociatedObject(button, "kYMVoteText", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            [button setNeedsLayout];
         }
-    }
-
-    if (likeNode) {
-        @try {
-            if (!dislikeNode) {
-                dislikeNode = YouModFindNodeWithIdentifier(node, @"id.video.dislike.button");
-            }
-            NSString *videoId = getVideoId(node);
-            if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
-            if (videoId.length == 0) return node;
-
-            id targetNode = nil;
-            if (likeNode.yogaChildren.count >= 2) {
-                targetNode = likeNode.yogaChildren[1];
-            }
-            if (!targetNode) {
-                for (ASDisplayNode *child in likeNode.yogaChildren) {
-                    if ([child isKindOfClass:%c(YTRollingNumberNode)] || [child isKindOfClass:%c(ELMTextNode)]) {
-                        targetNode = child;
-                        break;
-                    }
-                    for (ASDisplayNode *grandchild in child.yogaChildren) {
-                        if ([grandchild isKindOfClass:%c(YTRollingNumberNode)] || [grandchild isKindOfClass:%c(ELMTextNode)]) {
-                            targetNode = grandchild;
-                            break;
-                        }
-                    }
-                    if (targetNode) break;
-                }
-            }
-
-            __strong YTRollingNumberNode *likeRollingNumberNode = [targetNode isKindOfClass:%c(YTRollingNumberNode)] ? (YTRollingNumberNode *)targetNode : nil;
-            __strong ELMTextNode *likeTextNode = [targetNode isKindOfClass:%c(ELMTextNode)] ? (ELMTextNode *)targetNode : nil;
-
-            __strong YTRollingNumberNode *dislikeRollingNumberNode = nil;
-            __strong ELMTextNode *dislikeTextNode = nil;
-
-            if (dislikeNode) {
-                for (ASDisplayNode *dChild in dislikeNode.yogaChildren) {
-                    if ([dChild isKindOfClass:%c(YTRollingNumberNode)]) dislikeRollingNumberNode = (YTRollingNumberNode *)dChild;
-                    else if ([dChild isKindOfClass:%c(ELMTextNode)]) dislikeTextNode = (ELMTextNode *)dChild;
-                }
-
-                if (!dislikeRollingNumberNode && !dislikeTextNode && targetNode) {
-                    if (likeRollingNumberNode) {
-                        id elementContext = [likeRollingNumberNode valueForKey:@"_context"];
-                        overrideNodeCreation = 1;
-                        dislikeRollingNumberNode = [[%c(ELMNodeFactory) sharedInstance] nodeWithElement:likeRollingNumberNode.element materializationContext:&elementContext];
-                        overrideNodeCreation = 0;
-                        dislikeRollingNumberNode.updatedCount = @"...";
-                        dislikeRollingNumberNode.updatedCountNumber = @(0);
-                        if ([dislikeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) {
-                            [dislikeRollingNumberNode updateRollingNumberView];
-                        }
-                        [dislikeNode addYogaChild:dislikeRollingNumberNode];
-                        if (dislikeRollingNumberNode.view && dislikeNode.view) {
-                            [dislikeNode.view addSubview:dislikeRollingNumberNode.view];
-                        }
-                    } else if (likeTextNode) {
-                        id elementContext = [likeTextNode valueForKey:@"_context"];
-                        overrideNodeCreation = 2;
-                        dislikeTextNode = [[%c(ELMNodeFactory) sharedInstance] nodeWithElement:likeTextNode.element materializationContext:&elementContext];
-                        overrideNodeCreation = 0;
-                        NSMutableAttributedString *mDis = [[NSMutableAttributedString alloc] initWithAttributedString:likeTextNode.attributedText];
-                        [mDis.mutableString setString:@"..."];
-                        dislikeTextNode.attributedText = mDis;
-                        [dislikeNode addYogaChild:dislikeTextNode];
-                        if (dislikeTextNode.view && dislikeNode.view) {
-                            [dislikeNode.view addSubview:dislikeTextNode.view];
-                        }
-                    }
-                }
-            }
-
-            self.hasDislikeIntent = YES;
-            [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoId completion:^(NSDictionary *votes) {
-                if (!votes) return;
-                NSInteger dislikes = [votes[@"dislikes"] integerValue];
-                NSString *dislikeCount = YouModFormatVoteCount(dislikes);
-                NSInteger likes = [votes[@"likes"] integerValue];
-                NSString *likeCount = YouModFormatVoteCount(likes);
-
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    if (IS_ENABLED(RYDShowLikes)) {
-                        if (likeRollingNumberNode) {
-                            likeRollingNumberNode.updatedCount = likeCount;
-                            likeRollingNumberNode.updatedCountNumber = @(likes);
-                            if ([likeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) [likeRollingNumberNode updateRollingNumberView];
-                            if ([likeRollingNumberNode respondsToSelector:@selector(relayoutNode)]) [likeRollingNumberNode relayoutNode];
-                        } else if (likeTextNode) {
-                            NSMutableAttributedString *mLike = [[NSMutableAttributedString alloc] initWithAttributedString:likeTextNode.attributedText];
-                            [mLike.mutableString setString:likeCount];
-                            likeTextNode.attributedText = mLike;
-                        }
-                    }
-                    if (IS_ENABLED(RYDShowDislikes)) {
-                        if (dislikeRollingNumberNode) {
-                            dislikeRollingNumberNode.updatedCount = dislikeCount;
-                            dislikeRollingNumberNode.updatedCountNumber = @(dislikes);
-                            if ([dislikeRollingNumberNode respondsToSelector:@selector(updateRollingNumberView)]) [dislikeRollingNumberNode updateRollingNumberView];
-                            if ([dislikeRollingNumberNode respondsToSelector:@selector(relayoutNode)]) [dislikeRollingNumberNode relayoutNode];
-                        } else if (dislikeTextNode) {
-                            NSMutableAttributedString *mDis = [[NSMutableAttributedString alloc] initWithAttributedString:dislikeTextNode.attributedText];
-                            [mDis.mutableString setString:dislikeCount];
-                            dislikeTextNode.attributedText = mDis;
-                        }
-                    }
-                });
-            }];
-        } @catch (id ex) {}
-    }
-
-    return node;
-}
-
-%end
-
-#pragma mark - _ASDisplayView & Button Fallbacks
-
-// Helpers to apply votes
-static void YouModApplyRYDVotes(_ASDisplayView *view, NSDictionary *votes, NSString *iden) {
-    if (!view || !votes) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        view.clipsToBounds = NO;
-        if (view.superview) view.superview.clipsToBounds = NO;
-
-        if ([iden isEqualToString:@"id.video.dislike.button"]) {
-            NSInteger dislikes = [votes[@"dislikes"] integerValue];
-            NSString *dislikesText = YouModFormatVoteCount(dislikes);
-
-            BOOL updatedExisting = NO;
-            for (UIView *sub in view.subviews) {
-                if ([sub isKindOfClass:objc_getClass("YTRollingNumberView")]) {
-                    updatedExisting = YES;
-                    break;
-                }
-                if ([sub respondsToSelector:@selector(node)]) {
-                    id subNode = [sub performSelector:@selector(node)];
-                    if ([subNode isKindOfClass:%c(ELMTextNode)] || [subNode isKindOfClass:%c(ASTextNode)]) {
-                        NSAttributedString *orig = [subNode attributedText];
-                        NSMutableAttributedString *m = orig ? [orig mutableCopy] : [[NSMutableAttributedString alloc] initWithString:dislikesText];
-                        [m.mutableString setString:dislikesText];
-                        [subNode setAttributedText:m];
-                        [sub setNeedsDisplay];
-                        updatedExisting = YES;
-                        break;
-                    }
-                }
-            }
-
-            if (!updatedExisting) {
-                UILabel *lbl = [view viewWithTag:0xD1571CE];
-                if (!lbl) {
-                    lbl = [[UILabel alloc] init];
-                    lbl.tag = 0xD1571CE;
-                    lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
-                    lbl.textColor = [UIColor whiteColor];
-                    lbl.textAlignment = NSTextAlignmentLeft;
-                    [view addSubview:lbl];
-                }
-                lbl.text = dislikesText;
-                [lbl sizeToFit];
-
-                CGFloat iconWidth = 24.0;
-                CGFloat padding = 4.0;
-                lbl.frame = CGRectMake(iconWidth + padding, (view.bounds.size.height - lbl.bounds.size.height) / 2.0, lbl.bounds.size.width, lbl.bounds.size.height);
-
-                CGRect f = view.frame;
-                CGFloat reqWidth = iconWidth + padding + lbl.bounds.size.width + 8.0;
-                if (f.size.width < reqWidth) {
-                    CGFloat diff = reqWidth - f.size.width;
-                    f.size.width = reqWidth;
-                    view.frame = f;
-                    if (view.superview) {
-                        CGRect pf = view.superview.frame;
-                        pf.size.width += diff;
-                        view.superview.frame = pf;
-                    }
-                }
-            }
-        } else if ([iden isEqualToString:@"id.video.like.button"] && IS_ENABLED(RYDShowLikes)) {
-            NSInteger likes = [votes[@"likes"] integerValue];
-            NSString *likesText = YouModFormatVoteCount(likes);
-            for (UIView *sub in view.subviews) {
-                if ([sub respondsToSelector:@selector(node)]) {
-                    id subNode = [sub performSelector:@selector(node)];
-                    if ([subNode isKindOfClass:%c(ELMTextNode)] || [subNode isKindOfClass:%c(ASTextNode)]) {
-                        NSAttributedString *orig = [subNode attributedText];
-                        NSMutableAttributedString *m = orig ? [orig mutableCopy] : [[NSMutableAttributedString alloc] initWithString:likesText];
-                        [m.mutableString setString:likesText];
-                        [subNode setAttributedText:m];
-                        [sub setNeedsDisplay];
-                    }
-                } else if ([sub isKindOfClass:[UILabel class]] && sub.tag != 0xD1571CE) {
-                    UILabel *likeLbl = (UILabel *)sub;
-                    if (likeLbl.text.length > 0 && ![likeLbl.text isEqualToString:likesText]) {
-                        likeLbl.text = likesText;
-                    }
-                }
-            }
-        }
-    });
-}
-
-static void YouModApplyRYDVotesToButton(YTQTMButton *btn, NSDictionary *votes, NSString *iden) {
-    if (!btn || !votes) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([iden isEqualToString:@"id.video.dislike.button"]) {
-            NSInteger dislikes = [votes[@"dislikes"] integerValue];
-            NSString *dislikesText = YouModFormatVoteCount(dislikes);
-            [btn setTitle:dislikesText forState:UIControlStateNormal];
-            [btn setTitle:dislikesText forState:UIControlStateSelected];
-        } else if ([iden isEqualToString:@"id.video.like.button"] && IS_ENABLED(RYDShowLikes)) {
-            NSInteger likes = [votes[@"likes"] integerValue];
-            NSString *likesText = YouModFormatVoteCount(likes);
-            [btn setTitle:likesText forState:UIControlStateNormal];
-            [btn setTitle:likesText forState:UIControlStateSelected];
-        }
-    });
-}
-
-// Update main player action bar buttons (_ASDisplayView)
-%hook _ASDisplayView
-
-- (void)didMoveToWindow {
-    %orig;
-    if (!self.window) {
-        [[NSNotificationCenter defaultCenter] removeObserver:self name:kYMReturnDislikeNotification object:nil];
         return;
     }
-    if (!IS_ENABLED(ReturnYouTubeDislike)) return;
-
-    NSString *iden = self.accessibilityIdentifier;
-    if (![iden isEqualToString:@"id.video.dislike.button"] && ![iden isEqualToString:@"id.video.like.button"]) return;
-
-    self.clipsToBounds = NO;
-    if (self.superview) self.superview.clipsToBounds = NO;
-
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDislikeNotification:) name:kYMReturnDislikeNotification object:nil];
-
-    NSString *videoID = YouModGetCurrentVideoID();
-    if (!videoID) return;
-
+    NSString *videoID = getVideoId(button);
+    if (!videoID.length) return;
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID];
-    if (votes) {
-        YouModApplyRYDVotes(self, votes, iden);
+    if (!votes) [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
+    id number = votes[likes ? @"likes" : @"dislikes"];
+    NSString *text = [number isKindOfClass:[NSNumber class]] ? YouModFormatVoteCount([number integerValue]) : @"—";
+
+    // In the new non-scrollable bar, the hit target and icon are siblings.
+    ASDisplayNode *container = button.yogaChildren.count ? button : button.yogaParent;
+    if (!container) return;
+    ASDisplayNode *countNode = added ?: YouModFindVoteText(container, 4);
+    if (!countNode) {
+        added = [[%c(ASTextNode) alloc] init];
+        added.accessibilityIdentifier = likes ? @"youmod.like.count" : @"youmod.dislike.count";
+        added.style.spacingBefore = 4;
+        added.style.flexShrink = 0;
+        objc_setAssociatedObject(button, "kYMVoteIconWidth", @(MAX(24, container.calculatedSize.width)), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [container.style setFlexDirection:1]; // ASStackLayoutDirectionHorizontal
+        [container addYogaChild:added];
+        added.layerBacked = container.isLayerBacked;
+        [container addSubnode:added];
+        objc_setAssociatedObject(button, "kYMVoteText", added, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        countNode = added;
+    }
+    if ([countNode isKindOfClass:%c(YTRollingNumberNode)]) {
+        YTRollingNumberNode *rolling = (id)countNode;
+        if (![rolling.updatedCount isEqualToString:text]) {
+            rolling.updatedCount = text;
+            rolling.updatedCountNumber = [number isKindOfClass:[NSNumber class]] ? number : @0;
+            [rolling updateRollingNumberView];
+            if ([rolling respondsToSelector:@selector(relayoutNode)]) [rolling relayoutNode];
+        }
     } else {
-        [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:^(NSDictionary *fetchedVotes) {
-            if (fetchedVotes) {
-                YouModApplyRYDVotes(self, fetchedVotes, iden);
-            }
+        ASTextNode *label = (id)countNode;
+        UIColor *color = isDarkMode([UIApplication sharedApplication].keyWindow) ? UIColor.whiteColor : UIColor.blackColor;
+        NSAttributedString *value = [[NSAttributedString alloc] initWithString:text attributes:@{
+            NSFontAttributeName: [UIFont systemFontOfSize:12 weight:UIFontWeightMedium],
+            NSForegroundColorAttributeName: color
         }];
+        if (![label.attributedText isEqualToAttributedString:value]) {
+            label.attributedText = value;
+            if (added) {
+                CGFloat iconWidth = [objc_getAssociatedObject(button, "kYMVoteIconWidth") doubleValue];
+                [container.style setMinWidth:(YMVoteDimension){1, iconWidth + 4 + ceil(value.size.width)}];
+            }
+            [container setNeedsLayout];
+        }
     }
 }
 
-- (void)layoutSubviews {
+%hook ELMContainerNode
+- (void)didLoad {
     %orig;
-    if (!IS_ENABLED(ReturnYouTubeDislike)) return;
-    UILabel *lbl = [self viewWithTag:0xD1571CE];
-    if (lbl) {
-        self.clipsToBounds = NO;
-        if (self.superview) self.superview.clipsToBounds = NO;
-        CGFloat iconWidth = 24.0;
-        CGFloat padding = 4.0;
-        lbl.frame = CGRectMake(iconWidth + padding, (self.bounds.size.height - lbl.bounds.size.height) / 2.0, lbl.bounds.size.width, lbl.bounds.size.height);
-    }
+    if (!YouModIsVoteButton(self)) return;
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:kYMReturnDislikeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_updateVoteCount:) name:kYMReturnDislikeNotification object:nil];
+    YouModUpdateVoteNode(self);
 }
-
+- (void)didEnterVisibleState {
+    %orig;
+    if (!YouModIsVoteButton(self)) return;
+    // Texture visibility callbacks can arrive on a background thread.
+    dispatch_async(dispatch_get_main_queue(), ^{ YouModUpdateVoteNode(self); });
+}
 %new
-- (void)youmod_onDislikeNotification:(NSNotification *)note {
-    NSString *videoID = note.userInfo[@"videoID"];
-    if (!videoID || ![videoID isEqualToString:YouModGetCurrentVideoID()]) return;
-    NSDictionary *votes = note.userInfo[@"votes"];
-    YouModApplyRYDVotes(self, votes, self.accessibilityIdentifier);
+- (void)youmod_updateVoteCount:(NSNotification *)note {
+    YouModUpdateVoteNode(self);
 }
-
 %end
 
-// Fallback for button controls using YTQTMButton
+// Older UIKit action buttons still use their native title layout.
 %hook YTQTMButton
-
 - (void)didMoveToWindow {
     %orig;
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:kYMReturnDislikeNotification object:nil];
     if (!self.window) return;
-    if (!IS_ENABLED(ReturnYouTubeDislike)) return;
-
-    NSString *iden = self.accessibilityIdentifier;
-    if (![iden isEqualToString:@"id.video.dislike.button"] && ![iden isEqualToString:@"id.video.like.button"]) return;
-
-    NSString *videoID = YouModGetCurrentVideoID();
-    if (!videoID) return;
-
-    NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID];
-    if (votes) {
-        YouModApplyRYDVotesToButton(self, votes, iden);
-    } else {
-        [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:^(NSDictionary *fetchedVotes) {
-            if (fetchedVotes) {
-                YouModApplyRYDVotesToButton(self, fetchedVotes, iden);
-            }
-        }];
-    }
+    NSString *identifier = self.accessibilityIdentifier;
+    if (![identifier isEqualToString:@"id.video.like.button"] && ![identifier isEqualToString:@"id.video.dislike.button"]) return;
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_updateVoteTitle:) name:kYMReturnDislikeNotification object:nil];
+    [self youmod_updateVoteTitle:nil];
 }
-
+%new
+- (void)youmod_updateVoteTitle:(NSNotification *)note {
+    if (!IS_ENABLED(ReturnYouTubeDislike)) return;
+    BOOL likes = [self.accessibilityIdentifier isEqualToString:@"id.video.like.button"];
+    if (!(likes ? IS_ENABLED(RYDShowLikes) : IS_ENABLED(RYDShowDislikes))) return;
+    NSString *videoID = YouModGetCurrentVideoID();
+    NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID];
+    id number = votes[likes ? @"likes" : @"dislikes"];
+    if (![number isKindOfClass:[NSNumber class]]) {
+        [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
+        return;
+    }
+    NSString *title = YouModFormatVoteCount([number integerValue]);
+    [self setTitle:title forState:UIControlStateNormal];
+    [self setTitle:title forState:UIControlStateSelected];
+}
 %end
 
 #pragma mark - Protobuf Model Hooks

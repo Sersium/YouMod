@@ -776,38 +776,36 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 %end
 
 
-%hook YTInlineMutedPlaybackScrubberViewController
-- (void)setActiveSingleVideoObservable:(YTSingleVideoController *)singleVideoController {
-    if (singleVideoController) {
-        objc_setAssociatedObject(singleVideoController, "kYMIsInlinePlayback", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-            [singleVideoController setMuted:NO];
-        }
-    }
-    %orig;
-}
-%end
+// Initialize the native preference once per preview. The native getter must
+// remain live: it is read again after taps to synchronize the audio icon.
+@interface NSObject (YouModInlineAudioState)
+- (void)setInlinePlaybackUnmutedAtStart:(BOOL)unmuted;
+- (void)setInlinePlaybackCaptionHidden:(BOOL)hidden;
+@end
 
 %hook YTInlineMutedPlaybackPlayerOverlayViewController
-- (BOOL)inlinePlaybackUnmutedAtStart {
-    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-        return YES;
-    }
-    return %orig;
-}
-- (void)loadView {
-    %orig;
-    if (IS_ENABLED(FeedPreviewCCDisabled)) {
+- (void)setActiveSingleVideo:(YTSingleVideoController *)video {
+    NSString *videoID = video.singleVideo.videoId;
+    NSString *previousID = objc_getAssociatedObject(self, "kYMPreviewVideoID");
+    BOOL newVideo = videoID.length && ![videoID isEqualToString:previousID];
+    objc_setAssociatedObject(self, "kYMPreviewVideoID", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    if (newVideo) {
         @try {
-            if ([self.view respondsToSelector:@selector(setCaptionsActive:)]) {
-                [(id)self.view setCaptionsActive:NO];
+            id monitor = [self valueForKey:@"_globalStateMonitor"];
+            if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute) && [monitor respondsToSelector:@selector(setInlinePlaybackUnmutedAtStart:)]) {
+                [monitor setInlinePlaybackUnmutedAtStart:YES];
             }
-            UIView *captionBtn = [self.view valueForKey:@"_captionButton"];
-            if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
-                [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
+            if (IS_ENABLED(FeedPreviewCCDisabled) && [monitor respondsToSelector:@selector(setInlinePlaybackCaptionHidden:)]) {
+                [monitor setInlinePlaybackCaptionHidden:YES];
             }
-            captionBtn.hidden = NO;
         } @catch (id ex) {}
+    }
+    %orig;
+    if (newVideo && IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
+        [video setMuted:NO];
+        if ([self.viewIfLoaded respondsToSelector:@selector(setAudioSoundOn:)]) {
+            [(id)self.viewIfLoaded setAudioSoundOn:YES];
+        }
     }
 }
 %end

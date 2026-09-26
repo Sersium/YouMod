@@ -7,6 +7,8 @@ on:
       - '*.md'
       - 'feather.json'
       - '.gitignore'
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
     inputs:
       repo:
@@ -33,9 +35,12 @@ jobs:
       - name: Checkout YouMod
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.branch || github.ref_name }}
+          ref: ${{ inputs.branch || github.ref }}
           repository: ${{ inputs.repo || github.repository }}
           path: YouMod
+
+      - name: Check feed regressions
+        run: python3 YouMod/Tests/check_feed_regressions.py
 
       - name: Install dependencies
         run: brew install make ldid
@@ -192,6 +197,10 @@ jobs:
 
           ls -lh YouTube_YouMod.ipa
 
+      - name: Update Feather manifest
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          cd ${{ github.workspace }}
           IPA_SIZE=$(stat -f%z YouTube_YouMod.ipa 2>/dev/null || stat -c%s YouTube_YouMod.ipa)
           echo "IPA size: $IPA_SIZE"
           python3 -c "
@@ -252,6 +261,7 @@ jobs:
           overwrite: true
 
       - name: Create or update release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ env.YOUMOD_VERSION }}
