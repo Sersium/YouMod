@@ -53,6 +53,10 @@
 "DOWNLOADING" = "Скачивание";
 "DOWNLOAD_MANAGER" = "Менеджер загрузок";
 "DOWNLOAD_MANAGER_DESC" = "Заменяет загрузчик видео YouTube на загрузчик YouMod. Позволяет скачивать видео, аудио, субтитры и обложки.";
+"DOWNLOAD_BUTTON_POSITION" = "Download button position";
+"UNDER_THE_PLAYER" = "Under the player";
+"OVERLAY" = "Overlay";
+"BOTH" = "Both";
 "POST_DOWNLOAD_ACTION" = "Действие после загрузки";
 "POST_ACTION_SAVE_PHOTOS" = "Сохранить в Фото";
 "POST_ACTION_SHARE" = "Поделиться";
@@ -106,24 +110,18 @@
 "THUMBNAIL_OPTIONS" = "Скачать обложку";
 "COPY" = "Копировать";
 "COPIED_TO_CLIPBOARD" = "Скопировано в буфер обмена";
-"CONNECTING_TO_SERVER" = "Подключение к серверу...";
-"DOWNLOADING_TO_SERVER" = "Загрузка на сервер...";
 "COPY_COMMENT_TEXT" = "Скопировать текст комментария";
 "SAVE_COMMENT_IMAGE" = "Сохранить комментарий как изображение";
 "COPY_COMMENT_IMAGE" = "Скопировать комментарий как изображение";
 "COPY_POST_TEXT" = "Скопировать текст публикации";
 "SAVE_POST_IMAGE" = "Сохранить публикацию как изображение";
 "COPY_POST_IMAGE" = "Скопировать публикацию как изображение";
-"DOWNLOAD_SERVER" = "Сервер загрузки";
-"CHOOSE_DOWNLOAD_SERVER" = "Выберите сервер загрузки";
 "DOWNLOAD_COMMENT" = "Сохранение информации о комментариях";
 "DOWNLOAD_COMMENT_DESC" = "Позволяет скопировать текст комментария и сохранить комментарий как изображение долгим нажатием на кнопку с тремя точками.";
 "DOWNLOAD_POST" = "Сохранение информации о публикациях";
 "DOWNLOAD_POST_DESC" = "Позволяет скопировать текст публикации и сохранить публикацию как изображение долгим нажатием.";
 "TRANSLATE_COMMENT" = "Перевести комментарий";
 "TRANSLATE_POST" = "Перевести публикацию";
-"SERVER_EUROPRE1" = "Европа";
-"SERVER_ASIA1" = "Таиланд — Азия";
 "SHOW_OPTIONS" = "Показать параметры";
 "ENGLISH" = "Английский";
 "TRANSLATION" = "Перевод";
@@ -136,8 +134,8 @@
 "DOWNLOAD_METHOD" = "Способ загрузки";
 "DOWNLOAD_METHOD_DESC" = "Определяет, как скачиваются видео. Режим «На устройстве» работает в последних версиях YouTube.";
 "METHOD_DIRECT" = "Прямой";
-"METHOD_SERVER" = "Через сервер";
 "METHOD_ONDEVICE" = "На устройстве (SABR)";
+"AUDIO" = "Audio";
 
 "APPEARANCE" = "Оформление";
 "OLED_THEME" = "Тёмная тема OLED";
@@ -161,6 +159,8 @@
 "HIDE_VOICE_SEARCH_BUTTON_DESC" = "Скрывает кнопку голосового поиска в панели навигации.";
 "HIDE_CAST_BUTTON_NAVBAR" = "Скрыть кнопку трансляции";
 "HIDE_CAST_BUTTON_NAVBAR_DESC" = "Скрывает кнопку трансляции в панели навигации.";
+"HIDE_MESSAGES_BUTTON" = "Hide messages button";
+"HIDE_MESSAGES_BUTTON_DESC" = "Hide messages button in the navigation bar.";
 
 "FEED" = "Лента";
 "HIDE_SUBBAR" = "Скрыть панель фильтров";
@@ -178,15 +178,11 @@
 "KEEP_SHORTS_SUBSCRIPT" = "Сохранить Shorts в «Подписках»";
 "KEEP_SHORTS_SUBSCRIPT_DESC" = "Не даёт удалять Shorts из вкладки «Подписки».";
 "HIDE_SEARCH_HISTORY" = "Скрыть историю поиска";
-"HIDE_SEARCH_HISTORY_DESC" = "Скрывает предыдущую историю поиска и подсказки при использовании строки поиска.\\nПРИМЕЧАНИЕ: история поиска останется доступной в других клиентах YouTube.";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON" = "Удалить кнопку «Сообщество»";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC" = "Удаляет кнопку сообщества в шапке канала.";
-"REMOVE_CHANNEL_SPONSOR_BUTTON" = "Удалить кнопку «Спонсировать»";
-"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC" = "Удаляет кнопку спонсорства/подписки в ленте, на странице канала и в Shorts.";
+"HIDE_SEARCH_HISTORY_DESC" = "Скрывает предыдущую историю поиска и подсказки при использовании строки поиска.\nПРИМЕЧАНИЕ: история поиска останется доступной в других клиентах YouTube.";
 "HIDE_PLAYABLES" = "Убрать Playables";
 "HIDE_PLAYABLES_DESC" = "Убирает Playables (мини-игры) из ленты.";
 "HIDE_RELATED_VIDEOS" = "Скрыть похожие видео";
-"HIDE_RELATED_VIDEOS_DESC" = "Скрывает похожие видео под плеером (кроме полноэкранного режима).";
+"HIDE_RELATED_VIDEOS_DESC" = "Скрывает похожие видео как в ленте, так и в плеере";
 
 "PLAYER" = "Плеер";
 "PLAYBACK_SPEED" = "Скорость воспроизведения";
@@ -225,7 +221,12 @@
 "SPONSORBLOCK_BUTTON" = "SponsorBlock";
 "MANAGE_OVERLAY_BUTTONS" = "Управление кнопками оверлея";
 "MANAGE_OVERLAY_BUTTONS_DESC" = "Изменение порядка и видимости кнопок оверлея";
-"OVERLAY_BUTTON_REORDER_HINT" = "Перетащите, чтобы изменить порядок кнопок оверлея. Переключите, чтобы показать/скрыть.";
+"OVERLAY_BUTTON_REORDER_HINT" = "Перетащите, чтобы изменить порядок. Нажмите стрелку, чтобы переместить кнопку между верхним и нижним рядами. Переключатель включает и отключает отображение.";
+"OVERLAY_BUTTONS_TOP" = "Кнопки сверху";
+"OVERLAY_BUTTONS_BOTTOM" = "Кнопки снизу";
+"OVERLAY_BUTTONS_EMPTY" = "Нет кнопок";
+"REMOVE_ADS" = "Убрать рекламу";
+"REMOVE_ADS_DESC" = "Убирает рекламу из приложения, кроме игр";
 "HOLD_TO_SPEED" = "Ускорение удержанием";
 "HOLD_TO_SPEED_DESC" = "Задаёт скорость воспроизведения для режима ускорения удержанием.";
 "HIDE_AUTOPLAY" = "Скрыть переключатель автовоспроизведения";
@@ -325,9 +326,9 @@
 "PAUSE_TWO_FINGERS" = "Пауза двумя пальцами";
 "PAUSE_TWO_FINGERS_DESC" = "Ставит воспроизведение на паузу и возобновляет его касанием экрана двумя пальцами.";
 "SKIP_BACKWARD" = "Перемотка назад";
-"SKIP_BACKWARD_DESC" = "Заменяет кнопку предыдущего трека в Пункте управления на кнопку перемотки назад на заданное число секунд.";
+"SKIP_BACKWARD_DESC" = "Replaces the previous track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip backward button by a set number of seconds.";
 "SKIP_FORWARD" = "Перемотка вперёд";
-"SKIP_FORWARD_DESC" = "Заменяет кнопку следующего трека в Пункте управления на кнопку перемотки вперёд на заданное число секунд.";
+"SKIP_FORWARD_DESC" = "Replaces the next track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip forward button by a set number of seconds.";
 "REWIND_SECONDS" = "Секунды перемотки назад";
 "FORWARD_SECONDS" = "Секунды перемотки вперёд";
 "HIDE_COMMENTS_SECTION" = "Скрыть раздел комментариев";
@@ -436,7 +437,7 @@
 "LEARNING_TAB" = "Обучение";
 "MANAGE_TABS" = "Управление вкладками";
 "MANAGE_TABS_DESC" = "Изменение порядка и видимости вкладок";
-"TAB_REORDER_HINT" = "Перетащите, чтобы изменить порядок. Переключите, чтобы показать/скрыть.\\nНастройки вкладок также доступны долгим нажатием на первую вкладку в панели вкладок.";
+"TAB_REORDER_HINT" = "Перетащите, чтобы изменить порядок. Переключите, чтобы показать/скрыть.\nНастройки вкладок также доступны долгим нажатием на первую вкладку в панели вкладок.";
 "TAB_LIMIT" = "Лимит вкладок";
 "TAB_LIMIT_DESC" = "Разрешено не более 6 вкладок.";
 "ZERO_TAB_DESC" = "Должна быть включена хотя бы одна вкладка.";
@@ -509,14 +510,18 @@
 "HIDE_COMMU_GUIDE_DESC" = "Скрывает заголовок правил сообщества.";
 "HIDE_ENGAGEMENT_SUBBAR" = "Скрыть шапку комментариев";
 "HIDE_ENGAGEMENT_SUBBAR_DESC" = "Скрывает шапку сортировки комментариев (Сначала популярные, Сначала новые), чтобы она никогда не появлялась.";
+"HIDE_COMMUNITY_BUTTON_PANEL" = "Hide community button";
+"HIDE_COMMUNITY_BUTTON_PANEL_DESC" = "Hide the community button in the engagement panel.";
+"HIDE_INFO_BUTTON_PANEL" = "Hide info button";
+"HIDE_INFO_BUTTON_PANEL_DESC" = "Hide the info button in the engagement panel.";
 "DISABLES_RTL" = "Отключить формат RTL";
 "DISABLES_RTL_DESC" = "Принудительно отображает текст слева направо (LTR) для языков, которые изначально пишутся справа налево (RTL).";
 "DEVICE_UI" = "Стиль интерфейса";
 "OPEN_LINK" = "Открыть ссылку";
 "FLOATING_KEYBOARD" = "Плавающая клавиатура";
-"FLOATING_KEYBOARD_DESC" = "Принудительно включает плавающую клавиатуру. Полезно для iPhone с подменой стиля на iPad.\\nПримечание: работает ТОЛЬКО при выборе стиля iPad.";
+"FLOATING_KEYBOARD_DESC" = "Принудительно включает плавающую клавиатуру. Полезно для iPhone с подменой стиля на iPad.\nПримечание: работает ТОЛЬКО при выборе стиля iPad.";
 "AUTO_OPEN_LINK" = "Автопроверка буфера обмена";
-"AUTO_OPEN_LINK_DESC" = "Проверяет буфер обмена на наличие ссылок YouTube при каждом открытии приложения.\\nДля корректной работы зайдите в Настройки iOS → YouTube → «Вставка из других приложений» и выберите «Разрешить»";
+"AUTO_OPEN_LINK_DESC" = "Проверяет буфер обмена на наличие ссылок YouTube при каждом открытии приложения.\nДля корректной работы зайдите в Настройки iOS → YouTube → «Вставка из других приложений» и выберите «Разрешить»";
 
 "SB_DESCRIPTION" = "Автоматически пропускает спонсорские отрезки, используя данные, отправленные сообществом.";
 "SB_ENABLE" = "Включить SponsorBlock";
@@ -566,7 +571,7 @@
 "SB_CAT_filler_DESC" = "Сцены не по теме, шутки или моменты, не несущие смысловой нагрузки.";
 
 "SB_SKIPPED" = "Отрезок %@ пропущен";
-"SB_DETECTED" = "Обнаружен отрезок %@.\\nПропустить его?";
+"SB_DETECTED" = "Обнаружен отрезок %@.\nПропустить его?";
 "SB_SKIP_NOW" = "Пропустить";
 "SB_UNSKIP" = "Отменить пропуск";
 "SB_JUMPED_TO_HIGHLIGHT" = "Переход к главному моменту выполнен";
@@ -576,3 +581,71 @@
 "SB_SKIP_ALERT_DURATION" = "Длительность уведомления о пропуске";
 "SB_UNSKIP_ALERT_DURATION" = "Длительность уведомления об отмене пропуска";
 "SB_MIN_DURATION_SLIDER" = "Минимальная длительность отрезка для пропуска";
+
+/* SponsorBlock menu / vote / whitelist / user ID */
+"SB_MENU_ENABLE" = "Enable SponsorBlock";
+"SB_MENU_DISABLE" = "Disable SponsorBlock";
+"SB_MENU_VOTE" = "Vote on segments";
+"SB_MENU_WHITELIST" = "Whitelist channel";
+"SB_VOTE_TITLE" = "Segments";
+"SB_VOTES_COUNT" = "%ld votes";
+"SB_VOTE_UPVOTE" = "Upvote";
+"SB_VOTE_DOWNVOTE" = "Downvote";
+"SB_VOTE_UNDO" = "Undo vote";
+"SB_VOTE_CHANGE_CATEGORY" = "Change category";
+"SB_VOTE_JUMP_START" = "Jump to segment start";
+"SB_VOTE_JUMP_END" = "Jump to segment end";
+"SB_VOTE_SUCCESS" = "Vote submitted";
+"SB_VOTE_FAILED" = "Vote failed";
+"SB_VOTE_NO_SEGMENTS" = "No segments for this video";
+"SB_WHITELIST_ADD" = "Add to whitelist";
+"SB_WHITELIST_REMOVE" = "Remove from whitelist";
+"SB_WHITELIST_DESC" = "SponsorBlock will be disabled for this channel.";
+"SB_WHITELIST_MANAGE" = "Whitelist";
+"SB_WHITELIST_EMPTY" = "No whitelisted channels";
+"SB_WHITELIST_DELETE" = "Delete";
+"SB_USERID_HEADER" = "User ID";
+"SB_PRIVATE_ID" = "Private User ID";
+"SB_PUBLIC_ID" = "Public User ID";
+"SB_COPY_ID" = "Copy ID";
+"SB_EDIT_ID" = "Edit ID";
+"SB_ID_COPIED" = "ID copied";
+"SB_ID_SAVED" = "ID saved";
+"SB_ID_INVALID" = "ID must be at least 30 characters";
+"SB_ID_SAVE" = "Save";
+"SB_ID_CANCEL" = "Cancel";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "Скрыть плейлисты Mix";
+"HIDE_MIX_PLAYLISTS_DESC" = "Удаляет плейлисты YouTube Mix из ленты.";
+"HIDE_AI_SUMMARIES" = "Скрыть ИИ-сводки";
+"HIDE_AI_SUMMARIES_DESC" = "Скрывает сводки видео и ключевые моменты, созданные ИИ.";
+"SHORTS_AUTO_SPEED" = "Скорость воспроизведения Shorts";
+"SHORTS_AUTO_SPEED_DESC" = "Автоматически применяет выбранную скорость для YouTube Shorts независимо от обычных видео.";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "Скрыть кнопку «Не нравится»";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "Удаляет кнопку «Не нравится» с панели действий Shorts.";
+"REMOVE_SHORTS_SAVE_BUTTON" = "Скрыть кнопку «Сохранить»";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "Удаляет кнопку «Сохранить» с панели действий Shorts.";
+"CLEAN_URLS" = "Очищать ссылки";
+"CLEAN_URLS_DESC" = "Удаляет параметры отслеживания (si, feature, pp, utm_* и т. д.) из ссылок YouTube.";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "Включить «Воспроизвести следующим»";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "Включает добавление в очередь без YouTube Premium.";
+"RELOAD_BUTTON" = "Перезагрузить";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "Включить DeArrow";
+"DEARROW_ENABLED_DESC" = "Заменяет кликбейтные заголовки и превью точными заголовками и кадрами из API DeArrow.";
+"DEARROW_REPLACE_TITLES" = "Заменять заголовки";
+"DEARROW_REPLACE_TITLES_DESC" = "Заменяет названия видео на понятные заголовки от сообщества.";
+"DEARROW_REPLACE_THUMBNAILS" = "Заменять превью";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "Заменяет кликбейтные значки на реальные кадры из видео.";
+"DEARROW_FALLBACK_ORIGINAL" = "Возврат к оригиналу";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "Показывает оригинальное название и превью, если в DeArrow нет данных.";
+
+/* Return YouTube Dislike */
+"RYD_ENABLED" = "Включить Return YouTube Dislike";
+"RYD_ENABLED_DESC" = "Восстанавливает счетчик дизлайков прямо возле кнопки «Не нравится» через Return YouTube Dislike API.";
+"RYD_SHOW_DISLIKES" = "Показывать дизлайки";
+"RYD_SHOW_DISLIKES_DESC" = "Отображает количество дизлайков возле кнопки «Не нравится» на видео и в Shorts.";
+"RYD_SHOW_LIKES" = "Показывать проверенные лайки";
+"RYD_SHOW_LIKES_DESC" = "Отображает точное количество лайков.";

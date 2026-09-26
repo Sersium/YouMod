@@ -1,70 +1,39 @@
-<p align=center>
-<img src="https://github.com/grohit1810/YouMod/blob/feature/add-sponsorblock/Icon.png" width="200" height="200"/>
-<h1 align="center">YouMod</h1>
-</p>
-<p align=center>
-<img src="https://img.shields.io/badge/Platform-iOS%20%7C%20iPadOS%2014.0%2B-blue" alt="Badge"/>
-<a href="https://github.com/Tonwalter888/YouMod/releases/latest"><img src="https://custom-icon-badges.demolab.com/github/v/release/Tonwalter888/YouMod?color=brightgreen&label=Latest%20release" alt="Badge"></img></a>
-<a href="https://github.com/Tonwalter888/YouMod/releases/latest"><img src="https://img.shields.io/github/downloads/Tonwalter888/YouMod/total?label=Download" alt="Badge"></img></a>
-</p>
+# YouMod — Sersium's fork
 
-A tweak that's try to recreate features like in YTLite as much as possible. Contributions are welcome! ^^
+[![Build](https://github.com/Sersium/YouMod/actions/workflows/build.yml/badge.svg)](https://github.com/Sersium/YouMod/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/Sersium/YouMod)](https://github.com/Sersium/YouMod/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Sersium/YouMod/total)](https://github.com/Sersium/YouMod/releases)
 
-Thanks for 400 stars and 750 forks! This might be the best project I've done.
+A personal fork of [Tonwalter888/YouMod](https://github.com/Tonwalter888/YouMod), retaining its downloads, SponsorBlock, background playback and customization features.
 
-If you want to contribute this project, scroll down to `How to contribute this project?` part.
+## What this fork adds
 
-## Why I created this project?
-The reason is because of YTLite no longer free. So I'll try my best to recreate all the features as much as I can, plus alternative tweaks combined.
+- **DeArrow:** replacement titles and thumbnails across Home, channels and notifications, with a quick original/replacement toggle.
+- **Video stats:** Return YouTube Dislike counts and a compact view count beside the watch-page controls.
+- **Simpler watch controls:** no paid Join button and an icon-only Subscribe control.
+- **Preview defaults:** sound on, captions off, with working manual controls.
+- **Distribution:** each main-branch push builds an IPA and publishes a separate Feather entry with release notes and a source diff.
 
-## Features
-This tweak add a lot of QoL feature and can hide elements in YouTube. Such as:
-- Downloading (Video, Audio, Captions, Thumbnail, Video datails, etc. Currently supports up to 1080p60)
-- Appearance (OLED theme and keyboard)
-- Navigation bar (Hiding buttons)
-- Player (Hiding elements, buttons, and Add custom actions, etc.)
-- Shorts (Hiding elements and Add custom actions)
-- Tab bar (Reorder tabs, Hiding things, etc.)
-- Built-in SponsorBlock
-- And much more!
+## Install
 
-## Supported YouTube version
-Up to the latest, this is the goal of this tweak. Any versions starting from 19.x - latest and running at least iOS 14.
+Download the IPA from [Releases](https://github.com/Sersium/YouMod/releases/latest), or add this source in Feather:
 
-## How to build the IPA?
-1. Click on **Sync fork**, and if your branch is out-of-date, click on **Update branch**.
-2. Navigate to **Actions** in your forked repository and select **Build IPA with tweaks**.
-3. Click the **Run workflow** button located on the right side.
-4. Get a decrypted .ipa file (I cannot provide this due to legal reasons.), then upload it to a file provider (e.g., filebin.net,filemail.com,catbox.moe, Mega, or Dropbox is recommended). Paste the URL of the decrypted IPA file in the provided field. You can also change the BundleID and Display Name if desired.
+```text
+https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json
+```
 
-**NOTE:** Make sure to provide a direct download link to the file, not a link to a webpage. Otherwise, the process will fail.
+Refresh the source and select the newest version. Later versions remain separately available for rollback.
 
-5. Make sure all inputs are correct, then click **Run workflow** to start the process.
-6. Wait for the build to finish. You can download the YouMod IPA from the releases section of your forked repo. (If you can't find the releases section, go to your forked repo and add /releases to the URL, i.e., github.com/yourusername/YouMod/releases.)
+## Build with another YouTube IPA
 
-## How to contribute this project?
-1. Find or create an issue with the bug you're facing or a feature missing (Can also be workflows and localizations).
-2. Clone the repository.
-3. Create a new branch for your changes.
-4. Implement your changes and ensure that they are well-tested, commit your changes and push to your branch.
-5. On your fork repository, click **Contribute** button to create a new pull request (PR) from your branch.
-    - In the PR description, reference the issue you're addressing (e.g., "Closes #123", I found this issue from ..., Update this workflow to ... , Update this language localizations) and send screenshots or videos proving your codes work without any issues (Only send this if you are not modifying the localizations).
-    - Once your PR is submitted, maintainers or collaborators may review it and ask for changes or feedback. Make any necessary adjustments, and respond to comments as needed.
+- **Saved default:** edit the direct HTTPS `url` in [`ipa-source.json`](ipa-source.json). An optional `sha256` pins the downloaded file. Pushing the change builds and publishes automatically.
+- **One build:** open [Actions → Build YouMod → Run workflow](https://github.com/Sersium/YouMod/actions/workflows/build.yml), select `main`, and provide `ipa_url` and optionally `ipa_sha256`. Blank inputs use the saved default. A manual override does not change that default.
+- If a hosting service replaces a file at the **same URL**, select **refresh_ipa**, or update its checksum.
 
-## License
-This project uses GPLv3 license. See [LICENSE](https://github.com/Tonwalter888/YouMod/blob/main/LICENSE) for more details.
+Provide a direct download to a **decrypted YouTube IPA**, not a download webpage. The build checks the IPA and reads its YouTube version automatically; changing the source also changes the cache key. New YouTube versions can change private APIs, so a successful build still needs device testing. YouTube **21.38.2** is the currently device-tested base; the minimum iOS version also depends on the base IPA.
 
-## Credits
-- [YTLite](https://github.com/dayanch96/YTLite) - dayanch96
-- [YTMusicUltimate](https://github.com/dayanch96/YTMusicUltimate) - dayanch96
-- [OLEDKeyboard](https://github.com/dayanch96/OLEDKeyboard) - dayanch96
-- [YTLitePlus](https://github.com/YTLitePlus/YTLitePlus)
-- [uYouEnhanced](https://github.com/arichornlover/uYouEnhanced) - arichornlover
-- [YTweaks](https://github.com/fosterbarnes/YTweaks) - fosterbarnes
-- [jefemagril](https://github.com/jefemagril) - Implemented rewind/fast forward buttons to system Control Center
-- [grohit1810](https://github.com/grohit1810) - Implemented built-in SponsorBlock, whole new settings logic, and others
-- [SponsorBlock](https://sponsor.ajay.app) - SponsorBlock segments API
-- [Google Fonts](https://fonts.google.com/icons) - Icons for custom tabs
-- And [PoomSmart](https://github.com/PoomSmart)'s tweaks
+## AI disclosure, license and credits
 
-Also thanks to the other contributors in the past!
+AI tools were used extensively to write, debug and review this fork. Automated checks and user device testing help validate changes, but do not guarantee compatibility with every YouTube version.
+
+Licensed under [GPLv3](LICENSE). Original work and contributor credit remain with [Tonwalter888/YouMod](https://github.com/Tonwalter888/YouMod) and its contributors, including grohit1810, dayanch96, PoomSmart, YTLite/YTLitePlus, uYouEnhanced and YTweaks. This fork also uses [DeArrow](https://dearrow.ajay.app/), [SponsorBlock](https://sponsor.ajay.app/), [Return YouTube Dislike](https://returnyoutubedislike.com/), YTVideoOverlay and DontEatMyContent. Not affiliated with YouTube or Google.

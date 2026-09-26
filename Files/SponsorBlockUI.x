@@ -12,19 +12,60 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 
 #pragma mark - SBSkipNotificationView Implementation
 
+static NSInteger sbCurrentPillSequence = 0;
+
+static void YMDismissExistingPillsInView(UIView *parentView, void (^completion)(void)) {
+    if (!parentView) {
+        if (completion) completion();
+        return;
+    }
+    NSMutableArray<UIView *> *existingPills = [NSMutableArray array];
+    for (UIView *sub in [parentView.subviews copy]) {
+        if ([sub isKindOfClass:[SBSkipNotificationView class]] || [sub isKindOfClass:[YMDownloadProgressView class]]) {
+            [existingPills addObject:sub];
+        }
+    }
+
+    if (existingPills.count == 0) {
+        if (completion) completion();
+        return;
+    }
+
+    __block NSInteger remaining = existingPills.count;
+    for (UIView *pill in existingPills) {
+        if ([pill respondsToSelector:@selector(dismissWithCompletion:)]) {
+            [(id)pill dismissWithCompletion:^{
+                remaining--;
+                if (remaining <= 0) {
+                    if (completion) completion();
+                }
+            }];
+        } else if ([pill respondsToSelector:@selector(dismiss)]) {
+            [(id)pill dismiss];
+            remaining--;
+            if (remaining <= 0) {
+                if (completion) completion();
+            }
+        } else {
+            [pill removeFromSuperview];
+            remaining--;
+            if (remaining <= 0) {
+                if (completion) completion();
+            }
+        }
+    }
+}
+
 @implementation SBSkipNotificationView
 
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(appDidEnterBackground)
-                                                     name:UIApplicationDidEnterBackgroundNotification
-                                                   object:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(appWillEnterForeground)
-                                                     name:UIApplicationWillEnterForegroundNotification
-                                                   object:nil];
+        NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UIApplicationWillResignActiveNotification object:nil];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UISceneDidEnterBackgroundNotification object:nil];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UISceneWillDeactivateNotification object:nil];
     }
     return self;
 }
@@ -34,41 +75,17 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 }
 
 - (void)appDidEnterBackground {
-    if (!self.isPaused) {
-        [self pauseProgress];
-        self.backgroundDate = [NSDate date];
-    }
-}
-
-- (void)appWillEnterForeground {
-    if (self.backgroundDate) {
-        NSTimeInterval timeInBackground = [[NSDate date] timeIntervalSinceDate:self.backgroundDate];
-        self.remainingDuration -= timeInBackground;
-        self.backgroundDate = nil;
-        
-        if (self.remainingDuration <= 0) {
-            [self removeFromSuperview];
-            return;
-        } else {
-            CGFloat newScaleX = self.remainingDuration / self.totalDuration;
-            newScaleX = MAX(0.001, MIN(newScaleX, 1.0));
-            self.progressOverlay.transform = CGAffineTransformMakeScale(newScaleX, 1.0);
-            self.progressOverlay.alpha = newScaleX;
-        }
-    }
-    [self resumeProgress];
+    self.isDismissing = YES;
+    [self.progressOverlay.layer removeAllAnimations];
+    [self.layer removeAllAnimations];
+    self.alpha = 0.0;
+    [self removeFromSuperview];
 }
 
 + (instancetype)showInView:(UIView *)parentView message:(NSString *)message buttonTitle:(NSString *)buttonTitle action:(void (^)(void))action duration:(NSTimeInterval)duration {
-    if (!parentView) return nil;
+    if (!parentView || [UIApplication sharedApplication].applicationState == UIApplicationStateBackground) return nil;
 
-    for (UIView *sub in [parentView.subviews copy]) {
-        if ([sub isKindOfClass:[SBSkipNotificationView class]]) {
-            SBSkipNotificationView *existing = (SBSkipNotificationView *)sub;
-            if (existing.isHighlightPill) return nil;
-            [existing dismiss];
-        }
-    }
+    NSInteger sequence = ++sbCurrentPillSequence;
 
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
@@ -124,17 +141,6 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
         [view addSubview:button];
     }
 
-    [parentView addSubview:view];
-
-    // Layout: centered horizontally, anchored above tab bar via safe area
-    NSLayoutConstraint *maxWidth = [view.widthAnchor constraintLessThanOrEqualToAnchor:parentView.widthAnchor multiplier:0.85];
-    [NSLayoutConstraint activateConstraints:@[
-        [view.centerXAnchor constraintEqualToAnchor:parentView.centerXAnchor],
-        [view.bottomAnchor constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:-60.0],
-        [view.heightAnchor constraintEqualToConstant:44.0],
-        maxWidth
-    ]];
-
     // Internal layout
     if (showButton) {
         [NSLayoutConstraint activateConstraints:@[
@@ -159,17 +165,34 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:view action:@selector(handlePan:)];
     [view addGestureRecognizer:pan];
 
-    // Slide up from below
-    view.transform = CGAffineTransformMakeTranslation(0, 60);
-    view.alpha = 0.0;
-    [UIView animateWithDuration:0.4 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
-        view.alpha = 1.0;
-        view.transform = CGAffineTransformIdentity;
-    } completion:^(BOOL finished) {
-        if (finished && duration > 0) {
-            [view startProgressAnimation];
-        }
-    }];
+    // Dismiss existing pill if present, then present new pill
+    YMDismissExistingPillsInView(parentView, ^{
+        if (sequence != sbCurrentPillSequence) return;
+        if ([UIApplication sharedApplication].applicationState == UIApplicationStateBackground) return;
+
+        [parentView addSubview:view];
+
+        // Layout: centered horizontally, anchored above tab bar via safe area
+        NSLayoutConstraint *maxWidth = [view.widthAnchor constraintLessThanOrEqualToAnchor:parentView.widthAnchor multiplier:0.85];
+        [NSLayoutConstraint activateConstraints:@[
+            [view.centerXAnchor constraintEqualToAnchor:parentView.centerXAnchor],
+            [view.bottomAnchor constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:-60.0],
+            [view.heightAnchor constraintEqualToConstant:44.0],
+            maxWidth
+        ]];
+
+        // Slide up from below
+        view.transform = CGAffineTransformMakeTranslation(0, 60);
+        view.alpha = 0.0;
+        [UIView animateWithDuration:0.4 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            view.alpha = 1.0;
+            view.transform = CGAffineTransformIdentity;
+        } completion:^(BOOL finished) {
+            if (finished && duration > 0 && sequence == sbCurrentPillSequence && !view.isDismissing) {
+                [view startProgressAnimation];
+            }
+        }];
+    });
 
     return view;
 }
@@ -182,7 +205,7 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 }
 
 - (void)startProgressAnimation {
-    if (self.remainingDuration <= 0) return;
+    if (self.remainingDuration <= 0 || self.isDismissing) return;
 
     self.progressOverlay.frame = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height);
 
@@ -190,14 +213,14 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
         self.progressOverlay.transform = CGAffineTransformMakeScale(0.001, 1.0);
         self.progressOverlay.alpha = 0.0;
     } completion:^(BOOL finished) {
-        if (finished && !self.isPaused && self.superview) {
+        if (finished && !self.isPaused && self.superview && !self.isDismissing) {
             [self dismiss];
         }
     }];
 }
 
 - (void)pauseProgress {
-    if (self.isPaused) return;
+    if (self.isPaused || self.isDismissing) return;
     self.isPaused = YES;
 
     CALayer *presentationLayer = self.progressOverlay.layer.presentationLayer;
@@ -215,7 +238,7 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 }
 
 - (void)resumeProgress {
-    if (!self.isPaused) return;
+    if (!self.isPaused || self.isDismissing) return;
     self.isPaused = NO;
 
     if (self.remainingDuration <= 0) {
@@ -227,14 +250,14 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
         self.progressOverlay.transform = CGAffineTransformMakeScale(0.001, 1.0);
         self.progressOverlay.alpha = 0.0;
     } completion:^(BOOL finished) {
-        if (finished && !self.isPaused && self.superview) {
+        if (finished && !self.isPaused && self.superview && !self.isDismissing) {
             [self dismiss];
         }
     }];
 }
 
 - (void)handlePan:(UIPanGestureRecognizer *)gesture {
-    if (self.alpha < 1.0) {
+    if (self.alpha < 1.0 || self.isDismissing) {
         gesture.enabled = NO;
         gesture.enabled = YES;
         return;
@@ -277,6 +300,10 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 }
 
 - (void)dismissInDirection:(CGFloat)direction velocity:(CGFloat)velocity {
+    if (self.isDismissing) return;
+    self.isDismissing = YES;
+    [self.progressOverlay.layer removeAllAnimations];
+    [self.layer removeAllAnimations];
     CGFloat offscreenY = direction < 0 ? -(self.frame.size.height + 80) : (self.frame.size.height + 80);
     CGFloat animDuration = velocity > 500 ? 0.2 : 0.35;
 
@@ -295,14 +322,25 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
     [self dismiss];
 }
 
-- (void)dismiss {
+- (void)dismissWithCompletion:(void (^)(void))completion {
+    if (self.isDismissing) {
+        if (completion) completion();
+        return;
+    }
+    self.isDismissing = YES;
     [self.progressOverlay.layer removeAllAnimations];
-    [UIView animateWithDuration:0.25 delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+    [self.layer removeAllAnimations];
+    [UIView animateWithDuration:0.2 delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
         self.transform = CGAffineTransformMakeTranslation(0, 60);
         self.alpha = 0.0;
     } completion:^(BOOL finished) {
         [self removeFromSuperview];
+        if (completion) completion();
     }];
+}
+
+- (void)dismiss {
+    [self dismissWithCompletion:nil];
 }
 
 + (instancetype)showSuccessInView:(UIView *)parentView message:(NSString *)message duration:(NSTimeInterval)duration {
@@ -338,15 +376,9 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 }
 
 + (instancetype)showDownloadCompleteDialogInView:(UIView *)parentView message:(NSString *)message saveHandler:(void (^)(void))saveHandler shareHandler:(void (^)(void))shareHandler duration:(NSTimeInterval)duration {
-    if (!parentView) return nil;
+    if (!parentView || [UIApplication sharedApplication].applicationState == UIApplicationStateBackground) return nil;
 
-    for (UIView *sub in [parentView.subviews copy]) {
-        if ([sub isKindOfClass:[SBSkipNotificationView class]]) {
-            SBSkipNotificationView *existing = (SBSkipNotificationView *)sub;
-            if (existing.isHighlightPill) return nil;
-            [existing dismiss];
-        }
-    }
+    NSInteger sequence = ++sbCurrentPillSequence;
 
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
@@ -413,17 +445,6 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
     }] forControlEvents:UIControlEventTouchUpInside];
     [view addSubview:shareButton];
 
-    [parentView addSubview:view];
-
-    // Layout: centered horizontally, anchored above tab bar via safe area
-    NSLayoutConstraint *maxWidth = [view.widthAnchor constraintLessThanOrEqualToAnchor:parentView.widthAnchor multiplier:0.88];
-    [NSLayoutConstraint activateConstraints:@[
-        [view.centerXAnchor constraintEqualToAnchor:parentView.centerXAnchor],
-        [view.bottomAnchor constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:-60.0],
-        [view.heightAnchor constraintEqualToConstant:44.0],
-        maxWidth
-    ]];
-
     // Internal layout
     [NSLayoutConstraint activateConstraints:@[
         [label.leadingAnchor constraintEqualToAnchor:view.leadingAnchor constant:16.0],
@@ -445,17 +466,34 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:view action:@selector(handlePan:)];
     [view addGestureRecognizer:pan];
 
-    // Slide up from below
-    view.transform = CGAffineTransformMakeTranslation(0, 60);
-    view.alpha = 0.0;
-    [UIView animateWithDuration:0.4 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
-        view.alpha = 1.0;
-        view.transform = CGAffineTransformIdentity;
-    } completion:^(BOOL finished) {
-        if (finished && duration > 0) {
-            [view startProgressAnimation];
-        }
-    }];
+    // Dismiss existing pill if present, then present new pill
+    YMDismissExistingPillsInView(parentView, ^{
+        if (sequence != sbCurrentPillSequence) return;
+        if ([UIApplication sharedApplication].applicationState == UIApplicationStateBackground) return;
+
+        [parentView addSubview:view];
+
+        // Layout: centered horizontally, anchored above tab bar via safe area
+        NSLayoutConstraint *maxWidth = [view.widthAnchor constraintLessThanOrEqualToAnchor:parentView.widthAnchor multiplier:0.88];
+        [NSLayoutConstraint activateConstraints:@[
+            [view.centerXAnchor constraintEqualToAnchor:parentView.centerXAnchor],
+            [view.bottomAnchor constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:-60.0],
+            [view.heightAnchor constraintEqualToConstant:44.0],
+            maxWidth
+        ]];
+
+        // Slide up from below
+        view.transform = CGAffineTransformMakeTranslation(0, 60);
+        view.alpha = 0.0;
+        [UIView animateWithDuration:0.4 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            view.alpha = 1.0;
+            view.transform = CGAffineTransformIdentity;
+        } completion:^(BOOL finished) {
+            if (finished && duration > 0 && sequence == sbCurrentPillSequence && !view.isDismissing) {
+                [view startProgressAnimation];
+            }
+        }];
+    });
 
     return view;
 }
@@ -466,17 +504,35 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 
 @implementation YMDownloadProgressView
 
-+ (instancetype)showInView:(UIView *)parentView message:(NSString *)message cancelAction:(void (^)(void))cancelAction {
-    if (!parentView) return nil;
-
-    // Dismiss any existing download progress pill
-    for (UIView *sub in [parentView.subviews copy]) {
-        if ([sub isKindOfClass:[YMDownloadProgressView class]]) {
-            [(YMDownloadProgressView *)sub dismiss];
-        }
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UIApplicationWillResignActiveNotification object:nil];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UISceneDidEnterBackgroundNotification object:nil];
+        [nc addObserver:self selector:@selector(appDidEnterBackground) name:UISceneWillDeactivateNotification object:nil];
     }
+    return self;
+}
 
-    YMDownloadProgressView *view = [[YMDownloadProgressView alloc] init];
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)appDidEnterBackground {
+    self.isDismissing = YES;
+    [self.layer removeAllAnimations];
+    self.alpha = 0.0;
+    [self removeFromSuperview];
+}
+
++ (instancetype)showInView:(UIView *)parentView message:(NSString *)message cancelAction:(void (^)(void))cancelAction {
+    if (!parentView || [UIApplication sharedApplication].applicationState == UIApplicationStateBackground) return nil;
+
+    NSInteger sequence = ++sbCurrentPillSequence;
+
+    YMDownloadProgressView *view = [[YMDownloadProgressView alloc] initWithFrame:CGRectZero];
     view.onCancel = cancelAction;
     view.translatesAutoresizingMaskIntoConstraints = NO;
     view.backgroundColor = [UIColor colorWithWhite:0.12 alpha:1.0];
@@ -524,7 +580,7 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
     view.cancelButton = cancelButton;
     [view addSubview:cancelButton];
 
-    // Layout
+    // Internal layout
     [NSLayoutConstraint activateConstraints:@[
         [titleLabel.leadingAnchor constraintEqualToAnchor:view.leadingAnchor constant:16],
         [titleLabel.topAnchor constraintEqualToAnchor:view.topAnchor constant:12],
@@ -546,28 +602,34 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
         [cancelButton.heightAnchor constraintEqualToConstant:32],
     ]];
 
-    [parentView addSubview:view];
+    // Dismiss existing pill if present, then present new progress pill
+    YMDismissExistingPillsInView(parentView, ^{
+        if (sequence != sbCurrentPillSequence) return;
+        if ([UIApplication sharedApplication].applicationState == UIApplicationStateBackground) return;
 
-    // Center horizontally with max width
-    NSLayoutConstraint *centerX = [view.centerXAnchor constraintEqualToAnchor:parentView.centerXAnchor];
-    NSLayoutConstraint *maxWidth = [view.widthAnchor constraintLessThanOrEqualToConstant:360];
-    NSLayoutConstraint *leadingFallback = [view.leadingAnchor constraintGreaterThanOrEqualToAnchor:parentView.leadingAnchor constant:16];
-    NSLayoutConstraint *trailingFallback = [view.trailingAnchor constraintLessThanOrEqualToAnchor:parentView.trailingAnchor constant:-16];
-    NSLayoutConstraint *preferredWidth = [view.widthAnchor constraintEqualToAnchor:parentView.widthAnchor constant:-32];
-    preferredWidth.priority = UILayoutPriorityDefaultHigh;
+        [parentView addSubview:view];
 
-    [NSLayoutConstraint activateConstraints:@[
-        centerX, maxWidth, leadingFallback, trailingFallback, preferredWidth,
-        [view.bottomAnchor constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:-12],
-    ]];
+        // Center horizontally with max width
+        NSLayoutConstraint *centerX = [view.centerXAnchor constraintEqualToAnchor:parentView.centerXAnchor];
+        NSLayoutConstraint *maxWidth = [view.widthAnchor constraintLessThanOrEqualToConstant:360];
+        NSLayoutConstraint *leadingFallback = [view.leadingAnchor constraintGreaterThanOrEqualToAnchor:parentView.leadingAnchor constant:16];
+        NSLayoutConstraint *trailingFallback = [view.trailingAnchor constraintLessThanOrEqualToAnchor:parentView.trailingAnchor constant:-16];
+        NSLayoutConstraint *preferredWidth = [view.widthAnchor constraintEqualToAnchor:parentView.widthAnchor constant:-32];
+        preferredWidth.priority = UILayoutPriorityDefaultHigh;
 
-    // Slide-up animation
-    view.transform = CGAffineTransformMakeTranslation(0, 80);
-    view.alpha = 0;
-    [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.75 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
-        view.transform = CGAffineTransformIdentity;
-        view.alpha = 1.0;
-    } completion:nil];
+        [NSLayoutConstraint activateConstraints:@[
+            centerX, maxWidth, leadingFallback, trailingFallback, preferredWidth,
+            [view.bottomAnchor constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:-12],
+        ]];
+
+        // Slide-up animation
+        view.transform = CGAffineTransformMakeTranslation(0, 80);
+        view.alpha = 0;
+        [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.75 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            view.transform = CGAffineTransformIdentity;
+            view.alpha = 1.0;
+        } completion:nil];
+    });
 
     return view;
 }
@@ -585,89 +647,224 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
     }
 }
 
-- (void)dismiss {
-    if (!self.superview) return;
-    [UIView animateWithDuration:0.25 animations:^{
+- (void)dismissWithCompletion:(void (^)(void))completion {
+    if (self.isDismissing) {
+        if (completion) completion();
+        return;
+    }
+    self.isDismissing = YES;
+    if (!self.superview) {
+        if (completion) completion();
+        return;
+    }
+    [self.layer removeAllAnimations];
+    [UIView animateWithDuration:0.2 delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
         self.transform = CGAffineTransformMakeTranslation(0, 80);
-        self.alpha = 0;
+        self.alpha = 0.0;
     } completion:^(BOOL finished) {
         [self removeFromSuperview];
+        if (completion) completion();
     }];
+}
+
+- (void)dismiss {
+    [self dismissWithCompletion:nil];
 }
 
 @end
 
 #pragma mark - Marker Repositioning Hooks
 
-// YTModularPlayerBarView - normal player
-%hook YTModularPlayerBarView
+static NSArray<SBSegment *> *sbActivePlayerSegments = nil;
 
-- (void)layoutSubviews {
-    %orig;
-    CGFloat barWidth = self.bounds.size.width;
-    if (barWidth <= 0) return;
+static NSString *const SBSegmentMarkerLayerName = @"SBSegmentMarkerLayer";
 
-    // Find reference view for Y
-    UIView *referenceView = nil;
-    for (UIView *sub in self.subviews) {
-        if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)] ||
-            [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
-            referenceView = sub;
-            break;
-        }
-    }
-
-    for (UIView *sub in self.subviews) {
-        if (sub.tag != SBSegmentMarkerTag) continue;
-        NSArray *data = objc_getAssociatedObject(sub, @selector(sbSegmentData));
-        if (!data || data.count < 3) continue;
-
-        CGFloat startFrac = [data[0] floatValue];
-        CGFloat endFrac = [data[1] floatValue];
-        BOOL isPoi = [data[2] boolValue];
-
-        CGFloat x = startFrac * barWidth;
-        CGFloat w = (endFrac - startFrac) * barWidth;
-        if (isPoi) { w = SBPoiMarkerWidth; x = MAX(0, x - SBPoiMarkerXOffset); }
-        else if (w < SBMarkerMinWidth) w = SBMarkerMinWidth;
-
-        sub.frame = CGRectMake(x, referenceView.frame.origin.y, w, referenceView.frame.size.height);
-    }
-
-    // Keep the segment markers above YouTube's decoration views, and the scrubber
-    // dot above the markers, so the stack stays track < markers < dot. YouTube
-    // rebuilds its own decorations on top of ours on each layout (splitting the
-    // progress view per chapter), which would otherwise bury the markers.
-    NSArray<UIView *> *subs = self.subviews;
-    NSMutableArray<UIView *> *markers = [NSMutableArray array];
-    UIView *scrubberDot = nil;
-    @try {
-        scrubberDot = [self valueForKey:@"_scrubberCircle"];
-    } @catch (id ex) {}
-    for (UIView *sub in subs) {
-        if (sub.tag == SBSegmentMarkerTag) {
-            [markers addObject:sub];
-        } else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)]) {
-            if (!scrubberDot) scrubberDot = sub;
-        }
-    }
-    if (markers.count == 0) return;
-
-    // Desired top group, front-most last: the markers followed by the dot. Reorder
-    // only when the subview tail doesn't already match it, so a settled layout is a
-    // no-op and doesn't trigger a fresh layout pass on every runloop cycle.
-    NSMutableArray<UIView *> *desiredTail = [markers mutableCopy];
-    if (scrubberDot) [desiredTail addObject:scrubberDot];
-    BOOL settled = subs.count >= desiredTail.count;
-    for (NSUInteger i = 0; settled && i < desiredTail.count; i++) {
-        if (subs[subs.count - desiredTail.count + i] != desiredTail[i]) settled = NO;
-    }
-    if (settled) return;
-
-    for (UIView *marker in markers) [self bringSubviewToFront:marker];
-    if (scrubberDot) [self bringSubviewToFront:scrubberDot];
+// Round a segment marker to match YouTube's own player bar.
+//
+// The bar is a capsule, and YouTube shapes it with `layer.mask = CAShapeLayer` on the
+// decoration view rather than a cornerRadius — a mask composites a layer AND all its
+// sublayers, so our markers are already trimmed to the capsule silhouette, caps
+// included. That means no per-corner logic is needed: rounding all four corners is
+// correct both mid-bar and at the bar's ends, and anything overflowing gets clipped.
+//
+// The radius is clamped to half the marker's width so a narrow marker
+// (SBMarkerMinWidth / SBPoiMarkerWidth) stays a pill instead of collapsing to a dot.
+//
+// The corner curve is left at CALayer's default (circular), which is what produces a
+// stadium shape at radius = height/2 — the bar's silhouette. A continuous curve is the
+// wrong tool here: its control points run roughly 1.5x the radius along each edge, so
+// on a 2pt-tall bar the two corners' curves overlap and the path degenerates.
+static void SBApplyMarkerRounding(CALayer *layer) {
+    if (!layer) return;
+    CGFloat height = layer.bounds.size.height, width = layer.bounds.size.width;
+    if (height <= 0 || width <= 0) return;
+    layer.cornerRadius = MIN(height / 2.0, width / 2.0);
 }
 
+static BOOL SBGetDecorationViewTimeRange(UIView *view, CGFloat *outStart, CGFloat *outEnd) {
+    YTIPlayerBarDecorationModel *model = [view valueForKey:@"_model"];
+    YTIPlayerBarItemData *itemData = [model itemData];
+    CGFloat start = [itemData startTimeSec];
+    CGFloat end = [itemData endTimeSec];
+    if (end > start) {
+        if (outStart) *outStart = start;
+        if (outEnd) *outEnd = end;
+        return YES;
+    }
+    return NO;
+}
+
+// The feed's inline-muted-playback bar and the windowed main player are both excluded:
+// only the fullscreen main player's markers are rounded. isFullscreen is private on the
+// overlay view, so a view that does not answer it counts as not fullscreen.
+static BOOL SBDecorationViewIsInFullscreenMainPlayer(UIView *view) {
+    if (![view respondsToSelector:@selector(enableRoundedCorners)] || ![view isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) return NO;
+    UIView *currentView = view.superview;
+    while (currentView != nil && currentView.superview != nil && ![currentView isKindOfClass:%c(YTMainAppVideoPlayerOverlayView)]) {
+        currentView = currentView.superview;
+    }
+    if (![currentView isKindOfClass:%c(YTMainAppVideoPlayerOverlayView)]) return NO;
+    return [(YTMainAppVideoPlayerOverlayView *)currentView isFullscreen];
+}
+
+static void SBRebuildMarkersInDecorationView(UIView *view) {
+    for (CALayer *layer in [view.layer.sublayers copy]) {
+        if ([layer.name isEqualToString:SBSegmentMarkerLayerName]) {
+            [layer removeFromSuperlayer];
+        }
+    }
+
+    if (!IS_ENABLED(SBEnabled) || !IS_ENABLED(SBButtonKey) || (!IS_ENABLED(SBSegmentsInPlayer) && !IS_ENABLED(SBSegmentsInFeed))) return;
+
+    CGFloat start = 0.0, end = 0.0;
+    if (!SBGetDecorationViewTimeRange(view, &start, &end)) return;
+
+    CGFloat viewDuration = end - start;
+    CGFloat barWidth = view.bounds.size.width;
+    CGFloat barHeight = view.bounds.size.height;
+    if (viewDuration <= 0 || barWidth <= 0 || barHeight <= 0) return;
+
+    NSArray<SBSegment *> *segments = sbActivePlayerSegments;
+    if (!segments || segments.count == 0) return;
+
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+
+    for (SBSegment *segment in segments) {
+        SBSegmentAction action = [segment configuredAction];
+        if (action == SBSegmentActionDisable) continue;
+
+        BOOL isPoi = [segment.category isEqualToString:@"poi_highlight"];
+        if (isPoi) {
+            if (segment.startTime >= start && segment.startTime <= end) {
+                CGFloat frac = (segment.startTime - start) / viewDuration;
+                CGFloat x = MAX(0.0, frac * barWidth - SBPoiMarkerXOffset);
+                CGFloat w = SBPoiMarkerWidth;
+
+                CALayer *markerLayer = [CALayer layer];
+                markerLayer.name = SBSegmentMarkerLayerName;
+                markerLayer.frame = CGRectMake(x, 0, w, barHeight);
+                markerLayer.backgroundColor = [segment segmentColor].CGColor;
+                markerLayer.masksToBounds = YES;
+                if (SBDecorationViewIsInFullscreenMainPlayer(view)) SBApplyMarkerRounding(markerLayer);
+                objc_setAssociatedObject(markerLayer, @selector(sbSegmentData), @[@(frac), @(frac), @(YES)], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+                [view.layer addSublayer:markerLayer];
+            }
+        } else {
+            CGFloat overlapStart = MAX((CGFloat)segment.startTime, start);
+            CGFloat overlapEnd = MIN((CGFloat)segment.endTime, end);
+
+            if (overlapEnd > overlapStart) {
+                CGFloat fracStart = (overlapStart - start) / viewDuration;
+                CGFloat fracEnd = (overlapEnd - start) / viewDuration;
+                CGFloat x = fracStart * barWidth;
+                CGFloat w = (fracEnd - fracStart) * barWidth;
+                if (w < SBMarkerMinWidth) w = SBMarkerMinWidth;
+
+                CALayer *markerLayer = [CALayer layer];
+                markerLayer.name = SBSegmentMarkerLayerName;
+                markerLayer.frame = CGRectMake(x, 0, w, barHeight);
+                markerLayer.backgroundColor = [segment segmentColor].CGColor;
+                markerLayer.masksToBounds = YES;
+                if (SBDecorationViewIsInFullscreenMainPlayer(view)) SBApplyMarkerRounding(markerLayer);
+                objc_setAssociatedObject(markerLayer, @selector(sbSegmentData), @[@(fracStart), @(fracEnd), @(NO)], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+                [view.layer addSublayer:markerLayer];
+            }
+        }
+    }
+
+    [CATransaction commit];
+}
+
+static void SBRenderMarkersInDecorationView(UIView *view) {
+    CGFloat barWidth = view.bounds.size.width;
+    CGFloat barHeight = view.bounds.size.height;
+    if (barWidth <= 0 || barHeight <= 0) return;
+
+    if (!IS_ENABLED(SBEnabled) || !IS_ENABLED(SBButtonKey) || (!IS_ENABLED(SBSegmentsInPlayer) && !IS_ENABLED(SBSegmentsInFeed))) {
+        for (CALayer *layer in [view.layer.sublayers copy]) {
+            if ([layer.name isEqualToString:SBSegmentMarkerLayerName]) {
+                [layer removeFromSuperlayer];
+            }
+        }
+        return;
+    }
+
+    BOOL hasMarkers = NO;
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    for (CALayer *layer in view.layer.sublayers) {
+        if ([layer.name isEqualToString:SBSegmentMarkerLayerName]) {
+            hasMarkers = YES;
+            NSArray *data = objc_getAssociatedObject(layer, @selector(sbSegmentData));
+            if (data && data.count >= 3) {
+                CGFloat fracStart = [data[0] floatValue];
+                CGFloat fracEnd = [data[1] floatValue];
+                BOOL isPoi = [data[2] boolValue];
+
+                if (isPoi) {
+                    CGFloat x = MAX(0.0, fracStart * barWidth - SBPoiMarkerXOffset);
+                    layer.frame = CGRectMake(x, 0, SBPoiMarkerWidth, barHeight);
+                } else {
+                    CGFloat x = fracStart * barWidth;
+                    CGFloat w = MAX(SBMarkerMinWidth, (fracEnd - fracStart) * barWidth);
+                    layer.frame = CGRectMake(x, 0, w, barHeight);
+                }
+                // Re-derive the radius: the bar is 2pt windowed and 4pt fullscreen, and
+                // the width changes on every re-layout.
+                if (SBDecorationViewIsInFullscreenMainPlayer(view)) SBApplyMarkerRounding(layer);
+            }
+        }
+    }
+    [CATransaction commit];
+
+    if (!hasMarkers) {
+        SBRebuildMarkersInDecorationView(view);
+    }
+}
+
+%hook YTPlayerBarProgressDecorationView
+- (void)layoutSubviews {
+    %orig;
+    SBRenderMarkersInDecorationView(self);
+}
+%new
+- (void)sb_updateSegmentMarkers {
+    SBRebuildMarkersInDecorationView(self);
+}
+%end
+
+%hook YTPlayerBarRectangleDecorationView
+- (void)layoutSubviews {
+    %orig;
+    SBRenderMarkersInDecorationView(self);
+}
+%new
+- (void)sb_updateSegmentMarkers {
+    SBRebuildMarkersInDecorationView(self);
+}
 %end
 
 // YTWatchFloatingMiniplayerProgressBarView - miniplayer
@@ -728,13 +925,13 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
     if (!IS_ENABLED(SBSegmentsInPlayer) && !IS_ENABLED(SBSegmentsInMiniPlayer) && !IS_ENABLED(SBSegmentsInFeed)) return;
     if (!segments) segments = self.sbSegments;
 
+    sbActivePlayerSegments = segments;
+
     CGFloat totalTime = [self currentVideoTotalMediaTime];
     if (totalTime <= 0) return;
     CGFloat barWidth;
     CGFloat h;
     CGFloat y;
-    // Explicitly nil so the surface branches can rely on "unassigned == nil"
-    // when deciding marker ordering, without depending on ARC zero-init.
     UIView *mainView = nil;
     UIView *scrubberDot = nil;
     UIView *referenceView = nil;
@@ -768,43 +965,23 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
         YTMainAppVideoPlayerOverlayViewController *overlay = [self activeVideoPlayerOverlay];
         YTPlayerBarController *barController = [overlay playerBarController];
         YTInlinePlayerBarContainerView *containerView = barController.playerBar;
-        UIView *playerBar;
+        UIView *playerBar = nil;
 
         for (UIView *subview in containerView.subviews) {
             if ([subview isKindOfClass:%c(YTModularPlayerBarView)]) {
                 playerBar = subview;
-                mainView = subview;
                 break;
             }
         }
         if (!playerBar) return;
 
-        // Remove old markers
-        for (UIView *sub in [playerBar.subviews copy]) {
-            if (sub.tag == SBSegmentMarkerTag) [sub removeFromSuperview];
-        }
-
-        if (!segments || segments.count == 0) return;
-
-        barWidth = playerBar.bounds.size.width;
-        if (barWidth <= 0) return;
-
-        @try {
-            scrubberDot = [playerBar valueForKey:@"_scrubberCircle"];
-        } @catch (id ex) {}
-        // Find reference track view for Y position and height
         for (UIView *sub in playerBar.subviews) {
-            if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)]) {
-                if (!referenceView) referenceView = sub;
-            } else if ([sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
-                if (!referenceView) referenceView = sub;
-            } else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)]) {
-                if (!scrubberDot) scrubberDot = sub;
+            if ([sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)] ||
+                [sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)]) {
+                [(YTPlayerBarProgressDecorationView *)sub sb_updateSegmentMarkers];
             }
-            if (referenceView && scrubberDot) break;
         }
-        h = referenceView.bounds.size.height;
-        y = referenceView.frame.origin.y;
+        return;
     } else if ([[self activeVideoPlayerOverlay] isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)] && IS_ENABLED(SBSegmentsInFeed)) {
         YTInlineMutedPlaybackPlayerOverlayViewController *viewcon = [self activeVideoPlayerOverlay];
         YTInlineMutedPlaybackPlayerOverlayView *view = (YTInlineMutedPlaybackPlayerOverlayView *)viewcon.view;
@@ -836,34 +1013,24 @@ static const CGFloat SBPoiMarkerXOffset = 1.5;
 
         if (!playerBar) return;
 
+        if ([playerBar isKindOfClass:%c(YTModularPlayerBarView)]) {
+            for (UIView *sub in playerBar.subviews) {
+                if ([sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)] ||
+                    [sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)]) {
+                    [(YTPlayerBarProgressDecorationView *)sub sb_updateSegmentMarkers];
+                }
+            }
+            return;
+        }
+
         // Remove old markers
         for (UIView *sub in [mainView.subviews copy]) {
             if (sub.tag == SBSegmentMarkerTag) [sub removeFromSuperview];
         }
 
-        if ([mainView isKindOfClass:%c(YTModularPlayerBarView)]) {
-            @try {
-                scrubberDot = [mainView valueForKey:@"_scrubberCircle"];
-            } @catch (id ex) {}
-            // Find reference track view for Y position and height
-            for (UIView *sub in mainView.subviews) {
-                if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)]) {
-                    if (!referenceView) referenceView = sub;
-                } else if ([sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
-                    if (!referenceView) referenceView = sub;
-                } else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)]) {
-                    if (!scrubberDot) scrubberDot = sub;
-                }
-                if (referenceView && scrubberDot) break;
-            }
-            barWidth = playerBar.bounds.size.width;
-            h = referenceView.bounds.size.height;
-            y = referenceView.frame.origin.y;
-        } else {
-            barWidth = playerBar.bounds.size.width;
-            h = playerBar.bounds.size.height;
-            y = playerBar.frame.origin.y;
-        }
+        barWidth = playerBar.bounds.size.width;
+        h = playerBar.bounds.size.height;
+        y = playerBar.frame.origin.y;
     } else {
         return;
     }

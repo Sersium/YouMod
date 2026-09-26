@@ -53,6 +53,10 @@
 "DOWNLOADING" = "Đang tải xuống";
 "DOWNLOAD_MANAGER" = "Trình quản lý tải xuống";
 "DOWNLOAD_MANAGER_DESC" = "Thay trình tải video của YouTube bằng trình tải của YouMod. Cho phép tải video, âm thanh, phụ đề và hình thu nhỏ.";
+"DOWNLOAD_BUTTON_POSITION" = "Download button position";
+"UNDER_THE_PLAYER" = "Under the player";
+"OVERLAY" = "Overlay";
+"BOTH" = "Both";
 "POST_DOWNLOAD_ACTION" = "Hành động sau khi tải xuống";
 "POST_ACTION_SAVE_PHOTOS" = "Lưu vào Ảnh";
 "POST_ACTION_SHARE" = "Chia sẻ";
@@ -106,24 +110,18 @@
 "THUMBNAIL_OPTIONS" = "Tải hình thu nhỏ";
 "COPY" = "Sao chép";
 "COPIED_TO_CLIPBOARD" = "Đã sao chép vào bảng tạm";
-"CONNECTING_TO_SERVER" = "Đang kết nối tới máy chủ...";
-"DOWNLOADING_TO_SERVER" = "Đang tải xuống máy chủ...";
 "COPY_COMMENT_TEXT" = "Sao chép nội dung bình luận";
 "SAVE_COMMENT_IMAGE" = "Lưu bình luận dưới dạng hình ảnh";
 "COPY_COMMENT_IMAGE" = "Sao chép bình luận dưới dạng hình ảnh";
 "COPY_POST_TEXT" = "Sao chép nội dung bài đăng";
 "SAVE_POST_IMAGE" = "Lưu bài đăng dưới dạng hình ảnh";
 "COPY_POST_IMAGE" = "Sao chép bài đăng dưới dạng hình ảnh";
-"DOWNLOAD_SERVER" = "Máy chủ tải xuống";
-"CHOOSE_DOWNLOAD_SERVER" = "Chọn máy chủ tải xuống";
 "DOWNLOAD_COMMENT" = "Lưu thông tin bình luận";
 "DOWNLOAD_COMMENT_DESC" = "Cho phép sao chép nội dung bình luận và lưu bình luận dưới dạng hình ảnh bằng cách nhấn giữ lâu vào nút ba dấu chấm.";
 "DOWNLOAD_POST" = "Lưu thông tin bài đăng";
 "DOWNLOAD_POST_DESC" = "Cho phép sao chép nội dung bài đăng và lưu bài đăng dưới dạng hình ảnh bằng cách nhấn giữ lâu.";
 "TRANSLATE_COMMENT" = "Dịch bình luận";
 "TRANSLATE_POST" = "Dịch bài đăng";
-"SERVER_EUROPRE1" = "Châu Âu";
-"SERVER_ASIA1" = "Thái Lan - Châu Á";
 "SHOW_OPTIONS" = "Hiện tùy chọn";
 "ENGLISH" = "Tiếng Anh";
 "TRANSLATION" = "Dịch thuật";
@@ -136,8 +134,8 @@
 "DOWNLOAD_METHOD" = "Phương thức tải xuống";
 "DOWNLOAD_METHOD_DESC" = "Cách video được tải xuống. Chế độ 'Trên thiết bị' hoạt động trên các phiên bản YouTube mới nhất.";
 "METHOD_DIRECT" = "Trực tiếp";
-"METHOD_SERVER" = "Máy chủ";
 "METHOD_ONDEVICE" = "Trên thiết bị (SABR)";
+"AUDIO" = "Audio";
 
 "APPEARANCE" = "Hiển thị";
 "OLED_THEME" = "Chế độ tối OLED";
@@ -161,6 +159,8 @@
 "HIDE_VOICE_SEARCH_BUTTON_DESC" = "Ẩn nút tìm kiếm bằng giọng nói trên thanh điều hướng.";
 "HIDE_CAST_BUTTON_NAVBAR" = "Ẩn nút truyền phát";
 "HIDE_CAST_BUTTON_NAVBAR_DESC" = "Ẩn nút truyền phát trên thanh điều hướng.";
+"HIDE_MESSAGES_BUTTON" = "Hide messages button";
+"HIDE_MESSAGES_BUTTON_DESC" = "Hide messages button in the navigation bar.";
 
 "FEED" = "Bảng tin";
 "HIDE_SUBBAR" = "Ẩn thanh bộ lọc";
@@ -178,15 +178,11 @@
 "KEEP_SHORTS_SUBSCRIPT" = "Giữ Shorts trong Kênh đăng ký";
 "KEEP_SHORTS_SUBSCRIPT_DESC" = "Không xóa Shorts khỏi tab Kênh đăng ký.";
 "HIDE_SEARCH_HISTORY" = "Ẩn lịch sử tìm kiếm";
-"HIDE_SEARCH_HISTORY_DESC" = "Ẩn lịch sử tìm kiếm trước đó và gợi ý khi dùng thanh tìm kiếm.\\nLƯU Ý: Lịch sử tìm kiếm vẫn có thể xem được trong các ứng dụng YouTube khác của bạn.";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON" = "Xóa nút cộng đồng";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC" = "Xóa nút bài đăng cộng đồng trên phần đầu trang kênh.";
-"REMOVE_CHANNEL_SPONSOR_BUTTON" = "Xóa nút tham gia / tài trợ";
-"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC" = "Xóa nút tham gia hội viên/tài trợ kênh trên trang chủ, trang kênh và Shorts.";
+"HIDE_SEARCH_HISTORY_DESC" = "Ẩn lịch sử tìm kiếm trước đó và gợi ý khi dùng thanh tìm kiếm.\nLƯU Ý: Lịch sử tìm kiếm vẫn có thể xem được trong các ứng dụng YouTube khác của bạn.";
 "HIDE_PLAYABLES" = "Xóa Playables";
 "HIDE_PLAYABLES_DESC" = "Xóa Playables (trò chơi nhỏ) khỏi bảng tin.";
 "HIDE_RELATED_VIDEOS" = "Ẩn video liên quan";
-"HIDE_RELATED_VIDEOS_DESC" = "Ẩn video liên quan bên dưới trình phát. (Không áp dụng cho lớp phủ toàn màn hình)";
+"HIDE_RELATED_VIDEOS_DESC" = "Ẩn video liên quan ở cả nguồn cấp và trình phát";
 
 "PLAYER" = "Trình phát";
 "PLAYBACK_SPEED" = "Tốc độ phát";
@@ -225,7 +221,12 @@
 "SPONSORBLOCK_BUTTON" = "SponsorBlock";
 "MANAGE_OVERLAY_BUTTONS" = "Quản lý nút trên lớp phủ";
 "MANAGE_OVERLAY_BUTTONS_DESC" = "Sắp xếp lại và bật/tắt các nút trên lớp phủ";
-"OVERLAY_BUTTON_REORDER_HINT" = "Kéo để sắp xếp lại các nút trên lớp phủ. Bật/tắt để hiện/ẩn.";
+"OVERLAY_BUTTON_REORDER_HINT" = "Kéo để sắp xếp lại. Chạm mũi tên để di chuyển nút giữa hàng trên và hàng dưới. Bật hoặc tắt để hiển thị hoặc ẩn.";
+"OVERLAY_BUTTONS_TOP" = "Nút phía trên";
+"OVERLAY_BUTTONS_BOTTOM" = "Nút phía dưới";
+"OVERLAY_BUTTONS_EMPTY" = "Không có nút";
+"REMOVE_ADS" = "Xóa quảng cáo";
+"REMOVE_ADS_DESC" = "Xóa quảng cáo khỏi ứng dụng, trừ trò chơi";
 "HOLD_TO_SPEED" = "Giữ để tăng tốc";
 "HOLD_TO_SPEED_DESC" = "Dùng tốc độ phát tùy chỉnh khi giữ để tăng tốc.";
 "HIDE_AUTOPLAY" = "Ẩn nút chuyển tự động phát";
@@ -325,9 +326,9 @@
 "PAUSE_TWO_FINGERS" = "Tạm dừng bằng hai ngón tay";
 "PAUSE_TWO_FINGERS_DESC" = "Tạm dừng/tiếp tục phát bằng cách chạm vào màn hình bằng hai ngón tay.";
 "SKIP_BACKWARD" = "Tua lùi";
-"SKIP_BACKWARD_DESC" = "Thay nút bài trước trong Trung tâm điều khiển bằng nút tua lùi theo số giây đã đặt.";
+"SKIP_BACKWARD_DESC" = "Replaces the previous track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip backward button by a set number of seconds.";
 "SKIP_FORWARD" = "Tua tới";
-"SKIP_FORWARD_DESC" = "Thay nút bài sau trong Trung tâm điều khiển bằng nút tua tới theo số giây đã đặt.";
+"SKIP_FORWARD_DESC" = "Replaces the next track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip forward button by a set number of seconds.";
 "REWIND_SECONDS" = "Số giây tua lùi";
 "FORWARD_SECONDS" = "Số giây tua tới";
 "HIDE_COMMENTS_SECTION" = "Ẩn phần bình luận";
@@ -436,7 +437,7 @@
 "LEARNING_TAB" = "Học tập";
 "MANAGE_TABS" = "Quản lý tab";
 "MANAGE_TABS_DESC" = "Sắp xếp lại và bật/tắt các tab";
-"TAB_REORDER_HINT" = "Kéo để sắp xếp lại. Bật/tắt để hiện/ẩn.\\nCài đặt tab cũng có thể truy cập bằng cách nhấn giữ lâu tab đầu tiên trên thanh tab.";
+"TAB_REORDER_HINT" = "Kéo để sắp xếp lại. Bật/tắt để hiện/ẩn.\nCài đặt tab cũng có thể truy cập bằng cách nhấn giữ lâu tab đầu tiên trên thanh tab.";
 "TAB_LIMIT" = "Giới hạn số tab";
 "TAB_LIMIT_DESC" = "Chỉ cho phép tối đa 6 tab.";
 "ZERO_TAB_DESC" = "Phải bật ít nhất 1 tab.";
@@ -509,14 +510,18 @@
 "HIDE_COMMU_GUIDE_DESC" = "Ẩn tiêu đề quy tắc cộng đồng.";
 "HIDE_ENGAGEMENT_SUBBAR" = "Ẩn đầu trang bình luận";
 "HIDE_ENGAGEMENT_SUBBAR_DESC" = "Ẩn thanh sắp xếp bình luận (Hàng đầu, Mới nhất) để nó không bao giờ xuất hiện.";
+"HIDE_COMMUNITY_BUTTON_PANEL" = "Hide community button";
+"HIDE_COMMUNITY_BUTTON_PANEL_DESC" = "Hide the community button in the engagement panel.";
+"HIDE_INFO_BUTTON_PANEL" = "Hide info button";
+"HIDE_INFO_BUTTON_PANEL_DESC" = "Hide the info button in the engagement panel.";
 "DISABLES_RTL" = "Tắt định dạng RTL";
 "DISABLES_RTL_DESC" = "Buộc hiển thị văn bản theo định dạng từ trái sang phải (LTR) với các ngôn ngữ vốn được viết từ phải sang trái (RTL).";
 "DEVICE_UI" = "Kiểu giao diện";
 "OPEN_LINK" = "Mở liên kết";
 "FLOATING_KEYBOARD" = "Bàn phím nổi";
-"FLOATING_KEYBOARD_DESC" = "Bật bắt buộc bàn phím nổi. Hữu ích cho iPhone giả lập kiểu giao diện iPad.\\nLưu ý: chỉ hoạt động khi chọn kiểu iPad.";
+"FLOATING_KEYBOARD_DESC" = "Bật bắt buộc bàn phím nổi. Hữu ích cho iPhone giả lập kiểu giao diện iPad.\nLưu ý: chỉ hoạt động khi chọn kiểu iPad.";
 "AUTO_OPEN_LINK" = "Tự kiểm tra bảng tạm";
-"AUTO_OPEN_LINK_DESC" = "Kiểm tra bảng tạm tìm liên kết liên quan đến YouTube mỗi lần mở ứng dụng.\\nĐể hoạt động đúng, vào Cài đặt iOS → YouTube → Dán từ ứng dụng khác và chọn 'Cho phép'";
+"AUTO_OPEN_LINK_DESC" = "Kiểm tra bảng tạm tìm liên kết liên quan đến YouTube mỗi lần mở ứng dụng.\nĐể hoạt động đúng, vào Cài đặt iOS → YouTube → Dán từ ứng dụng khác và chọn 'Cho phép'";
 
 "SB_DESCRIPTION" = "Tự động bỏ qua các đoạn tài trợ bằng dữ liệu do cộng đồng đóng góp.";
 "SB_ENABLE" = "Bật SponsorBlock";
@@ -566,7 +571,7 @@
 "SB_CAT_filler_DESC" = "Các cảnh ngoài lề, trò đùa hoặc phần đệm không liên quan trực tiếp đến chủ đề chính của video.";
 
 "SB_SKIPPED" = "Đã bỏ qua đoạn %@";
-"SB_DETECTED" = "Phát hiện đoạn %@.\\nBạn có muốn bỏ qua đoạn này không?";
+"SB_DETECTED" = "Phát hiện đoạn %@.\nBạn có muốn bỏ qua đoạn này không?";
 "SB_SKIP_NOW" = "Bỏ qua";
 "SB_UNSKIP" = "Hủy bỏ qua";
 "SB_JUMPED_TO_HIGHLIGHT" = "Đã chuyển đến khoảnh khắc nổi bật";
@@ -576,3 +581,71 @@
 "SB_SKIP_ALERT_DURATION" = "Thời lượng cảnh báo bỏ qua";
 "SB_UNSKIP_ALERT_DURATION" = "Thời lượng cảnh báo hủy bỏ qua";
 "SB_MIN_DURATION_SLIDER" = "Thời lượng đoạn tối thiểu để bỏ qua";
+
+/* SponsorBlock menu / vote / whitelist / user ID */
+"SB_MENU_ENABLE" = "Enable SponsorBlock";
+"SB_MENU_DISABLE" = "Disable SponsorBlock";
+"SB_MENU_VOTE" = "Vote on segments";
+"SB_MENU_WHITELIST" = "Whitelist channel";
+"SB_VOTE_TITLE" = "Segments";
+"SB_VOTES_COUNT" = "%ld votes";
+"SB_VOTE_UPVOTE" = "Upvote";
+"SB_VOTE_DOWNVOTE" = "Downvote";
+"SB_VOTE_UNDO" = "Undo vote";
+"SB_VOTE_CHANGE_CATEGORY" = "Change category";
+"SB_VOTE_JUMP_START" = "Jump to segment start";
+"SB_VOTE_JUMP_END" = "Jump to segment end";
+"SB_VOTE_SUCCESS" = "Vote submitted";
+"SB_VOTE_FAILED" = "Vote failed";
+"SB_VOTE_NO_SEGMENTS" = "No segments for this video";
+"SB_WHITELIST_ADD" = "Add to whitelist";
+"SB_WHITELIST_REMOVE" = "Remove from whitelist";
+"SB_WHITELIST_DESC" = "SponsorBlock will be disabled for this channel.";
+"SB_WHITELIST_MANAGE" = "Whitelist";
+"SB_WHITELIST_EMPTY" = "No whitelisted channels";
+"SB_WHITELIST_DELETE" = "Delete";
+"SB_USERID_HEADER" = "User ID";
+"SB_PRIVATE_ID" = "Private User ID";
+"SB_PUBLIC_ID" = "Public User ID";
+"SB_COPY_ID" = "Copy ID";
+"SB_EDIT_ID" = "Edit ID";
+"SB_ID_COPIED" = "ID copied";
+"SB_ID_SAVED" = "ID saved";
+"SB_ID_INVALID" = "ID must be at least 30 characters";
+"SB_ID_SAVE" = "Save";
+"SB_ID_CANCEL" = "Cancel";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "Hide Mix playlists";
+"HIDE_MIX_PLAYLISTS_DESC" = "Removes YouTube Mix and My Mix playlists from feeds.";
+"HIDE_AI_SUMMARIES" = "Hide AI summaries";
+"HIDE_AI_SUMMARIES_DESC" = "Hides AI-generated video summaries and key moments in search and feeds.";
+"SHORTS_AUTO_SPEED" = "Shorts playback speed";
+"SHORTS_AUTO_SPEED_DESC" = "Automatically applies the selected playback speed for YouTube Shorts independently of regular videos.";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "Remove Dislike button";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "Removes the Dislike button from the Shorts action bar.";
+"REMOVE_SHORTS_SAVE_BUTTON" = "Remove Save button";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "Removes the Save/Bookmark button from the Shorts action bar.";
+"CLEAN_URLS" = "Clean copied links";
+"CLEAN_URLS_DESC" = "Strips tracking parameters (si, feature, pp, utm_*, etc.) from shared and copied YouTube URLs.";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "Enable 'Play next in queue'";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "Enables 'Play next in queue' and 'Add to queue' without requiring YouTube Premium.";
+"RELOAD_BUTTON" = "Reload";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "Enable DeArrow";
+"DEARROW_ENABLED_DESC" = "Replaces sensationalized, clickbait titles and thumbnails with community-created accurate titles and snapshots from the DeArrow API.";
+"DEARROW_REPLACE_TITLES" = "Replace titles";
+"DEARROW_REPLACE_TITLES_DESC" = "Replaces video titles with crowd-sourced descriptive titles.";
+"DEARROW_REPLACE_THUMBNAILS" = "Replace thumbnails";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
+"DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";
+
+/* Return YouTube Dislike */
+"RYD_ENABLED" = "Enable Return YouTube Dislike";
+"RYD_ENABLED_DESC" = "Restores public dislike numbers and statistics directly next to the thumbs down button using the Return YouTube Dislike API.";
+"RYD_SHOW_DISLIKES" = "Show dislike counts";
+"RYD_SHOW_DISLIKES_DESC" = "Displays dislike counts next to the thumbs down button on videos and Shorts.";
+"RYD_SHOW_LIKES" = "Show verified like counts";
+"RYD_SHOW_LIKES_DESC" = "Verifies and displays like numbers alongside dislike counts.";

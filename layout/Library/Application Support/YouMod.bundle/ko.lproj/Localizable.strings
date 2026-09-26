@@ -53,6 +53,10 @@
 "DOWNLOADING" = "다운로드";
 "DOWNLOAD_MANAGER" = "다운로드 관리자";
 "DOWNLOAD_MANAGER_DESC" = "YouTube의 동영상 다운로더를 YouMod 다운로더로 대체합니다. 동영상, 오디오, 자막, 썸네일을 다운로드할 수 있습니다.";
+"DOWNLOAD_BUTTON_POSITION" = "Download button position";
+"UNDER_THE_PLAYER" = "Under the player";
+"OVERLAY" = "Overlay";
+"BOTH" = "Both";
 "POST_DOWNLOAD_ACTION" = "다운로드 후 동작";
 "POST_ACTION_SAVE_PHOTOS" = "사진 앱에 저장";
 "POST_ACTION_SHARE" = "공유";
@@ -106,24 +110,18 @@
 "THUMBNAIL_OPTIONS" = "썸네일 다운로드";
 "COPY" = "복사";
 "COPIED_TO_CLIPBOARD" = "클립보드에 복사됨";
-"CONNECTING_TO_SERVER" = "서버에 연결 중...";
-"DOWNLOADING_TO_SERVER" = "서버로 다운로드 중...";
 "COPY_COMMENT_TEXT" = "댓글 텍스트 복사";
 "SAVE_COMMENT_IMAGE" = "댓글을 이미지로 저장";
 "COPY_COMMENT_IMAGE" = "댓글을 이미지로 복사";
 "COPY_POST_TEXT" = "게시물 텍스트 복사";
 "SAVE_POST_IMAGE" = "게시물을 이미지로 저장";
 "COPY_POST_IMAGE" = "게시물을 이미지로 복사";
-"DOWNLOAD_SERVER" = "다운로드 서버";
-"CHOOSE_DOWNLOAD_SERVER" = "다운로드 서버 선택";
 "DOWNLOAD_COMMENT" = "댓글 정보 저장";
 "DOWNLOAD_COMMENT_DESC" = "점 세 개 버튼을 길게 눌러 댓글 텍스트를 복사하거나 댓글을 이미지로 저장할 수 있습니다.";
 "DOWNLOAD_POST" = "게시물 정보 저장";
 "DOWNLOAD_POST_DESC" = "길게 눌러 게시물 텍스트를 복사하거나 게시물을 이미지로 저장할 수 있습니다.";
 "TRANSLATE_COMMENT" = "댓글 번역";
 "TRANSLATE_POST" = "게시물 번역";
-"SERVER_EUROPRE1" = "유럽";
-"SERVER_ASIA1" = "태국 - 아시아";
 "SHOW_OPTIONS" = "옵션 보기";
 "ENGLISH" = "영어";
 "TRANSLATION" = "번역";
@@ -136,8 +134,8 @@
 "DOWNLOAD_METHOD" = "다운로드 방식";
 "DOWNLOAD_METHOD_DESC" = "동영상을 다운로드하는 방식입니다. 기기 내 처리 방식은 최신 YouTube 버전에서 작동합니다.";
 "METHOD_DIRECT" = "직접";
-"METHOD_SERVER" = "서버";
 "METHOD_ONDEVICE" = "기기 내 처리 (SABR)";
+"AUDIO" = "Audio";
 
 "APPEARANCE" = "화면 표시";
 "OLED_THEME" = "OLED 다크 모드";
@@ -161,6 +159,8 @@
 "HIDE_VOICE_SEARCH_BUTTON_DESC" = "내비게이션 바의 음성 검색 버튼을 숨깁니다.";
 "HIDE_CAST_BUTTON_NAVBAR" = "캐스트 버튼 숨기기";
 "HIDE_CAST_BUTTON_NAVBAR_DESC" = "내비게이션 바의 캐스트 버튼을 숨깁니다.";
+"HIDE_MESSAGES_BUTTON" = "Hide messages button";
+"HIDE_MESSAGES_BUTTON_DESC" = "Hide messages button in the navigation bar.";
 
 "FEED" = "피드";
 "HIDE_SUBBAR" = "서브바 숨기기";
@@ -179,14 +179,10 @@
 "KEEP_SHORTS_SUBSCRIPT_DESC" = "구독 탭에서 Shorts가 제거되지 않도록 합니다.";
 "HIDE_SEARCH_HISTORY" = "검색 기록 숨기기";
 "HIDE_SEARCH_HISTORY_DESC" = "검색창 사용 시 이전 검색 기록과 추천 검색어를 숨깁니다.\nNOTE: 다른 YouTube 클라이언트에서는 검색 기록을 계속 확인할 수 있습니다.";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON" = "커뮤니티 버튼 제거";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC" = "채널 헤더에서 커뮤니티 버튼을 제거합니다.";
-"REMOVE_CHANNEL_SPONSOR_BUTTON" = "가입(스폰서) 버튼 제거";
-"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC" = "피드, 채널 헤더 및 Shorts에서 채널 가입/스폰서 버튼을 제거합니다.";
 "HIDE_PLAYABLES" = "Playables 제거";
 "HIDE_PLAYABLES_DESC" = "피드에서 Playables(미니게임)를 제거합니다.";
 "HIDE_RELATED_VIDEOS" = "관련 동영상 숨기기";
-"HIDE_RELATED_VIDEOS_DESC" = "플레이어 아래의 관련 동영상을 숨깁니다. (오버레이는 제외)";
+"HIDE_RELATED_VIDEOS_DESC" = "피드와 플레이어 모두에서 관련 동영상을 숨깁니다";
 
 "PLAYER" = "플레이어";
 "PLAYBACK_SPEED" = "재생 속도";
@@ -225,7 +221,12 @@
 "SPONSORBLOCK_BUTTON" = "SponsorBlock";
 "MANAGE_OVERLAY_BUTTONS" = "오버레이 버튼 관리";
 "MANAGE_OVERLAY_BUTTONS_DESC" = "오버레이 버튼 순서 변경 및 켜기/끄기";
-"OVERLAY_BUTTON_REORDER_HINT" = "드래그하여 오버레이 버튼 순서를 변경하세요. 스위치로 표시 여부를 설정할 수 있습니다.";
+"OVERLAY_BUTTON_REORDER_HINT" = "드래그하여 재정렬하세요. 화살표를 탭하여 버튼을 상단 행과 하단 행 사이에서 이동하세요. 스위치로 표시 여부를 설정합니다.";
+"OVERLAY_BUTTONS_TOP" = "상단 버튼";
+"OVERLAY_BUTTONS_BOTTOM" = "하단 버튼";
+"OVERLAY_BUTTONS_EMPTY" = "버튼 없음";
+"REMOVE_ADS" = "광고 삭제";
+"REMOVE_ADS_DESC" = "게임을 제외한 앱 내 광고를 삭제합니다";
 "HOLD_TO_SPEED" = "길게 눌러 배속 재생";
 "HOLD_TO_SPEED_DESC" = "길게 누르면 지정한 배속으로 재생됩니다.";
 "HIDE_AUTOPLAY" = "자동재생 스위치 숨기기";
@@ -325,9 +326,9 @@
 "PAUSE_TWO_FINGERS" = "두 손가락으로 일시정지";
 "PAUSE_TWO_FINGERS_DESC" = "화면을 두 손가락으로 탭하여 재생을 일시정지/재개합니다.";
 "SKIP_BACKWARD" = "뒤로 건너뛰기";
-"SKIP_BACKWARD_DESC" = "제어 센터의 이전 트랙 버튼을 지정한 초만큼 뒤로 건너뛰는 버튼으로 대체합니다.";
+"SKIP_BACKWARD_DESC" = "Replaces the previous track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip backward button by a set number of seconds.";
 "SKIP_FORWARD" = "앞으로 건너뛰기";
-"SKIP_FORWARD_DESC" = "제어 센터의 다음 트랙 버튼을 지정한 초만큼 앞으로 건너뛰는 버튼으로 대체합니다.";
+"SKIP_FORWARD_DESC" = "Replaces the next track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip forward button by a set number of seconds.";
 "REWIND_SECONDS" = "되감기 초";
 "FORWARD_SECONDS" = "빨리감기 초";
 "HIDE_COMMENTS_SECTION" = "댓글 섹션 숨기기";
@@ -509,6 +510,10 @@
 "HIDE_COMMU_GUIDE_DESC" = "커뮤니티 가이드 헤더를 숨깁니다.";
 "HIDE_ENGAGEMENT_SUBBAR" = "댓글 헤더 숨기기";
 "HIDE_ENGAGEMENT_SUBBAR_DESC" = "댓글 정렬 헤더(인기순, 최신순)가 표시되지 않도록 숨깁니다.";
+"HIDE_COMMUNITY_BUTTON_PANEL" = "Hide community button";
+"HIDE_COMMUNITY_BUTTON_PANEL_DESC" = "Hide the community button in the engagement panel.";
+"HIDE_INFO_BUTTON_PANEL" = "Hide info button";
+"HIDE_INFO_BUTTON_PANEL_DESC" = "Hide the info button in the engagement panel.";
 "DISABLES_RTL" = "RTL 서식 비활성화";
 "DISABLES_RTL_DESC" = "오른쪽에서 왼쪽(RTL)으로 표시되는 언어의 텍스트를 강제로 왼쪽에서 오른쪽(LTR) 형식으로 표시합니다.";
 "DEVICE_UI" = "인터페이스 스타일";
@@ -576,3 +581,71 @@
 "SB_SKIP_ALERT_DURATION" = "건너뛰기 알림 표시 시간";
 "SB_UNSKIP_ALERT_DURATION" = "건너뛰기 취소 알림 표시 시간";
 "SB_MIN_DURATION_SLIDER" = "건너뛸 최소 구간 길이";
+
+/* SponsorBlock menu / vote / whitelist / user ID */
+"SB_MENU_ENABLE" = "Enable SponsorBlock";
+"SB_MENU_DISABLE" = "Disable SponsorBlock";
+"SB_MENU_VOTE" = "Vote on segments";
+"SB_MENU_WHITELIST" = "Whitelist channel";
+"SB_VOTE_TITLE" = "Segments";
+"SB_VOTES_COUNT" = "%ld votes";
+"SB_VOTE_UPVOTE" = "Upvote";
+"SB_VOTE_DOWNVOTE" = "Downvote";
+"SB_VOTE_UNDO" = "Undo vote";
+"SB_VOTE_CHANGE_CATEGORY" = "Change category";
+"SB_VOTE_JUMP_START" = "Jump to segment start";
+"SB_VOTE_JUMP_END" = "Jump to segment end";
+"SB_VOTE_SUCCESS" = "Vote submitted";
+"SB_VOTE_FAILED" = "Vote failed";
+"SB_VOTE_NO_SEGMENTS" = "No segments for this video";
+"SB_WHITELIST_ADD" = "Add to whitelist";
+"SB_WHITELIST_REMOVE" = "Remove from whitelist";
+"SB_WHITELIST_DESC" = "SponsorBlock will be disabled for this channel.";
+"SB_WHITELIST_MANAGE" = "Whitelist";
+"SB_WHITELIST_EMPTY" = "No whitelisted channels";
+"SB_WHITELIST_DELETE" = "Delete";
+"SB_USERID_HEADER" = "User ID";
+"SB_PRIVATE_ID" = "Private User ID";
+"SB_PUBLIC_ID" = "Public User ID";
+"SB_COPY_ID" = "Copy ID";
+"SB_EDIT_ID" = "Edit ID";
+"SB_ID_COPIED" = "ID copied";
+"SB_ID_SAVED" = "ID saved";
+"SB_ID_INVALID" = "ID must be at least 30 characters";
+"SB_ID_SAVE" = "Save";
+"SB_ID_CANCEL" = "Cancel";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "Hide Mix playlists";
+"HIDE_MIX_PLAYLISTS_DESC" = "Removes YouTube Mix and My Mix playlists from feeds.";
+"HIDE_AI_SUMMARIES" = "Hide AI summaries";
+"HIDE_AI_SUMMARIES_DESC" = "Hides AI-generated video summaries and key moments in search and feeds.";
+"SHORTS_AUTO_SPEED" = "Shorts playback speed";
+"SHORTS_AUTO_SPEED_DESC" = "Automatically applies the selected playback speed for YouTube Shorts independently of regular videos.";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "Remove Dislike button";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "Removes the Dislike button from the Shorts action bar.";
+"REMOVE_SHORTS_SAVE_BUTTON" = "Remove Save button";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "Removes the Save/Bookmark button from the Shorts action bar.";
+"CLEAN_URLS" = "Clean copied links";
+"CLEAN_URLS_DESC" = "Strips tracking parameters (si, feature, pp, utm_*, etc.) from shared and copied YouTube URLs.";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "Enable 'Play next in queue'";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "Enables 'Play next in queue' and 'Add to queue' without requiring YouTube Premium.";
+"RELOAD_BUTTON" = "Reload";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "Enable DeArrow";
+"DEARROW_ENABLED_DESC" = "Replaces sensationalized, clickbait titles and thumbnails with community-created accurate titles and snapshots from the DeArrow API.";
+"DEARROW_REPLACE_TITLES" = "Replace titles";
+"DEARROW_REPLACE_TITLES_DESC" = "Replaces video titles with crowd-sourced descriptive titles.";
+"DEARROW_REPLACE_THUMBNAILS" = "Replace thumbnails";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
+"DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";
+
+/* Return YouTube Dislike */
+"RYD_ENABLED" = "Enable Return YouTube Dislike";
+"RYD_ENABLED_DESC" = "Restores public dislike numbers and statistics directly next to the thumbs down button using the Return YouTube Dislike API.";
+"RYD_SHOW_DISLIKES" = "Show dislike counts";
+"RYD_SHOW_DISLIKES_DESC" = "Displays dislike counts next to the thumbs down button on videos and Shorts.";
+"RYD_SHOW_LIKES" = "Show verified like counts";
+"RYD_SHOW_LIKES_DESC" = "Verifies and displays like numbers alongside dislike counts.";

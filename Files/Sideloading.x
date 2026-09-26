@@ -43,10 +43,6 @@ static NSString *accessGroupID() {
 + (NSString *)appName { return YT_NAME; }
 %end
 
-%hook OGLPhenotypeFlagServiceImpl
-- (NSString *)bundleId { return YT_BUNDLE_ID; }
-%end
-
 %hook APMAEU
 + (BOOL)isFAS { return YES; }
 %end
@@ -76,7 +72,7 @@ static NSString *accessGroupID() {
 + (NSBundle *)bundleWithIdentifier:(NSString *)identifier {
     if ([identifier isEqualToString:YT_BUNDLE_ID])
         return NSBundle.mainBundle;
-    return %orig(identifier);
+    return %orig;
 }
 - (NSString *)bundleIdentifier {
     return [self isEqual:NSBundle.mainBundle] ? YT_BUNDLE_ID : %orig;

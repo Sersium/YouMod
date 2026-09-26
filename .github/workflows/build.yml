@@ -4,18 +4,18 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
     inputs:
-      repo:
-        description: 'Repository to build from'
-        required: true
-        default: 'Tonwalter888/YouMod'
-      branch:
-        description: 'Branch to build from'
-        required: true
-        default: 'main'
-   
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+      ipa_url:
+        description: 'Direct HTTPS URL of a decrypted YouTube IPA (blank uses ipa-source.json)'
+        type: string
+        required: false
+      ipa_sha256:
+        description: 'Optional SHA-256 checksum for the IPA'
+        type: string
+        required: false
+      refresh_ipa:
+        description: 'Download again even when the same source URL is cached'
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -28,9 +28,17 @@ jobs:
       - name: Checkout YouMod
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.branch }}
-          repository: ${{ inputs.repo }}
+          ref: ${{ github.sha }}
+          repository: ${{ github.repository }}
           path: YouMod
+          fetch-depth: 0
+
+      - name: Check feed regressions
+        run: |
+          python3 YouMod/Tests/check_feed_regressions.py
+          python3 YouMod/Tests/check_feather.py
+          python3 YouMod/Tests/check_ipa_source.py
+          python3 YouMod/Tests/check_watch_bar.py
 
       - name: Install dependencies
         run: brew install make ldid
@@ -40,7 +48,6 @@ jobs:
           echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
           echo "THEOS=${{ github.workspace }}/theos" >> $GITHUB_ENV
 
-      # Original from YTweaks
       - name: Get Theos commit
         run: |
           get_commit_hash() {
@@ -59,12 +66,12 @@ jobs:
       - name: Setup Theos
         if: ${{ steps.cache-theos.outputs.cache-hit != 'true' }}
         run: |
-            git clone --quiet --depth=1 --recurse-submodules https://github.com/roothide/theos.git
-            git clone --quiet --depth=1 -n --filter=tree:0 https://github.com/Tonwalter888/iOS-SDKs.git
-            cd iOS-SDKs
-            git sparse-checkout set --no-cone iPhoneOS26.5.sdk
-            git checkout --quiet
-            mv *.sdk "$THEOS/sdks"
+          git clone --quiet --depth=1 --recurse-submodules https://github.com/roothide/theos.git
+          git clone --quiet --depth=1 -n --filter=tree:0 https://github.com/Tonwalter888/iOS-SDKs.git
+          cd iOS-SDKs
+          git sparse-checkout set --no-cone iPhoneOS26.5.sdk
+          git checkout --quiet
+          mv *.sdk "$THEOS/sdks"
             
       - name: Clone headers
         run: |
@@ -75,6 +82,9 @@ jobs:
             git pull --quiet --force
             cd ${{ github.workspace }}
           fi
+
+          rm -rf "$THEOS/include/YTHeaders"
+          cp -r "$THEOS/include/YouTubeHeader" "$THEOS/include/YTHeaders"
           
           if [ ! -d "$THEOS/include/PSHeader" ]; then
             git clone --quiet --depth=1 https://github.com/PoomSmart/PSHeader.git "$THEOS/include/PSHeader"
@@ -87,30 +97,130 @@ jobs:
       - name: Fix Theos od broken pipe issue
         run: sed -i '' 's/od -c "$i" | head/od -c "$i" 2>\/dev\/null | head/g' $THEOS/bin/convert_xml_plist.sh || true
 
+      - name: Clone Safe Extra Tweaks
+        run: |
+          cd ${{ github.workspace }}
+          git clone --quiet --depth=1 https://github.com/PoomSmart/YTVideoOverlay.git
+          git clone --quiet --depth=1 https://github.com/therealFoxster/DontEatMyContent.git
+
+      - name: Build Safe Extra Tweaks
+        run: |
+          cd ${{ github.workspace }}
+
+          # Build YTVideoOverlay
+          cd YTVideoOverlay
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/ytvo.deb
+          cd ${{ github.workspace }}
+
+          # Build DontEatMyContent
+          cd DontEatMyContent
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/demc.deb
+          cd ${{ github.workspace }}
+
       - name: Build YouMod
         run: |
           cd YouMod
-          echo "YOUMOD_VERSION=$(grep '^Version:' control | cut -d ' ' -f2)" >> $GITHUB_ENV
-          make clean package DEBUG=0 FINALPACKAGE=1
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
-          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
-          mv packages/*.deb ${{ github.workspace }}
+          BASE_VERSION=$(grep '^Version:' control | cut -d ' ' -f2)
+          VERSION="$BASE_VERSION.${{ github.run_number }}"
+          sed -i '' "s/^Version:.*/Version: $VERSION/" control
+          echo "YOUMOD_VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Upload the tweak .deb(s)
+          # Build rootless deb for IPA injection
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          mv packages/*.deb ${{ github.workspace }}/youmod.deb
+
+          # Build rootful and roothide debs for jailbreak release assets
+          make clean package DEBUG=0 FINALPACKAGE=1
+          mv packages/*.deb ${{ github.workspace }}/dev.water888.youmod_${VERSION}_iphoneos-arm.deb
+          make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
+          mv packages/*.deb ${{ github.workspace }}/dev.water888.youmod_${VERSION}_iphoneos-arm64e.deb
+
+      - name: Resolve base IPA source
+        id: ipa-source
+        working-directory: YouMod
+        env:
+          IPA_URL: ${{ inputs.ipa_url }}
+          IPA_SHA256: ${{ inputs.ipa_sha256 }}
+          CACHE_REFRESH: ${{ inputs.refresh_ipa && github.run_id || '' }}
+        run: python3 Scripts/ipa_source.py resolve
+
+      - name: Cache Decrypted YouTube IPA
+        id: cache-ipa
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/youtube.ipa
+          key: ${{ steps.ipa-source.outputs.cache_key }}
+
+      - name: Download Decrypted YouTube IPA
+        if: steps.cache-ipa.outputs.cache-hit != 'true'
+        env:
+          IPA_URL: ${{ steps.ipa-source.outputs.url }}
+        run: curl --fail --location --retry 3 --proto '=https' --proto-redir '=https' "$IPA_URL" -o youtube.ipa
+
+      - name: Validate base IPA and detect YouTube version
+        id: base-ipa
+        env:
+          IPA_SHA256: ${{ steps.ipa-source.outputs.sha256 }}
+        run: python3 YouMod/Scripts/ipa_source.py inspect youtube.ipa
+
+      - name: Install cyan and tbd
+        run: |
+          pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
+          sudo wget --quiet --no-verbose "https://github.com/inoahdev/tbd/releases/download/2.2/tbd-mac" -O /usr/local/bin/tbd && sudo chmod +x /usr/local/bin/tbd || true
+
+      - name: Inject Tweaks into YouTube IPA
+        run: |
+          cd ${{ github.workspace }}
+
+          cyan -i youtube.ipa -o YouTube_YouMod.ipa -uwesq -f youmod.deb demc.deb ytvo.deb -n "YouTube" -b "com.google.ios.youtube"
+          python3 YouMod/Scripts/verify_ipa.py YouTube_YouMod.ipa
+
+      - name: Prepare release notes
+        working-directory: YouMod
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 Scripts/feather.py record "$YOUMOD_VERSION" ../YouTube_YouMod.ipa "${{ github.sha }}"
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-         name: YouMod v${{ env.YOUMOD_VERSION }}
-         path: ${{ github.workspace }}/*.deb
-         if-no-files-found: error
-         overwrite: true
+          name: YouMod v${{ env.YOUMOD_VERSION }}
+          path: |
+            ${{ github.workspace }}/*.deb
+            ${{ github.workspace }}/YouTube_YouMod.ipa
+            YouMod/release-record.json
+            YouMod/release-notes.md
+          if-no-files-found: error
+          overwrite: true
 
-      - name: Create a draft release
+      - name: Publish versioned release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ env.YOUMOD_VERSION }}
-          name: v${{ env.YOUMOD_VERSION }} 
+          name: YouMod v${{ env.YOUMOD_VERSION }}
+          target_commitish: ${{ github.sha }}
+          body_path: YouMod/release-notes.md
+          make_latest: legacy
           files: |
-             dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm.deb
-             dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64.deb
-             dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
-          draft: true
+             ${{ github.workspace }}/youmod.deb
+             ${{ github.workspace }}/ytvo.deb
+             ${{ github.workspace }}/demc.deb
+             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm.deb
+             ${{ github.workspace }}/dev.water888.youmod_${{ env.YOUMOD_VERSION }}_iphoneos-arm64e.deb
+             ${{ github.workspace }}/YouTube_YouMod.ipa
+             YouMod/release-record.json
+             YouMod/release-notes.md
+          draft: false
+
+      # Publish only after the IPA exists. Contents API SHA checking preserves
+      # history if two builds finish together; failure must fail the run.
+      - name: Publish Feather source
+        if: github.ref == 'refs/heads/main'
+        working-directory: YouMod
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 Scripts/feather.py publish release-record.json

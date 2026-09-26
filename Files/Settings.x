@@ -103,7 +103,7 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
 
     // Tweak Version (at the top)
     // Thanks to the original codes from YTweaks by fosterbarnes - https://github.com/fosterbarnes/YTweaks/blob/e921591a89b87256a2b37c4788bd99282f70d9c2/Settings.x
-    YTSettingsSectionItem *tweakVersion = [YTSettingsSectionItemClass itemWithTitle:@"YouMod v2.0.0"
+    YTSettingsSectionItem *tweakVersion = [YTSettingsSectionItemClass itemWithTitle:@"YouMod v2.1.0"
         titleDescription:nil
         accessibilityIdentifier:nil
         detailTextBlock:nil
@@ -197,11 +197,15 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     // Downloading
     NSArray<YMSettingsItem *> *downloadingItems = @[
             YMToggle(YMLOC(@"DOWNLOAD_MANAGER"), YMLOC(@"DOWNLOAD_MANAGER_DESC"), DownloadManager),
+            [YMTextSegment(YMLOC(@"DOWNLOAD_BUTTON_POSITION"), DownloadButtonPosition, (@[YMLOC(@"UNDER_THE_PLAYER"), YMLOC(@"OVERLAY"), YMLOC(@"BOTH")]), 0) visibleWhenBoolKey:DownloadManager],
             YMToggle(YMLOC(@"ADD_SHORTS_DOWNLOAD"), YMLOC(@"ADD_SHORTS_DOWNLOAD_DESC"), AddDownloadToShorts),
             [YMTextSegment(YMLOC(@"POST_DOWNLOAD_ACTION"), PostDownloadAction, (@[YMLOC(@"POST_ACTION_SAVE_PHOTOS"), YMLOC(@"POST_ACTION_SHARE"), YMLOC(@"POST_ACTION_ASK")]), 0) visibleWhenAnyBoolKey:@[DownloadManager, AddDownloadToShorts, DownloadComment, DownloadPost]],
-            [[YMTextSegment(YMLOC(@"AUDIO_TRACK"), AudioPreferIndex, (@[YMLOC(@"SHOW_OPTIONS"), YMLOC(@"ORIGINAL"), YMLOC(@"ENGLISH")]), 0) visibleWhenKey:DownloadMethod equals:0] visibleWhenAnyBoolKey:@[DownloadManager, AddDownloadToShorts]],
-            [YMPicker(YMLOC(@"DOWNLOAD_METHOD"), YMLOC(@"DOWNLOAD_METHOD_DESC"), DownloadMethod, (@[YMLOC(@"METHOD_DIRECT"), YMLOC(@"METHOD_SERVER"), YMLOC(@"METHOD_ONDEVICE")]), 0) visibleWhenAnyBoolKey:@[DownloadManager, AddDownloadToShorts]],
-            [[YMPicker(YMLOC(@"DOWNLOAD_SERVER"), YMLOC(@"CHOOSE_DOWNLOAD_SERVER"), DownloadServerIndex, (@[YMLOC(@"SERVER_EUROPRE1"), YMLOC(@"SERVER_ASIA1")]), 0) visibleWhenKey:DownloadMethod equals:1] visibleWhenAnyBoolKey:@[DownloadManager, AddDownloadToShorts]],
+            // Shown for every method that can actually honour a soundtrack choice. The
+            // filter this drives (YouModMediaFormatFromStream) is not gated on the
+            // method, so hiding the row while it still applies would leave the list
+            // silently filtered with no visible control.
+            [[YMTextSegment(YMLOC(@"AUDIO_TRACK"), AudioPreferIndex, (@[YMLOC(@"SHOW_OPTIONS"), YMLOC(@"ORIGINAL"), YMLOC(@"ENGLISH")]), 0) visibleWhenKey:DownloadMethod inValues:@[@(DownloadMethodDirect), @(DownloadMethodOnDevice)]] visibleWhenAnyBoolKey:@[DownloadManager, AddDownloadToShorts]],
+            [YMPicker(YMLOC(@"DOWNLOAD_METHOD"), YMLOC(@"DOWNLOAD_METHOD_DESC"), DownloadMethod, (@[YMLOC(@"METHOD_DIRECT"), YMLOC(@"METHOD_ONDEVICE")]), 0) visibleWhenAnyBoolKey:@[DownloadManager, AddDownloadToShorts]],
             YMToggle(YMLOC(@"DOWNLOAD_COMMENT"), YMLOC(@"DOWNLOAD_COMMENT_DESC"), DownloadComment),
             YMToggle(YMLOC(@"DOWNLOAD_POST"), YMLOC(@"DOWNLOAD_POST_DESC"), DownloadPost),
     ];
@@ -239,6 +243,7 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"HIDE_SEARCH_BUTTON"), YMLOC(@"HIDE_SEARCH_BUTTON_DESC"), HideSearch),
             YMToggle(YMLOC(@"HIDE_VOICE_SEARCH_BUTTON"), YMLOC(@"HIDE_VOICE_SEARCH_BUTTON_DESC"), HideVoiceSearch),
             YMToggle(YMLOC(@"HIDE_CAST_BUTTON_NAVBAR"), YMLOC(@"HIDE_CAST_BUTTON_NAVBAR_DESC"), HideCastButtonNav),
+            YMToggle(YMLOC(@"HIDE_MESSAGES_BUTTON"), YMLOC(@"HIDE_MESSAGES_BUTTON_DESC"), HideMessages),
             YMPicker(YMLOC(@"NAVIGATION_ICON"), YMLOC(@"NAVIGATION_ICON_DESC"), YTLogoIndex, (@[YMLOC(@"DEFAULT"), YMLOC(@"PREMIUM"), YMLOC(@"YOUTUBE"), YMLOC(@"REMOVE_YTLOGO")]), 0),
     ];
     YMRegisterSettingsGroup(YMLOC(@"NAVBAR"), navbarItems);
@@ -254,6 +259,9 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     // Section 4
     // Feed
     NSArray<YMSettingsItem *> *feedItems = @[
+            YMToggle(YMLOC(@"REMOVE_ADS"), YMLOC(@"REMOVE_ADS_DESC"), RemoveAds),
+            YMToggle(YMLOC(@"HIDE_MIX_PLAYLISTS"), YMLOC(@"HIDE_MIX_PLAYLISTS_DESC"), HideMixPlaylists),
+            YMToggle(YMLOC(@"HIDE_AI_SUMMARIES"), YMLOC(@"HIDE_AI_SUMMARIES_DESC"), HideAISummaries),
             YMToggle(YMLOC(@"HIDE_SUBBAR"), YMLOC(@"HIDE_SUBBAR_DESC"), HideSubbar),
             YMToggle(YMLOC(@"HIDE_HORI_SHELF"), YMLOC(@"HIDE_HORI_SHELF_DESC"), HideHoriShelf),
             YMToggle(YMLOC(@"HIDE_MUSIC_PLAYLISTS"), YMLOC(@"HIDE_MUSIC_PLAYLISTS_DESC"), HideGenMusicShelf),
@@ -263,8 +271,6 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"HIDE_SHORTS_SHELF"), YMLOC(@"HIDE_SHORTS_SHELF_DESC"), HideShortsShelf),
             YMToggle(YMLOC(@"KEEP_SHORTS_SUBSCRIPT"), YMLOC(@"KEEP_SHORTS_SUBSCRIPT_DESC"), KeepShortsSubscript),
             YMToggle(YMLOC(@"HIDE_SEARCH_HISTORY"), YMLOC(@"HIDE_SEARCH_HISTORY_DESC"), HideSearchHis),
-            YMToggle(YMLOC(@"REMOVE_CHANNEL_COMMUNITY_BUTTON"), YMLOC(@"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC"), RemoveChannelCommunityButton),
-            YMToggle(YMLOC(@"REMOVE_CHANNEL_SPONSOR_BUTTON"), YMLOC(@"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC"), RemoveChannelSponsorAll),
     ];
     YMRegisterSettingsGroup(YMLOC(@"FEED"), feedItems);
     YTSettingsSectionItem *feedgroup = [YTSettingsSectionItemClass itemWithTitle:YMLOC(@"FEED") accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
@@ -310,7 +316,6 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"HIDE_WATERMARK"), YMLOC(@"HIDE_WATERMARK_DESC"), HideWaterMark),
             YMToggle(YMLOC(@"HIDE_FULLSCREEN_ACTIONS"), YMLOC(@"HIDE_FULLSCREEN_ACTIONS_DESC"), HideFullAction),
             YMToggle(YMLOC(@"FORCE_SEEKBAR"), YMLOC(@"FORCE_SEEKBAR_DESC"), AlwaysShowSeekbar),
-            YMToggle(YMLOC(@"DISABLES_SHOW_REMAINING"), YMLOC(@"DISABLES_SHOW_REMAINING_DESC"), DisablesShowRemaining),
             YMToggle(YMLOC(@"ALWAYS_SHOW_REMAINING"), YMLOC(@"ALWAYS_SHOW_REMAINING_DESC"), AlwaysShowRemaining),
             YMToggle(YMLOC(@"SHOW_REMAINING_EXTRA"), YMLOC(@"SHOW_REMAINING_EXTRA_DESC"), ShowExtraTimeRemaining),
             [YMToggle(YMLOC(@"USES_24_HOURS_TIME"), YMLOC(@"USES_24_HOURS_TIME_DESC"), Uses24HoursTime) visibleWhenBoolKey:ShowExtraTimeRemaining], 
@@ -341,6 +346,8 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"STOP_AUTOPLAY_VIDEO"), YMLOC(@"STOP_AUTOPLAY_VIDEO_DESC"), StopAutoplayVideo),
             YMToggle(YMLOC(@"AUTO_FULLSCREEN"), YMLOC(@"AUTO_FULLSCREEN_DESC"), AutoFullScreen),
             YMToggle(YMLOC(@"AUTO_EXIT_FULLSCREEN"), YMLOC(@"AUTO_EXIT_FULLSCREEN_DESC"), AutoExitFullScreen),
+            YMToggle(YMLOC(@"FEED_PREVIEW_SOUND"), YMLOC(@"FEED_PREVIEW_SOUND_DESC"), FeedPreviewSoundOn),
+            YMToggle(YMLOC(@"FEED_PREVIEW_CC_DISABLED"), YMLOC(@"FEED_PREVIEW_CC_DISABLED_DESC"), FeedPreviewCCDisabled),
             YMToggle(YMLOC(@"AUTO_FEED_MUTE"), YMLOC(@"AUTO_FEED_MUTE_DESC"), AutoFeedMute),
             YMHeader(YMLOC(@"GESTURE_HEADER")),
             YMToggle(YMLOC(@"GESTURES"), YMLOC(@"GESTURES_DESC"), GestureControls),
@@ -376,6 +383,7 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     // Shorts
     NSArray<YMSettingsItem *> *shortsItems = @[
             YMTextSegment(YMLOC(@"SHORTS_ACTION"), ShortsActionIndex, (@[YMLOC(@"LOOP"), YMLOC(@"SKIP_TO_NEXT_SHORTS"), YMLOC(@"PAUSE_SHORTS")]), 0),
+            YMPicker(YMLOC(@"SHORTS_AUTO_SPEED"), YMLOC(@"SHORTS_AUTO_SPEED_DESC"), ShortsAutoSpeedIndex, (@[YMLOC(@"DEFAULT"), @"0.01x", @"0.25x", @"0.5x", @"0.75x", @"1.0x", @"1.25x", @"1.5x", @"1.75x", @"2.0x", @"3.0x", @"4.0x", @"5.0x"]), 0),
             YMToggle(YMLOC(@"ENABLES_SHORTS_QUALITY"), YMLOC(@"ENABLES_SHORTS_QUALITY_DESC"), EnablesShortsQuality),
             YMToggle(YMLOC(@"SHOW_SHORTS_SEEKBAR"), YMLOC(@"SHOW_SHORTS_SEEKBAR_DESC"), ShowShortsSeekbar),
             YMToggle(YMLOC(@"SHORTS_ONLY"), YMLOC(@"SHORTS_ONLY_DESC"), ShortsOnly),
@@ -389,6 +397,8 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"HIDE_SHORTS_RECBAR"), YMLOC(@"HIDE_SHORTS_RECBAR_DESC"), HideShortsRecbar),
             YMToggle(YMLOC(@"HIDE_SHORTS_DISCLOSURE"), YMLOC(@"HIDE_SHORTS_DISCLOSURE_DESC"), RemoveShortsDisclosure),
             YMToggle(YMLOC(@"REMOVE_SHORTS_LIKE_BUTTON"), YMLOC(@"REMOVE_SHORTS_LIKE_BUTTON_DESC"), RemoveShortsLikeButton),
+            YMToggle(YMLOC(@"REMOVE_SHORTS_DISLIKE_BUTTON"), YMLOC(@"REMOVE_SHORTS_DISLIKE_BUTTON_DESC"), RemoveShortsDislikeButton),
+            YMToggle(YMLOC(@"REMOVE_SHORTS_SAVE_BUTTON"), YMLOC(@"REMOVE_SHORTS_SAVE_BUTTON_DESC"), RemoveShortsSaveButton),
             YMToggle(YMLOC(@"REMOVE_SHORTS_COMMENT_BUTTON"), YMLOC(@"REMOVE_SHORTS_COMMENT_BUTTON_DESC"), RemoveShortsCommentButton),
             YMToggle(YMLOC(@"REMOVE_SHORTS_SHARE_BUTTON"), YMLOC(@"REMOVE_SHORTS_SHARE_BUTTON_DESC"), RemoveShortsShareButton),
             YMToggle(YMLOC(@"REMOVE_SHORTS_REMIX_BUTTON"), YMLOC(@"REMOVE_SHORTS_REMIX_BUTTON_DESC"), RemoveShortsRemixButton),
@@ -479,13 +489,14 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"HIDE_LIKE_DISLIKE_VOTES"), YMLOC(@"HIDE_LIKE_DISLIKE_VOTES_DESC"), HideLikeDislikeVotes),
             YMToggle(YMLOC(@"HIDE_COMMU_GUIDE"), YMLOC(@"HIDE_COMMU_GUIDE_DESC"), HideCommuGuide),
             YMToggle(YMLOC(@"HIDE_ENGAGEMENT_SUBBAR"), YMLOC(@"HIDE_ENGAGEMENT_SUBBAR_DESC"), HideEngagementSubbar),
+            YMToggle(YMLOC(@"HIDE_INFO_BUTTON_PANEL"), YMLOC(@"HIDE_INFO_BUTTON_PANEL_DESC"), HideInfoButtonPanel),
+            YMToggle(YMLOC(@"HIDE_COMMUNITY_BUTTON_PANEL"), YMLOC(@"HIDE_COMMUNITY_BUTTON_PANEL_DESC"), HideCommunityButtonPanel),
             YMToggle(YMLOC(@"FLOATING_KEYBOARD"), YMLOC(@"FLOATING_KEYBOARD_DESC"), FloatingKeyboard),
             YMToggle(YMLOC(@"DISABLES_RTL"), YMLOC(@"DISABLES_RTL_DESC"), DisablesRTL),
             YMHeader(@""),
             YMTextSegment(YMLOC(@"DEVICE_UI"), DeviceUIIndex, (@[YMLOC(@"DEFAULT"), @"iPad", @"iPhone"]), 0),
             YMToggle(YMLOC(@"AUTO_OPEN_LINK"), YMLOC(@"AUTO_OPEN_LINK_DESC"), AutoOpenLink),
             YMHeader(YMLOC(@"FLYOUT_MENU")),
-            YMToggle(YMLOC(@"REMOVE_PLAY_IN_NEXT_QUEUE_OPTION"), YMLOC(@"REMOVE_PLAY_IN_NEXT_QUEUE_OPTION_DESC"), RemovePlayInNextQueueOption),
             YMToggle(YMLOC(@"REMOVE_PLAY_IN_LAST_QUEUE_OPTION"), YMLOC(@"REMOVE_PLAY_IN_LAST_QUEUE_OPTION_DESC"), RemoveAddToLastQueueOption),
             YMToggle(YMLOC(@"REMOVE_DOWNLOAD_OPTION"), YMLOC(@"REMOVE_DOWNLOAD_OPTION_DESC"), RemoveDownloadOption),
             YMToggle(YMLOC(@"REMOVE_WATCH_LATER_OPTION"), YMLOC(@"REMOVE_WATCH_LATER_OPTION_DESC"), RemoveWatchLaterOption),
@@ -506,6 +517,8 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMToggle(YMLOC(@"REMOVE_HELP_OPTION"), YMLOC(@"REMOVE_HELP_OPTION_DESC"), RemoveHelpOption),
             YMToggle(YMLOC(@"REMOVE_NOTIFY_OPTION"), YMLOC(@"REMOVE_NOTIFY_OPTION_DESC"), RemoveNotifyOption),
             YMToggle(YMLOC(@"REMOVE_CLEARSCREEN_OPTION"), YMLOC(@"REMOVE_CLEARSCREEN_OPTION_DESC"), RemoveClearScreenOption),
+            YMToggle(YMLOC(@"CLEAN_URLS"), YMLOC(@"CLEAN_URLS_DESC"), CleanURLs),
+            YMToggle(YMLOC(@"ENABLE_PLAY_NEXT_IN_QUEUE"), YMLOC(@"ENABLE_PLAY_NEXT_IN_QUEUE_DESC"), EnablePlayNextInQueue),
     ];
     YMRegisterSettingsGroup(YMLOC(@"MISCELLANEOUS"), miscItems);
     YTSettingsSectionItem *othergroup = [YTSettingsSectionItemClass itemWithTitle:YMLOC(@"MISCELLANEOUS") accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
@@ -527,8 +540,41 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
     sponsorblockgroup.settingIcon = iconSB;
     [sectionItems addObject:sponsorblockgroup];
 
+    // Section: DeArrow
+    NSArray<YMSettingsItem *> *dearrowItems = @[
+        YMToggle(YMLOC(@"DEARROW_ENABLED"), YMLOC(@"DEARROW_ENABLED_DESC"), DeArrowEnabled),
+        YMToggle(YMLOC(@"DEARROW_REPLACE_TITLES"), YMLOC(@"DEARROW_REPLACE_TITLES_DESC"), DeArrowReplaceTitles),
+        YMToggle(YMLOC(@"DEARROW_REPLACE_THUMBNAILS"), YMLOC(@"DEARROW_REPLACE_THUMBNAILS_DESC"), DeArrowReplaceThumbnails),
+        YMToggle(YMLOC(@"DEARROW_FALLBACK_ORIGINAL"), YMLOC(@"DEARROW_FALLBACK_ORIGINAL_DESC"), DeArrowFallbackToOriginal),
+    ];
+    YMRegisterSettingsGroup(@"DeArrow", dearrowItems);
+    YTSettingsSectionItem *dearrowgroup = [YTSettingsSectionItemClass itemWithTitle:@"DeArrow" accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
+        YMPushSubSettings(@"DeArrow", dearrowItems, settingsViewController, [self parentResponder]);
+        return YES;
+    }];
+    YTIIcon *iconDA = [%c(YTIIcon) new];
+    iconDA.iconType = 67;
+    dearrowgroup.settingIcon = iconDA;
+    [sectionItems addObject:dearrowgroup];
+
+    // Section: Return YouTube Dislike
+    NSArray<YMSettingsItem *> *rydItems = @[
+        YMToggle(YMLOC(@"RYD_ENABLED"), YMLOC(@"RYD_ENABLED_DESC"), ReturnYouTubeDislike),
+        YMToggle(YMLOC(@"RYD_SHOW_DISLIKES"), YMLOC(@"RYD_SHOW_DISLIKES_DESC"), RYDShowDislikes),
+        YMToggle(YMLOC(@"RYD_SHOW_LIKES"), YMLOC(@"RYD_SHOW_LIKES_DESC"), RYDShowLikes),
+    ];
+    YMRegisterSettingsGroup(@"Return YouTube Dislike", rydItems);
+    YTSettingsSectionItem *rydgroup = [YTSettingsSectionItemClass itemWithTitle:@"Return YouTube Dislike" accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
+        YMPushSubSettings(@"Return YouTube Dislike", rydItems, settingsViewController, [self parentResponder]);
+        return YES;
+    }];
+    YTIIcon *iconRYD = [%c(YTIIcon) new];
+    iconRYD.iconType = 51; // YT_DISLIKE
+    rydgroup.settingIcon = iconRYD;
+    [sectionItems addObject:rydgroup];
+
     // Section 9
-    // Perferences
+    // Preferences
     YTSettingsSectionItem *perfgroup = [YTSettingsSectionItemClass itemWithTitle:YMLOC(@"PERFER_HEADER") accessibilityIdentifier:nil detailTextBlock:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
         YMPushSubSettings(YMLOC(@"PERFER_HEADER"), @[
             YMHeader(YMLOC(@"PERFER")),
@@ -639,7 +685,7 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
 %ctor {
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{
         AutoClearCache: @YES,
-        DownloadMethod: @2,
+        DownloadMethod: @1,
         YTLogoIndex: @1,
         BackgroundPlayback: @YES,
         DownloadManager: @YES,
@@ -647,6 +693,25 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
         DisableHints: @YES,
         RewindSeconds: @10.0,
         ForwardSeconds: @10.0,
+        CleanURLs: @YES,
+        EnablePlayNextInQueue: @YES,
+        DeArrowEnabled: @YES,
+        DeArrowReplaceTitles: @YES,
+        DeArrowReplaceThumbnails: @YES,
+        DeArrowFallbackToOriginal: @YES,
+        HideMixPlaylists: @NO,
+        HideAISummaries: @NO,
+        RemoveShortsDislikeButton: @NO,
+        RemoveShortsSaveButton: @NO,
+        ShortsAutoSpeedIndex: @0,
+        ReturnYouTubeDislike: @YES,
+        RYDShowLikes: @YES,
+        RYDShowDislikes: @YES,
+        FeedPreviewSoundOn: @YES,
+        FeedPreviewCCDisabled: @YES,
+        AutoFeedMute: @NO,
+        QualityButton: @YES,
+        OldQualityPicker: @YES
     }];
     %init;
 }

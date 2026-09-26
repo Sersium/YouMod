@@ -1,0 +1,26 @@
+{
+  "name": "YouMod Sideload Repo",
+  "identifier": "com.sersium.youmod.source",
+  "subtitle": "DeArrow, video stats and custom preview defaults",
+  "description": "Official Feather repository for YouTube (YouMod) - modified YouTube iOS app with background playback, ad removal, DeArrow title/thumbnail swapping, and Return YouTube Dislike.",
+  "website": "https://github.com/Sersium/YouMod",
+  "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
+  "apps": [
+    {
+      "name": "YouTube (YouMod)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "21.38.2-2.1.7.40",
+      "versionDate": "2026-09-26T03:10:41-04:00",
+      "versionDescription": "YouMod 2.1.7.40 \u00b7 YouTube 21.38.2\n\n- Pin push builds to their commit and make release tests independent of live versions (2fd0185)\n- Render DeArrow replacements in flattened home and notification thumbnails (2ae2047)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.1.7.38...2fd01855062dc5e06ad6a22d3e75f781ce06d2c8\nSource: 2fd01855062dc5e06ad6a22d3e75f781ce06d2c8\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.7.40/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 2.1.7.40 \u00b7 YouTube 21.38.2\n\n- Pin push builds to their commit and make release tests independent of live versions (2fd0185)\n- Render DeArrow replacements in flattened home and notification thumbnails (2ae2047)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.1.7.38...2fd01855062dc5e06ad6a22d3e75f781ce06d2c8\nSource: 2fd01855062dc5e06ad6a22d3e75f781ce06d2c8\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 129311274,
+      "screenshotURLs": [],
+      "versions": []
+    }
+  ],
+  "news": []
+}

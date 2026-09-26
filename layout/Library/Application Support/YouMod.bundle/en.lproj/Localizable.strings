@@ -25,8 +25,8 @@
 "FIX_PLAYBACK_ISSUES" = "Fix playback issues (Temporary)";
 "FIX_PLAYBACK_ISSUES_DESC" = "Try to fix video playback issues for some users. Turning this on will make the player automatically reloads itself everytime it errors or fails to play the video.";
 
-"PERFER_HEADER" = "YouMod perferences";
-"PERFER" = "Perferences";
+"PERFER_HEADER" = "YouMod preferences";
+"PERFER" = "Preferences";
 "IMPORT" = "Import settings";
 "IMPORT_DESC" = "Load your preferences in a .plist file.";
 "IMPORT_DONE" = "Successful";
@@ -53,6 +53,10 @@
 "DOWNLOADING" = "Downloading";
 "DOWNLOAD_MANAGER" = "Download manager";
 "DOWNLOAD_MANAGER_DESC" = "Replaces YouTube's video downloader with YouMod one. With ablity to downloading videos, audios, captions, and thumbnails.";
+"DOWNLOAD_BUTTON_POSITION" = "Download button position";
+"UNDER_THE_PLAYER" = "Under the player";
+"OVERLAY" = "Overlay";
+"BOTH" = "Both";
 "POST_DOWNLOAD_ACTION" = "Post-download action";
 "POST_ACTION_SAVE_PHOTOS" = "Save to Photos";
 "POST_ACTION_SHARE" = "Share";
@@ -106,24 +110,18 @@
 "THUMBNAIL_OPTIONS" = "Download thumbnail";
 "COPY" = "Copy";
 "COPIED_TO_CLIPBOARD" = "Copied to clipboard";
-"CONNECTING_TO_SERVER" = "Connecting to the server...";
-"DOWNLOADING_TO_SERVER" = "Downloading to the server...";
 "COPY_COMMENT_TEXT" = "Copy comment text";
 "SAVE_COMMENT_IMAGE" = "Save comment as image";
 "COPY_COMMENT_IMAGE" = "Copy comment as image";
 "COPY_POST_TEXT" = "Copy post text";
 "SAVE_POST_IMAGE" = "Save post as image";
 "COPY_POST_IMAGE" = "Copy post as image";
-"DOWNLOAD_SERVER" = "Download server";
-"CHOOSE_DOWNLOAD_SERVER" = "Choose download server";
 "DOWNLOAD_COMMENT" = "Save comment information";
 "DOWNLOAD_COMMENT_DESC" = "Allows to copy comment text and save comment as image by long tap on the three dots button.";
 "DOWNLOAD_POST" = "Save post information";
 "DOWNLOAD_POST_DESC" = "Allows to copy post text and save post as image by long tap.";
 "TRANSLATE_COMMENT" = "Translate comment";
 "TRANSLATE_POST" = "Translate post";
-"SERVER_EUROPRE1" = "Europe";
-"SERVER_ASIA1" = "Thailand - Asia";
 "SHOW_OPTIONS" = "Show options";
 "ENGLISH" = "English";
 "TRANSLATION" = "Translation";
@@ -136,8 +134,8 @@
 "DOWNLOAD_METHOD" = "Download method";
 "DOWNLOAD_METHOD_DESC" = "How videos are downloaded. On-device works on the latest YouTube versions.";
 "METHOD_DIRECT" = "Direct";
-"METHOD_SERVER" = "Server";
 "METHOD_ONDEVICE" = "On-device (SABR)";
+"AUDIO" = "Audio";
 
 "APPEARANCE" = "Appearance";
 "OLED_THEME" = "OLED dark mode";
@@ -161,6 +159,8 @@
 "HIDE_VOICE_SEARCH_BUTTON_DESC" = "Hide voice search button in the navigation bar.";
 "HIDE_CAST_BUTTON_NAVBAR" = "Hide cast button";
 "HIDE_CAST_BUTTON_NAVBAR_DESC" = "Hide cast button in the navigation bar.";
+"HIDE_MESSAGES_BUTTON" = "Hide messages button";
+"HIDE_MESSAGES_BUTTON_DESC" = "Hide messages button in the navigation bar.";
 
 "FEED" = "Feed";
 "HIDE_SUBBAR" = "Hide subbar";
@@ -178,15 +178,11 @@
 "KEEP_SHORTS_SUBSCRIPT" = "Keep Shorts in Subscriptions";
 "KEEP_SHORTS_SUBSCRIPT_DESC" = "Prevents removing Shorts from Subscriptions tab.";
 "HIDE_SEARCH_HISTORY" = "Hide search history";
-"HIDE_SEARCH_HISTORY_DESC" = "Hide previous search history and suggestions when using the search bar.\\nNOTE: Your search history will still be accessible in your other YouTube clients.";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON" = "Remove community button";
-"REMOVE_CHANNEL_COMMUNITY_BUTTON_DESC" = "Removes the community button on channel headers.";
-"REMOVE_CHANNEL_SPONSOR_BUTTON" = "Remove sponsor button";
-"REMOVE_CHANNEL_SPONSOR_BUTTON_DESC" = "Removes the sponsor / join channel button across feeds, channel headers, and Shorts.";
+"HIDE_SEARCH_HISTORY_DESC" = "Hide previous search history and suggestions when using the search bar.\nNOTE: Your search history will still be accessible in your other YouTube clients.";
 "HIDE_PLAYABLES" = "Remove playables";
 "HIDE_PLAYABLES_DESC" = "Removes playables (mini-games) from the feed.";
 "HIDE_RELATED_VIDEOS" = "Hide related videos";
-"HIDE_RELATED_VIDEOS_DESC" = "Hide related videos below the player. (Not in the overlay)";
+"HIDE_RELATED_VIDEOS_DESC" = "Hide related videos in both the feed and the player";
 
 "PLAYER" = "Player";
 "PLAYBACK_SPEED" = "Playback speed";
@@ -225,7 +221,12 @@
 "SPONSORBLOCK_BUTTON" = "SponsorBlock";
 "MANAGE_OVERLAY_BUTTONS" = "Manage overlay buttons";
 "MANAGE_OVERLAY_BUTTONS_DESC" = "Reorder and toggle overlay buttons";
-"OVERLAY_BUTTON_REORDER_HINT" = "Drag to reorder overlay buttons. Toggle to show/hide.";
+"OVERLAY_BUTTON_REORDER_HINT" = "Drag to reorder. Tap the arrow to move a button between the top and bottom rows. Toggle to show/hide.";
+"OVERLAY_BUTTONS_TOP" = "Top buttons";
+"OVERLAY_BUTTONS_BOTTOM" = "Bottom buttons";
+"OVERLAY_BUTTONS_EMPTY" = "No buttons";
+"REMOVE_ADS" = "Remove ads";
+"REMOVE_ADS_DESC" = "Removes ads from the app, except Playables";
 "HOLD_TO_SPEED" = "Hold to speed";
 "HOLD_TO_SPEED_DESC" = "Uses custom hold to speed playback rate.";
 "HIDE_AUTOPLAY" = "Hide autoplay switch";
@@ -288,6 +289,10 @@
 "AUTO_EXIT_FULLSCREEN_DESC" = "Automatically exit fullscreen after the video ends.";
 "AUTO_FEED_MUTE" = "Auto mute feed videos";
 "AUTO_FEED_MUTE_DESC" = "Automatically mute videos playing in feeds.";
+"FEED_PREVIEW_SOUND" = "Sound on in feed previews";
+"FEED_PREVIEW_SOUND_DESC" = "Automatically unmutes video previews when scrolling in feeds.";
+"FEED_PREVIEW_CC_DISABLED" = "Disable captions in feed previews";
+"FEED_PREVIEW_CC_DISABLED_DESC" = "Prevents captions from automatically appearing during feed preview playback.";
 "DISABLES_SHOW_REMAINING" = "Disable remaining time";
 "DISABLES_SHOW_REMAINING_DESC" = "Disable the feature that shows how much time is left in a video when tapping the timestamp.";
 "ALWAYS_SHOW_REMAINING" = "Always show remaining time";
@@ -325,9 +330,9 @@
 "PAUSE_TWO_FINGERS" = "Pause using two fingers";
 "PAUSE_TWO_FINGERS_DESC" = "Pause/Resume playback by tapping on the screen using two fingers.";
 "SKIP_BACKWARD" = "Skip backward";
-"SKIP_BACKWARD_DESC" = "Replaces the previous track button in Control Center with a skip backward button by a set number of seconds.";
+"SKIP_BACKWARD_DESC" = "Replaces the previous track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip backward button by a set number of seconds.";
 "SKIP_FORWARD" = "Skip forward";
-"SKIP_FORWARD_DESC" = "Replaces the next track button in Control Center with a skip forward button by a set number of seconds.";
+"SKIP_FORWARD_DESC" = "Replaces the next track button in Control Center, Lock Screen, Bluetooth, and CarPlay with a skip forward button by a set number of seconds.";
 "REWIND_SECONDS" = "Rewind seconds";
 "FORWARD_SECONDS" = "Fast-forward seconds";
 "HIDE_COMMENTS_SECTION" = "Hide comments section";
@@ -436,7 +441,7 @@
 "LEARNING_TAB" = "Learning";
 "MANAGE_TABS" = "Manage tabs";
 "MANAGE_TABS_DESC" = "Reorder and toggle tabs";
-"TAB_REORDER_HINT" = "Drag to reorder. Toggle to show/hide.\\nTab settings are also accessible by long-pressing the first tab in the tab bar.";
+"TAB_REORDER_HINT" = "Drag to reorder. Toggle to show/hide.\nTab settings are also accessible by long-pressing the first tab in the tab bar.";
 "TAB_LIMIT" = "Tab limit";
 "TAB_LIMIT_DESC" = "Only 6 tabs are allowed.";
 "ZERO_TAB_DESC" = "At least 1 tab has to be enabled.";
@@ -509,14 +514,18 @@
 "HIDE_COMMU_GUIDE_DESC" = "Hide community guidelines header.";
 "HIDE_ENGAGEMENT_SUBBAR" = "Hide comments header";
 "HIDE_ENGAGEMENT_SUBBAR_DESC" = "Hides sort comments header (Top, Newest) so it will never appear.";
+"HIDE_COMMUNITY_BUTTON_PANEL" = "Hide community button";
+"HIDE_COMMUNITY_BUTTON_PANEL_DESC" = "Hide the community button in the engagement panel.";
+"HIDE_INFO_BUTTON_PANEL" = "Hide info button";
+"HIDE_INFO_BUTTON_PANEL_DESC" = "Hide the info button in the engagement panel.";
 "DISABLES_RTL" = "Disable RTL formatting";
 "DISABLES_RTL_DESC" = "Forcefully displays text in left-to-right (LTR) format for languages that are initially displayed in right-to-left (RTL).";
 "DEVICE_UI" = "Interface style";
 "OPEN_LINK" = "Open link";
 "FLOATING_KEYBOARD" = "Floating keyboard";
-"FLOATING_KEYBOARD_DESC" = "Force-enables the floating keyboard. Useful for iPhones with iPad style spoofing.\\nNote: Works ONLY when iPad style is selected.";
+"FLOATING_KEYBOARD_DESC" = "Force-enables the floating keyboard. Useful for iPhones with iPad style spoofing.\nNote: Works ONLY when iPad style is selected.";
 "AUTO_OPEN_LINK" = "Auto-check clipboard";
-"AUTO_OPEN_LINK_DESC" = "Check clipboard for YouTube-related links each time the app is opened.\\nFor proper functionality, go to iOS Settings → YouTube → Paste from other apps and select 'Allow'";
+"AUTO_OPEN_LINK_DESC" = "Check clipboard for YouTube-related links each time the app is opened.\nFor proper functionality, go to iOS Settings → YouTube → Paste from other apps and select 'Allow'";
 
 "SB_DESCRIPTION" = "Skip sponsored segments automatically using community-submitted data.";
 "SB_ENABLE" = "Enable SponsorBlock";
@@ -566,7 +575,7 @@
 "SB_CAT_filler_DESC" = "Tangential content, jokes, or filler that is not directly related to the main topic.";
 
 "SB_SKIPPED" = "%@ segment has been skipped";
-"SB_DETECTED" = "%@ segment detected.\\nWould you like to skip the segment?";
+"SB_DETECTED" = "%@ segment detected.\nWould you like to skip the segment?";
 "SB_SKIP_NOW" = "Skip";
 "SB_UNSKIP" = "Unskip";
 "SB_JUMPED_TO_HIGHLIGHT" = "Jumped to highlight";
@@ -576,3 +585,71 @@
 "SB_SKIP_ALERT_DURATION" = "Skip alert duration";
 "SB_UNSKIP_ALERT_DURATION" = "Unskip alert duration";
 "SB_MIN_DURATION_SLIDER" = "Minimum segment duration to skip";
+
+/* SponsorBlock menu / vote / whitelist / user ID */
+"SB_MENU_ENABLE" = "Enable SponsorBlock";
+"SB_MENU_DISABLE" = "Disable SponsorBlock";
+"SB_MENU_VOTE" = "Vote on segments";
+"SB_MENU_WHITELIST" = "Whitelist channel";
+"SB_VOTE_TITLE" = "Segments";
+"SB_VOTES_COUNT" = "%ld votes";
+"SB_VOTE_UPVOTE" = "Upvote";
+"SB_VOTE_DOWNVOTE" = "Downvote";
+"SB_VOTE_UNDO" = "Undo vote";
+"SB_VOTE_CHANGE_CATEGORY" = "Change category";
+"SB_VOTE_JUMP_START" = "Jump to segment start";
+"SB_VOTE_JUMP_END" = "Jump to segment end";
+"SB_VOTE_SUCCESS" = "Vote submitted";
+"SB_VOTE_FAILED" = "Vote failed";
+"SB_VOTE_NO_SEGMENTS" = "No segments for this video";
+"SB_WHITELIST_ADD" = "Add to whitelist";
+"SB_WHITELIST_REMOVE" = "Remove from whitelist";
+"SB_WHITELIST_DESC" = "SponsorBlock will be disabled for this channel.";
+"SB_WHITELIST_MANAGE" = "Whitelist";
+"SB_WHITELIST_EMPTY" = "No whitelisted channels";
+"SB_WHITELIST_DELETE" = "Delete";
+"SB_USERID_HEADER" = "User ID";
+"SB_PRIVATE_ID" = "Private User ID";
+"SB_PUBLIC_ID" = "Public User ID";
+"SB_COPY_ID" = "Copy ID";
+"SB_EDIT_ID" = "Edit ID";
+"SB_ID_COPIED" = "ID copied";
+"SB_ID_SAVED" = "ID saved";
+"SB_ID_INVALID" = "ID must be at least 30 characters";
+"SB_ID_SAVE" = "Save";
+"SB_ID_CANCEL" = "Cancel";
+
+/* New features & optimizations */
+"HIDE_MIX_PLAYLISTS" = "Hide Mix playlists";
+"HIDE_MIX_PLAYLISTS_DESC" = "Removes YouTube Mix and My Mix playlists from feeds.";
+"HIDE_AI_SUMMARIES" = "Hide AI summaries";
+"HIDE_AI_SUMMARIES_DESC" = "Hides AI-generated video summaries and key moments in search and feeds.";
+"SHORTS_AUTO_SPEED" = "Shorts playback speed";
+"SHORTS_AUTO_SPEED_DESC" = "Automatically applies the selected playback speed for YouTube Shorts independently of regular videos.";
+"REMOVE_SHORTS_DISLIKE_BUTTON" = "Remove Dislike button";
+"REMOVE_SHORTS_DISLIKE_BUTTON_DESC" = "Removes the Dislike button from the Shorts action bar.";
+"REMOVE_SHORTS_SAVE_BUTTON" = "Remove Save button";
+"REMOVE_SHORTS_SAVE_BUTTON_DESC" = "Removes the Save/Bookmark button from the Shorts action bar.";
+"CLEAN_URLS" = "Clean copied links";
+"CLEAN_URLS_DESC" = "Strips tracking parameters (si, feature, pp, utm_*, etc.) from shared and copied YouTube URLs.";
+"ENABLE_PLAY_NEXT_IN_QUEUE" = "Enable 'Play next in queue'";
+"ENABLE_PLAY_NEXT_IN_QUEUE_DESC" = "Enables 'Play next in queue' and 'Add to queue' without requiring YouTube Premium.";
+"RELOAD_BUTTON" = "Reload";
+
+/* DeArrow */
+"DEARROW_ENABLED" = "Enable DeArrow";
+"DEARROW_ENABLED_DESC" = "Replaces sensationalized, clickbait titles and thumbnails with community-created accurate titles and snapshots from the DeArrow API.";
+"DEARROW_REPLACE_TITLES" = "Replace titles";
+"DEARROW_REPLACE_TITLES_DESC" = "Replaces video titles with crowd-sourced descriptive titles.";
+"DEARROW_REPLACE_THUMBNAILS" = "Replace thumbnails";
+"DEARROW_REPLACE_THUMBNAILS_DESC" = "Replaces clickbait thumbnails with clean video frame snapshots.";
+"DEARROW_FALLBACK_ORIGINAL" = "Fallback to original";
+"DEARROW_FALLBACK_ORIGINAL_DESC" = "Shows original title and thumbnail if no community DeArrow submission exists.";
+
+/* Return YouTube Dislike */
+"RYD_ENABLED" = "Enable Return YouTube Dislike";
+"RYD_ENABLED_DESC" = "Restores public dislike numbers and statistics directly next to the thumbs down button using the Return YouTube Dislike API.";
+"RYD_SHOW_DISLIKES" = "Show dislike counts";
+"RYD_SHOW_DISLIKES_DESC" = "Displays dislike counts next to the thumbs down button on videos and Shorts.";
+"RYD_SHOW_LIKES" = "Show verified like counts";
+"RYD_SHOW_LIKES_DESC" = "Verifies and displays like numbers alongside dislike counts.";
