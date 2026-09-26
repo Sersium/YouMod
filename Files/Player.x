@@ -775,23 +775,6 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 }
 %end
 
-static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
-    UIViewController *curVC = vc;
-    while (curVC) {
-        if ([curVC isKindOfClass:%c(YTInlineMutedPlaybackPlayerOverlayViewController)] ||
-            [NSStringFromClass([curVC class]) containsString:@"Inline"]) {
-            return YES;
-        }
-        curVC = curVC.parentViewController;
-    }
-    UIView *curV = view;
-    while (curV) {
-        NSString *cls = NSStringFromClass([curV class]);
-        if ([cls containsString:@"Inline"]) return YES;
-        curV = curV.superview;
-    }
-    return NO;
-}
 
 %hook YTInlineMutedPlaybackScrubberViewController
 - (void)setActiveSingleVideoObservable:(YTSingleVideoController *)singleVideoController {

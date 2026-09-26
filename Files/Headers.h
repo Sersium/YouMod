@@ -88,13 +88,6 @@
 - (void)setUpdatedCount:(NSString *)count updatedCountNumber:(NSNumber *)number font:(UIFont *)font color:(UIColor *)color skipAnimation:(BOOL)skip;
 @end
 
-@interface YTRollingNumberNode (RYD)
-@property (strong, nonatomic) NSString *updatedCount;
-@property (strong, nonatomic) NSNumber *updatedCountNumber;
-- (void)updateCount:(NSString *)count color:(UIColor *)color;
-- (void)relayoutNode;
-- (void)updateRollingNumberView;
-@end
 
 // For Settings.x and SponsorBlockSettings.x
 #import <roothide.h>
