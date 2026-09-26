@@ -1367,8 +1367,6 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
         }
     }
 
-    NSString *extractedVID = nil;
-    ASNetworkImageNode *inNode = YouModFindThumbnailNode(imageNodes, &extractedVID);
     if (inNode) {
         objc_setAssociatedObject(inNode, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         if (!objc_getAssociatedObject(inNode, "kYMDeArrowOrigURLKey") && [inNode respondsToSelector:@selector(URL)]) {
