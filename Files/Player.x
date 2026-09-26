@@ -805,81 +805,12 @@ static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
 }
 %end
 
-%hook YTSingleVideoController
-- (void)setMuted:(BOOL)muted {
-    if (objc_getAssociatedObject(self, "kYMIsInlinePlayback")) {
-        if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-            %orig(NO);
-            return;
-        }
-    }
-    %orig;
-}
-- (BOOL)isMuted {
-    if (objc_getAssociatedObject(self, "kYMIsInlinePlayback")) {
-        if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-            return NO;
-        }
-    }
-    return %orig;
-}
-%end
-
-%hook YTInlineMutedPlaybackAudioIconView
-- (void)setAudioOn:(BOOL)audioOn {
-    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-        %orig(YES);
-        return;
-    }
-    %orig(audioOn);
-}
-%end
-
-%hook YTInlineMutedPlaybackPlayerOverlayView
-- (void)setAudioSoundOn:(BOOL)soundOn {
-    if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-        %orig(YES);
-        return;
-    }
-    %orig(soundOn);
-}
-- (void)setCaptionsActive:(BOOL)active {
-    if (IS_ENABLED(FeedPreviewCCDisabled)) {
-        %orig(NO);
-        return;
-    }
-    %orig(active);
-}
-- (BOOL)captionsActive {
-    if (IS_ENABLED(FeedPreviewCCDisabled)) return NO;
-    return %orig;
-}
-- (void)layoutSubviews {
-    %orig;
-    if (IS_ENABLED(FeedPreviewCCDisabled)) {
-        @try {
-            UIView *captionBtn = [self valueForKey:@"_captionButton"];
-            if (captionBtn && !captionBtn.hidden) {
-                captionBtn.hidden = YES;
-            }
-        } @catch (id ex) {}
-    }
-}
-%end
-
 %hook YTInlineMutedPlaybackPlayerOverlayViewController
 - (BOOL)inlinePlaybackUnmutedAtStart {
     if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
         return YES;
     }
     return %orig;
-}
-- (void)setActiveCaptionTrack:(id)track {
-    if (IS_ENABLED(FeedPreviewCCDisabled)) {
-        %orig(nil);
-        return;
-    }
-    %orig(track);
 }
 - (void)loadView {
     %orig;
@@ -892,32 +823,9 @@ static BOOL YouModIsInlinePlaybackContext(UIView *view, UIViewController *vc) {
             if ([captionBtn respondsToSelector:@selector(setSelected:)]) {
                 [captionBtn performSelector:@selector(setSelected:) withObject:@NO];
             }
-            captionBtn.hidden = YES;
+            captionBtn.hidden = NO;
         } @catch (id ex) {}
     }
-}
-%end
-
-%hook YTCaptionViewController
-- (void)loadView {
-    %orig;
-    if (IS_ENABLED(FeedPreviewCCDisabled) && YouModIsInlinePlaybackContext(self.view, self)) {
-        self.view.hidden = YES;
-    }
-}
-- (void)setCaptionsHidden:(BOOL)hidden {
-    if (IS_ENABLED(FeedPreviewCCDisabled) && YouModIsInlinePlaybackContext(self.view, self)) {
-        %orig(YES);
-        return;
-    }
-    %orig(hidden);
-}
-- (void)setActiveCaptionTrack:(id)track {
-    if (IS_ENABLED(FeedPreviewCCDisabled) && YouModIsInlinePlaybackContext(self.view, self)) {
-        %orig(nil);
-        return;
-    }
-    %orig(track);
 }
 %end
 

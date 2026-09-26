@@ -10,16 +10,23 @@
       "name": "YouTube (YouMod)",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "21.38.2-2.1.4",
-      "versionDate": "2026-09-23T20:52:15Z",
-      "versionDescription": "YouMod v2.1.4: Universal DeArrow titles, web-style feed indicator, RYD action bar & details dislike counters, feed audio ON & CC disabled, and embedded tweak preferences.",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.4/YouTube_YouMod.ipa",
+      "version": "21.38.2-2.1.5",
+      "versionDate": "2026-09-26T05:45:00Z",
+      "versionDescription": "YouMod v2.1.5: Fix comment scroll freeze, restore RYD segmented pill like/dislike counters, restore individual preview audio & CC controls, fix DeArrow button sizing & title overlap, fix notification placement, eliminate grey thumbnails & 3-dots rectangle.",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.5/YouTube_YouMod.ipa",
       "localizedDescription": "All-in-one YouTube for iOS with ad blocking, background playback, OLED dark mode, DeArrow title/thumbnail replacement with web-style title indicator button, and Return YouTube Dislike counts on videos and Shorts.",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
       "size": 129319524,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "21.38.2-2.1.5",
+          "date": "2026-09-26T05:45:00Z",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.1.5/YouTube_YouMod.ipa",
+          "size": 129319524,
+          "localizedDescription": "YouMod v2.1.5: Fix comment scroll freeze, restore RYD segmented pill like/dislike counters, restore individual preview audio & CC controls, fix DeArrow button sizing & title overlap, fix notification placement, eliminate grey thumbnails & 3-dots rectangle."
+        },
         {
           "version": "21.38.2-2.1.4",
           "date": "2026-09-23T20:52:15Z",

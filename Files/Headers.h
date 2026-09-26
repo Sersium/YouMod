@@ -83,6 +83,22 @@
 #import <YouTubeHeader/YTReelNonVideoContentModel.h>
 #import <YouTubeHeader/YTIPlayerBarPlayingState.h>
 
+@interface YTRollingNumberView : UIView
+@property (nonatomic, strong) UIFont *font;
+@property (nonatomic, strong) UIColor *color;
+@property (nonatomic, strong) NSDictionary *fontAttributes;
+- (void)setUpdatedCount:(NSString *)count updatedCountNumber:(NSNumber *)number font:(UIFont *)font fontAttributes:(NSDictionary *)attrs color:(UIColor *)color skipAnimation:(BOOL)skip;
+- (void)setUpdatedCount:(NSString *)count updatedCountNumber:(NSNumber *)number font:(UIFont *)font color:(UIColor *)color skipAnimation:(BOOL)skip;
+@end
+
+@interface YTRollingNumberNode (RYD)
+@property (strong, nonatomic) NSString *updatedCount;
+@property (strong, nonatomic) NSNumber *updatedCountNumber;
+- (void)updateCount:(NSString *)count color:(UIColor *)color;
+- (void)relayoutNode;
+- (void)updateRollingNumberView;
+@end
+
 // For Settings.x and SponsorBlockSettings.x
 #import <roothide.h>
 #import <YouTubeHeader/YTSettingsGroupData.h>

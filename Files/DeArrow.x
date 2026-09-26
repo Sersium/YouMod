@@ -14,6 +14,42 @@ static NSString *YouModFindVideoIDFromView(UIView *view);
 - (UIView *)view;
 @end
 
+@interface YouModDeArrowButton : UIButton
+@end
+
+@implementation YouModDeArrowButton
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
+    CGRect hitBounds = CGRectInset(self.bounds, -12.0, -12.0);
+    return CGRectContainsPoint(hitBounds, point);
+}
+@end
+
+static BOOL YouModIsLikelyBadgeOrMetadata(NSString *str) {
+    if (!str || str.length < 4) return YES;
+    if ([str containsString:@" views"] || [str containsString:@" watching"] || 
+        [str containsString:@" ago"] || [str containsString:@" • "] || 
+        [str containsString:@"subscribers"]) {
+        return YES;
+    }
+    static NSRegularExpression *timeRegex = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        timeRegex = [NSRegularExpression regularExpressionWithPattern:@"^\\d+:\\d{2}(:\\d{2})?$" options:0 error:nil];
+    });
+    if ([timeRegex numberOfMatchesInString:str options:0 range:NSMakeRange(0, str.length)] > 0) {
+        return YES;
+    }
+    NSString *trimmed = [str stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]].uppercaseString;
+    if ([trimmed isEqualToString:@"LIVE"] || [trimmed isEqualToString:@"SHORTS"] || 
+        [trimmed isEqualToString:@"PREMIERE"] || [trimmed isEqualToString:@"NEW"] || 
+        [trimmed isEqualToString:@"CC"] || [trimmed isEqualToString:@"HD"] || 
+        [trimmed isEqualToString:@"4K"]) {
+        return YES;
+    }
+    return NO;
+}
+
+
 @interface YouModDeArrowManager : NSObject
 @property (nonatomic, strong) NSCache<NSString *, NSDictionary *> *brandingCache;
 @property (nonatomic, strong) NSCache<NSString *, NSString *> *titleToVideoIDCache;
@@ -351,14 +387,11 @@ static NSString *YouModFormatDeArrowTitle(NSString *origTitle) {
             }
         }
 
-        NSString *candidateURL = nil;
         if (bestTimestamp) {
-            candidateURL = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@&time=%@", videoID, bestTimestamp];
+            NSString *candidateURL = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@&time=%@", videoID, bestTimestamp];
             branding[@"timestamp"] = bestTimestamp;
-        } else {
-            candidateURL = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@", videoID];
+            branding[@"thumbnailURL"] = candidateURL;
         }
-        branding[@"thumbnailURL"] = candidateURL;
         [self.brandingCache setObject:branding forKey:videoID];
 
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -410,8 +443,9 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     }
 
     NSString *deArrowThumb = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:videoID];
-    if (!deArrowThumb) {
-        deArrowThumb = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@", videoID];
+    if (!deArrowThumb || deArrowThumb.length == 0) {
+        [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
+        return %orig;
     }
     NSURL *deArrowURL = [NSURL URLWithString:deArrowThumb];
 
@@ -467,32 +501,10 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(self, "kYMDeArrowOrigURLKey", url, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
-    // Propagate videoID to parent nodes and sibling subnodes
+    // Propagate videoID to parent nodes
     ASDisplayNode *cur = self.supernode;
     while (cur) {
         objc_setAssociatedObject(cur, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        if ([cur respondsToSelector:@selector(subnodes)]) {
-            for (ASDisplayNode *child in cur.subnodes) {
-                objc_setAssociatedObject(child, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                if ([child isKindOfClass:%c(ASTextNode)]) {
-                    ASTextNode *tn = (ASTextNode *)child;
-                    NSString *curStr = tn.attributedText.string;
-                    if (curStr.length > 4 && !objc_getAssociatedObject(tn, "kYMDeArrowOrigAttrKey")) {
-                        BOOL isMeta = ([curStr containsString:@" views"] || [curStr containsString:@" watching"] || [curStr containsString:@" ago"] || [curStr containsString:@" • "]);
-                        if (!isMeta) {
-                            objc_setAssociatedObject(tn, "kYMDeArrowOrigAttrKey", tn.attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:curStr forVideoID:videoID];
-                            NSString *deTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
-                            if (deTitle.length > 0 && ![curStr isEqualToString:deTitle]) {
-                                NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:tn.attributedText];
-                                [mod.mutableString setString:deTitle];
-                                [tn setAttributedText:mod];
-                            }
-                        }
-                    }
-                }
-            }
-        }
         cur = cur.supernode;
     }
 
@@ -864,7 +876,22 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
         return;
     }
 
+    // Skip text nodes that belong to thumbnails (e.g. duration badges, CC overlays)
+    ASDisplayNode *ancestor = self.supernode;
+    while (ancestor) {
+        if ([ancestor isKindOfClass:%c(ASNetworkImageNode)]) {
+            %orig(attributedString);
+            return;
+        }
+        ancestor = ancestor.supernode;
+    }
+
     NSString *curStr = attributedString.string;
+    if (YouModIsLikelyBadgeOrMetadata(curStr)) {
+        %orig(attributedString);
+        return;
+    }
+
     NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
     if (!videoID) {
         ASDisplayNode *cur = self.supernode;
@@ -886,23 +913,19 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     if (videoID && videoID.length == 11) {
         objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
-        BOOL isMetadata = ([curStr containsString:@" views"] || [curStr containsString:@" watching"] || [curStr containsString:@" ago"] || [curStr containsString:@" • "] || curStr.length < 4);
+        if (!objc_getAssociatedObject(self, "kYMDeArrowOrigAttrKey")) {
+            objc_setAssociatedObject(self, "kYMDeArrowOrigAttrKey", attributedString, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:curStr forVideoID:videoID];
+        }
 
-        if (!isMetadata) {
-            if (!objc_getAssociatedObject(self, "kYMDeArrowOrigAttrKey")) {
-                objc_setAssociatedObject(self, "kYMDeArrowOrigAttrKey", attributedString, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                [[YouModDeArrowManager sharedInstance] registerOriginalTitle:curStr forVideoID:videoID];
-            }
-
-            NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
-            if (deArrowTitle && deArrowTitle.length > 0 && ![curStr isEqualToString:deArrowTitle]) {
-                NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:attributedString];
-                [mod.mutableString setString:deArrowTitle];
-                %orig(mod);
-                return;
-            } else if (!deArrowTitle) {
-                [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
-            }
+        NSString *deArrowTitle = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
+        if (deArrowTitle && deArrowTitle.length > 0 && ![curStr isEqualToString:deArrowTitle]) {
+            NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:attributedString];
+            [mod.mutableString setString:deArrowTitle];
+            %orig(mod);
+            return;
+        } else if (!deArrowTitle) {
+            [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
         }
     }
     %orig(attributedString);
@@ -980,15 +1003,18 @@ static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
     BOOL isOriginal = [[YouModDeArrowManager sharedInstance] isOriginalToggledForVideoID:videoID];
     BOOL hasBranding = [[YouModDeArrowManager sharedInstance] hasDeArrowBrandingForVideoID:videoID];
 
-    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIFontWeightMedium];
-    UIImage *img = [UIImage systemImageNamed:@"dot.circle" withConfiguration:cfg];
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIFontWeightSemibold];
+    UIImage *img = [UIImage systemImageNamed:@"arrow.triangle.2.circlepath" withConfiguration:cfg];
+    if (!img) img = [UIImage systemImageNamed:@"dot.circle" withConfiguration:cfg];
     if (!img) img = [UIImage systemImageNamed:@"circle.circle.fill" withConfiguration:cfg];
     [indBtn setImage:img forState:UIControlStateNormal];
 
     if (isOriginal || !hasBranding) {
-        indBtn.tintColor = [UIColor colorWithWhite:0.55 alpha:0.6];
+        indBtn.tintColor = [UIColor colorWithWhite:0.6 alpha:0.7];
+        indBtn.backgroundColor = [UIColor colorWithWhite:0.5 alpha:0.12];
     } else {
-        indBtn.tintColor = [UIColor colorWithRed:0.0 green:0.68 blue:1.0 alpha:1.0]; // DeArrow cyan/blue
+        indBtn.tintColor = [UIColor colorWithRed:0.0 green:0.72 blue:1.0 alpha:1.0]; // DeArrow cyan
+        indBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.72 blue:1.0 alpha:0.15];
     }
 }
 
@@ -1022,13 +1048,23 @@ static ASTextNode *YouModFindTitleNode(NSArray *textNodes) {
     for (id node in textNodes) {
         if (![node isKindOfClass:%c(ASTextNode)]) continue;
         ASTextNode *tn = (ASTextNode *)node;
+
+        // Skip nodes inside thumbnail hierarchy
+        ASDisplayNode *ancestor = tn.supernode;
+        BOOL isInsideThumb = NO;
+        while (ancestor) {
+            if ([ancestor isKindOfClass:%c(ASNetworkImageNode)]) {
+                isInsideThumb = YES;
+                break;
+            }
+            ancestor = ancestor.supernode;
+        }
+        if (isInsideThumb) continue;
+
         NSString *s = tn.attributedText.string;
         if (!s || s.length < 5) continue;
-        if ([s containsString:@" views"] || [s containsString:@" watching"] || 
-            [s containsString:@" ago"] || [s containsString:@" • "] ||
-            [s hasPrefix:@"http"] || [s containsString:@"subscribers"]) {
-            continue;
-        }
+        if (YouModIsLikelyBadgeOrMetadata(s)) continue;
+
         if (s.length > maxLen) {
             maxLen = s.length;
             bestNode = tn;
@@ -1118,8 +1154,9 @@ static ASNetworkImageNode *YouModFindThumbnailNode(NSArray *imageNodes, NSString
                 if (origURL) [inNode setURL:origURL resetToDefault:YES];
             } else {
                 NSString *deThumb = [[YouModDeArrowManager sharedInstance] thumbnailURLForVideoID:videoID];
-                if (!deThumb) deThumb = [NSString stringWithFormat:@"https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=%@", videoID];
-                [inNode setURL:[NSURL URLWithString:deThumb] resetToDefault:YES];
+                if (deThumb.length > 0) {
+                    [inNode setURL:[NSURL URLWithString:deThumb] resetToDefault:YES];
+                }
             }
             [inNode setNeedsDisplay];
             if ([inNode respondsToSelector:@selector(view)]) {
@@ -1215,9 +1252,6 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
         container = container.superview;
     }
 
-    superv.clipsToBounds = NO;
-    container.clipsToBounds = NO;
-
     NSMutableArray *textNodes = [NSMutableArray array];
     NSMutableArray *imageNodes = [NSMutableArray array];
     YouModCollectNodesFromView(container, textNodes, imageNodes);
@@ -1238,9 +1272,12 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
 
     UIButton *indBtn = (UIButton *)[container viewWithTag:0xDEA222];
     if (!indBtn) {
-        indBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        indBtn = [YouModDeArrowButton buttonWithType:UIButtonTypeCustom];
         indBtn.tag = 0xDEA222;
         indBtn.userInteractionEnabled = YES;
+        indBtn.exclusiveTouch = YES;
+        indBtn.layer.cornerRadius = 13.0;
+        indBtn.clipsToBounds = YES;
         [indBtn addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [container addSubview:indBtn];
     }
@@ -1248,10 +1285,63 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
     objc_setAssociatedObject(indBtn, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
     CGRect rectInContainer = [self convertRect:self.bounds toView:container];
-    CGFloat btnSize = 22.0;
+    CGFloat btnSize = 26.0;
     CGFloat btnX = rectInContainer.origin.x - btnSize - 6.0;
     CGFloat btnY = rectInContainer.origin.y + (rectInContainer.size.height - btnSize) / 2.0;
+
+    // Check if candidate position overlaps with a compact thumbnail (e.g. notification row)
+    CGRect thumbRectInContainer = CGRectZero;
+    NSString *extractedVID = nil;
+    ASNetworkImageNode *inNode = YouModFindThumbnailNode(imageNodes, &extractedVID);
+    if (inNode) {
+        if ([inNode respondsToSelector:@selector(view)] && [inNode view]) {
+            thumbRectInContainer = [[inNode view] convertRect:[inNode view].bounds toView:container];
+        } else {
+            thumbRectInContainer = inNode.frame;
+        }
+    }
+
+    CGRect candidateBtnFrame = CGRectMake(btnX, btnY, btnSize, btnSize);
+    BOOL overlapsThumbnail = (thumbRectInContainer.size.width > 0 && CGRectIntersectsRect(candidateBtnFrame, thumbRectInContainer));
+
+    if (overlapsThumbnail) {
+        // Notification row layout: compact thumbnail is right next to 3-dots menu!
+        // Place DeArrow button in the open right margin below the 3-dots button, or above, or left of thumbnail
+        CGFloat belowY = CGRectGetMaxY(rectInContainer) + 6.0;
+        CGFloat colX = rectInContainer.origin.x + (rectInContainer.size.width - btnSize) / 2.0;
+        if (belowY + btnSize <= container.bounds.size.height - 2.0) {
+            btnX = colX;
+            btnY = belowY;
+        } else {
+            CGFloat aboveY = rectInContainer.origin.y - btnSize - 6.0;
+            if (aboveY >= 2.0) {
+                btnX = colX;
+                btnY = aboveY;
+            } else {
+                btnX = thumbRectInContainer.origin.x - btnSize - 6.0;
+                btnY = thumbRectInContainer.origin.y + (thumbRectInContainer.size.height - btnSize) / 2.0;
+            }
+        }
+    } else {
+        // Feed card layout: ensure title text does not overlap the DeArrow button
+        ASTextNode *tn = YouModFindTitleNode(textNodes);
+        if (tn && [tn respondsToSelector:@selector(view)]) {
+            UIView *titleView = [tn view];
+            if (titleView) {
+                CGRect tInCont = [titleView convertRect:titleView.bounds toView:container];
+                if (CGRectGetMaxX(tInCont) > btnX - 6.0) {
+                    CGRect tFrame = titleView.frame;
+                    CGFloat diff = CGRectGetMaxX(tInCont) - (btnX - 6.0);
+                    tFrame.size.width = MAX(50.0, tFrame.size.width - diff);
+                    titleView.frame = tFrame;
+                    titleView.clipsToBounds = YES;
+                }
+            }
+        }
+    }
+
     indBtn.frame = CGRectMake(btnX, btnY, btnSize, btnSize);
+    [container bringSubviewToFront:indBtn];
 
     YouModUpdateOverflowIndicator(indBtn, videoID);
 
@@ -1336,8 +1426,20 @@ static NSString *YouModFindVideoIDFromView(UIView *view) {
                 NSMutableAttributedString *mod = [[NSMutableAttributedString alloc] initWithAttributedString:origAttr];
                 [mod.mutableString setString:deTitle];
                 [tn setAttributedText:mod];
-                [tn setNeedsDisplay];
-                if ([tn respondsToSelector:@selector(view)]) [[tn view] setNeedsDisplay];
+                if ([tn respondsToSelector:@selector(view)]) {
+                    UIView *tv = [tn view];
+                    [tv setNeedsDisplay];
+                    if (indBtn && tv) {
+                        CGRect tInCont = [tv convertRect:tv.bounds toView:container];
+                        if (CGRectGetMaxX(tInCont) > indBtn.frame.origin.x - 6.0) {
+                            CGRect tFrame = tv.frame;
+                            CGFloat diff = CGRectGetMaxX(tInCont) - (indBtn.frame.origin.x - 6.0);
+                            tFrame.size.width = MAX(50.0, tFrame.size.width - diff);
+                            tv.frame = tFrame;
+                            tv.clipsToBounds = YES;
+                        }
+                    }
+                }
             }
         }
     }
