@@ -74,6 +74,8 @@ assert 'fetched"] boolValue' in dearrow and 'branding[@"fetched"] = @YES' in dea
 assert 'lastRequest.timeIntervalSinceNow < 60' in dearrow
 assert '%hook YTIThumbnailDetails_Thumbnail' not in dearrow, 'Preserve original thumbnail identity'
 assert 'keepalive_node' in dearrow and 'node.subnodes' in dearrow, 'Include layer-backed home cards'
+image_hook = dearrow.split('%hook ASNetworkImageNode', 1)[1].split('%end', 1)[0]
+assert '@selector(view)' not in image_hook, 'Never force a view for a layer-backed image node'
 assert 'titleView.frame =' not in dearrow, 'Do not fight native title layout'
 assert '- (BOOL)inlinePlaybackUnmutedAtStart {' not in player, 'Leave audio getter live after taps'
 assert 'setInlinePlaybackUnmutedAtStart:YES' in player and 'if (newVideo' in player

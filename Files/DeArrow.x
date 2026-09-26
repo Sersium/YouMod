@@ -550,11 +550,6 @@ static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
 
 - (void)didLoad {
     %orig;
-    NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
-    if (videoID && [self respondsToSelector:@selector(view)]) {
-        UIView *v = [self performSelector:@selector(view)];
-        if (v) objc_setAssociatedObject(v, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowImageNotification:) name:kYMDeArrowUpdatedNotification object:nil];
 }
 
