@@ -83,10 +83,7 @@
 #import <YouTubeHeader/YTReelNonVideoContentModel.h>
 #import <YouTubeHeader/YTIPlayerBarPlayingState.h>
 
-@interface YTRollingNumberView : UIView
-@property (nonatomic, strong) UIFont *font;
-@property (nonatomic, strong) UIColor *color;
-@property (nonatomic, strong) NSDictionary *fontAttributes;
+@interface YTRollingNumberView (YouMod)
 - (void)setUpdatedCount:(NSString *)count updatedCountNumber:(NSNumber *)number font:(UIFont *)font fontAttributes:(NSDictionary *)attrs color:(UIColor *)color skipAnimation:(BOOL)skip;
 - (void)setUpdatedCount:(NSString *)count updatedCountNumber:(NSNumber *)number font:(UIFont *)font color:(UIColor *)color skipAnimation:(BOOL)skip;
 @end
