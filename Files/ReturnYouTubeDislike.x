@@ -320,16 +320,6 @@ static int overrideNodeCreation = 0;
 
 %end
 
-static NSString *getElementDescription(ELMCellNode *node) {
-    if (![node isKindOfClass:%c(ELMCellNode)]) return nil;
-    @try {
-        ELMNodeController *controller = [node controller];
-        return [[controller owningComponent] description];
-    } @catch (id ex) {
-        return nil;
-    }
-}
-
 static ELMContainerNode *YouModFindNodeWithIdentifier(ASDisplayNode *root, NSString *targetId) {
     if (!root) return nil;
     if ([root.accessibilityIdentifier isEqualToString:targetId]) {
