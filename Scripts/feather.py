@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import plistlib
+import re
 import zipfile
 from pathlib import Path
 import subprocess
@@ -11,6 +12,17 @@ import sys
 import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+
+
+def build_version(base, run_number, first_run):
+    if not re.fullmatch(r'[1-9][0-9]*\.[0-9]', base):
+        raise ValueError('The release base must use major.digit, such as 2.3')
+    offset = int(run_number) - int(first_run)
+    if offset < 0:
+        raise ValueError('Build number predates the release sequence')
+    major, minor = map(int, base.split('.'))
+    major, minor = divmod(major * 10 + minor + offset, 10)
+    return f'{major}.{minor}'
 
 
 def update_manifest(data, entry):
@@ -92,7 +104,7 @@ def release_record(version, ipa, sha):
         youtube_version = plistlib.loads(archive.read(plist))['CFBundleShortVersionString']
     notes = release_notes(version, sha, youtube_version)
     date = subprocess.check_output(['git', 'show', '-s', '--format=%cI', sha], text=True).strip()
-    record = dict(version=youtube_version + '-' + version, date=date, downloadURL=f'https://github.com/{repo}/releases/download/{tag}/YouTube_YouMod.ipa',
+    record = dict(version=version, date=date, downloadURL=f'https://github.com/{repo}/releases/download/{tag}/YouTube_YouMod.ipa',
                   size=Path(ipa).stat().st_size, localizedDescription=notes)
     Path('release-notes.md').write_text(notes)
     Path('release-record.json').write_text(json.dumps(record, indent=2) + '\n')
@@ -100,9 +112,11 @@ def release_record(version, ipa, sha):
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == 'record':
+    if sys.argv[1] == 'version':
+        print(build_version(*sys.argv[2:]))
+    elif sys.argv[1] == 'record':
         release_record(*sys.argv[2:])
     elif sys.argv[1] == 'publish':
         publish(json.loads(Path(sys.argv[2]).read_text()))
     else:
-        raise SystemExit('Usage: feather.py record VERSION IPA SHA | publish RECORD')
+        raise SystemExit('Usage: feather.py version BASE RUN FIRST_RUN | record VERSION IPA SHA | publish RECORD')

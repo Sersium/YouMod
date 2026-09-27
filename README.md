@@ -9,8 +9,9 @@ A personal fork of [Tonwalter888/YouMod](https://github.com/Tonwalter888/YouMod)
 ## What this fork adds
 
 - **DeArrow:** replacement titles and thumbnails across Home, channels and notifications, with a quick original/replacement toggle.
-- **Video stats:** Return YouTube Dislike counts and a compact view count beside the watch-page controls.
+- **Video stats:** views before the watch-page like/dislike controls on iPhone and iPad, with distinct counters in the iPad vote pill. Feed previews also show like/dislike counts beside views, using Return YouTube Dislike.
 - **Simpler watch controls:** no paid Join button and an icon-only Subscribe control.
+- **Feed and tab customization:** Shorts/horizontal-shelf filters apply to the initial feed, including iPad. Tab changes refresh directly when saved.
 - **Preview defaults:** sound on, captions off, with working manual controls.
 - **Distribution:** each main-branch push builds an IPA and publishes a separate Feather entry with release notes and a source diff.
 
@@ -23,6 +24,12 @@ https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json
 ```
 
 Refresh the source and select the newest version. Later versions remain separately available for rollback.
+
+## Release versions
+
+Releases and Feather entries use **2.3, 2.4, …, 2.9, 3.0, 3.1, …**. The YouTube base version is listed separately in each release's notes.
+
+Versioning is automatic: workflow run 42 starts at the `2.3` base in `control`, and each new run advances one step. Retrying the same run keeps its version; failed runs can leave gaps. The base and starting run stay fixed for this sequence.
 
 ## Build with another YouTube IPA
 

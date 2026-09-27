@@ -129,6 +129,55 @@ static CGRect YMWatchViewCountFrame(CGRect subscribe, CGRect join, CGRect like, 
     return CGRectMake(x, CGRectGetMidY(subscribe) - 22, MAX(0, right - x), 44);
 }
 
+// Discover the actual row from a vote control. The compact phone row and
+// tablet scrollable row do not share an accessibility identifier.
+static UIView *YMWatchRowForControl(UIView *like) {
+    UIView *actions = nil;
+    for (UIView *row = like.superview; row; row = row.superview) {
+        if (row.bounds.size.height > 100) break;
+        if (!YMFindWatchControl(row, @"id.video.dislike.button") ||
+            !YMFindWatchControl(row, @"id.video.share.button")) continue;
+        if (!actions) actions = row;
+        UIView *subscribe = YMFindWatchControl(row, @"id.ui.channel.subscribe");
+        if (subscribe) {
+            CGRect sub = [subscribe convertRect:subscribe.bounds toView:row];
+            CGRect vote = [like convertRect:like.bounds toView:row];
+            if (fabs(CGRectGetMidY(sub) - CGRectGetMidY(vote)) < 20) return row;
+        }
+    }
+    return actions;
+}
+
+static CGRect YMWatchPrefixFrame(CGRect like) {
+    CGFloat height = MIN(44, like.size.height);
+    return CGRectMake(CGRectGetMinX(like), CGRectGetMidY(like) - height / 2, 52, height);
+}
+
+// Tablet actions are separate from the channel/Subscribe row. Reserve a prefix
+// in that row instead of requiring a subscription control that is elsewhere.
+static CGRect YMPrependWatchViews(UIView *bar, UIView *like) {
+    UIView *first = like;
+    while (first.superview && first.superview != bar) first = first.superview;
+    CGRect frame = [first convertRect:first.bounds toView:bar];
+    NSMutableArray *shifted = [NSMutableArray array];
+    CGFloat right = 0;
+    for (UIView *view in bar.subviews) {
+        if ([view.accessibilityIdentifier hasPrefix:@"youmod."]) continue;
+        CGRect child = [view convertRect:view.bounds toView:bar];
+        if (CGRectGetMinX(child) < CGRectGetMinX(frame) - 1) continue;
+        objc_setAssociatedObject(view, "YMOriginalTransform", [NSValue valueWithCGAffineTransform:view.transform], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        view.transform = CGAffineTransformTranslate(view.transform, 56, 0);
+        [shifted addObject:view];
+        right = MAX(right, CGRectGetMaxX(child) + 56);
+    }
+    objc_setAssociatedObject(bar, "YMShiftedActions", shifted, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if ([bar isKindOfClass:UIScrollView.class]) {
+        UIScrollView *scroll = (UIScrollView *)bar;
+        scroll.contentSize = CGSizeMake(MAX(right, bar.bounds.size.width), scroll.contentSize.height);
+    }
+    return YMWatchPrefixFrame(frame);
+}
+
 static void YMUpdateWatchBar(UIView *bar) {
     if (!bar.window) return;
     YMRestoreWatchActions(bar);
@@ -137,12 +186,12 @@ static void YMUpdateWatchBar(UIView *bar) {
     UIView *join = YMFindWatchControl(bar, @"id.sponsorship.sponsor.button");
     UILabel *count = objc_getAssociatedObject(bar, "YMViewCount");
     UIButton *compact = objc_getAssociatedObject(bar, "YMCompactSubscribe");
-    if (!like || !subscribe) {
+    if (!like) {
         count.hidden = YES;
         compact.hidden = YES;
         return;
     }
-    CGRect subFrame = [subscribe convertRect:subscribe.bounds toView:bar];
+    CGRect subFrame = subscribe ? [subscribe convertRect:subscribe.bounds toView:bar] : CGRectZero;
     CGRect joinFrame = join ? [join convertRect:join.bounds toView:bar] : CGRectZero;
     CGRect likeFrame = [like convertRect:like.bounds toView:bar];
     id target = YMWatchTapTarget(subscribe);
@@ -152,7 +201,8 @@ static void YMUpdateWatchBar(UIView *bar) {
     if (join) join.hidden = YES;
     CGRect frame = YMWatchViewCountFrame(subFrame, joinFrame, likeFrame, target != nil);
     CGFloat subscribeX = frame.origin.x - 48;
-    if (target && frame.size.width < 24) frame = YMFreeGeminiSlot(bar, like);
+    if (!subscribe && CGRectIsEmpty(frame)) frame = YMPrependWatchViews(bar, like);
+    else if (frame.size.width < 24) frame = YMFreeGeminiSlot(bar, like);
     if (target && frame.size.width >= 24) {
         if (!compact) {
             compact = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -180,7 +230,7 @@ static void YMUpdateWatchBar(UIView *bar) {
         // Never replace a subscription control unless its original action is available.
         compact.hidden = YES;
         subscribe.hidden = NO;
-        frame = YMWatchViewCountFrame(subFrame, joinFrame, likeFrame, NO);
+        if (CGRectIsEmpty(frame) && subscribe) frame = YMWatchViewCountFrame(subFrame, joinFrame, likeFrame, NO);
     }
     if (!count) {
         count = [[UILabel alloc] init];
@@ -203,22 +253,39 @@ static void YMUpdateWatchBar(UIView *bar) {
     count.hidden = frame.size.width < 24;
 }
 
+static void YMMarkWatchRow(UIView *row) {
+    if (!row || objc_getAssociatedObject(row, "YMWatchRow")) return;
+    objc_setAssociatedObject(row, "YMWatchRow", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
 %hook _ASDisplayView
 - (void)didMoveToWindow {
     %orig;
     if ([self.accessibilityIdentifier isEqualToString:@"id.sponsorship.sponsor.button"]) self.hidden = YES;
-    if (![self.accessibilityIdentifier isEqualToString:@"id.video.non_scrollable_action_bar"]) return;
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModReturnDislikeNotification" object:nil];
-    if (self.window) [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_refreshWatchBar:) name:@"YouModReturnDislikeNotification" object:nil];
-    YMUpdateWatchBar(self);
+    if ([self.accessibilityIdentifier isEqualToString:@"id.video.like.button"]) {
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModWatchStatsChanged" object:nil];
+        if (self.window) [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_refreshWatchBar:) name:@"YouModWatchStatsChanged" object:nil];
+        // The row's other children may not be attached until this turn finishes.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIView *row = YMWatchRowForControl(self);
+            YMMarkWatchRow(row);
+            YMUpdateWatchBar(row);
+        });
+    }
 }
 - (void)layoutSubviews {
     %orig;
     if ([self.accessibilityIdentifier isEqualToString:@"id.sponsorship.sponsor.button"]) self.hidden = YES;
-    if ([self.accessibilityIdentifier isEqualToString:@"id.video.non_scrollable_action_bar"]) YMUpdateWatchBar(self);
+    if ([self.accessibilityIdentifier isEqualToString:@"id.video.like.button"]) {
+        UIView *row = YMWatchRowForControl(self);
+        YMMarkWatchRow(row);
+        YMUpdateWatchBar(row);
+    } else if (objc_getAssociatedObject(self, "YMWatchRow")) {
+        YMUpdateWatchBar(self);
+    }
 }
 %new
 - (void)youmod_refreshWatchBar:(NSNotification *)notification {
-    YMUpdateWatchBar(self);
+    YMUpdateWatchBar(YMWatchRowForControl(self));
 }
 %end

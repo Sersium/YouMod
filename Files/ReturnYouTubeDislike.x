@@ -120,6 +120,7 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
         [self.votesCache setObject:voteData forKey:videoID];
 
         dispatch_async(dispatch_get_main_queue(), ^{
+            if ([currentWatchPlayer.contentVideoID isEqualToString:videoID]) [[NSNotificationCenter defaultCenter] postNotificationName:@"YouModWatchStatsChanged" object:nil];
             [[NSNotificationCenter defaultCenter] postNotificationName:kYMReturnDislikeNotification object:nil userInfo:@{@"videoID": videoID, @"votes": voteData}];
             if (completion) completion(voteData);
         });
@@ -175,6 +176,7 @@ static void YouModWatchVideoChanged(YTPlayerViewController *player) {
     currentWatchPlayer = player;
     if (IS_ENABLED(ReturnYouTubeDislike)) [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
     dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"YouModWatchStatsChanged" object:nil];
         [[NSNotificationCenter defaultCenter] postNotificationName:kYMReturnDislikeNotification object:nil userInfo:@{@"videoID": videoID}];
     });
 }
@@ -192,11 +194,114 @@ static void YouModWatchVideoChanged(YTPlayerViewController *player) {
 
 @interface ASDisplayNode (YouModVoteLayer)
 - (CALayer *)layer;
+@property (nonatomic) UIAccessibilityTraits accessibilityTraits;
+- (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node;
 @end
 
 static BOOL YouModIsVoteButton(ASDisplayNode *node) {
     return [node.accessibilityIdentifier isEqualToString:@"id.video.like.button"] ||
            [node.accessibilityIdentifier isEqualToString:@"id.video.dislike.button"];
+}
+
+static ASDisplayNode *YMFindVoteNode(ASDisplayNode *node, NSString *identifier) {
+    if ([node.accessibilityIdentifier isEqualToString:identifier]) return node;
+    for (ASDisplayNode *child in node.subnodes) {
+        ASDisplayNode *found = YMFindVoteNode(child, identifier);
+        if (found) return found;
+    }
+    return nil;
+}
+
+// A shared tablet pill has room beside the icons, not underneath its existing
+// title. Paint an owned, non-interactive surface over it; native hit targets,
+// gestures and accessibility remain in place underneath.
+static BOOL YMUpdateVotePill(ASDisplayNode *parent, NSDictionary *votes, BOOL visible) {
+    ASDisplayNode *like = nil, *dislike = nil;
+    for (ASDisplayNode *candidate = parent; candidate; candidate = candidate.yogaParent ?: candidate.supernode) {
+        if (candidate.bounds.size.width > 200 || candidate.bounds.size.height > 48) break;
+        like = YMFindVoteNode(candidate, @"id.video.like.button");
+        dislike = YMFindVoteNode(candidate, @"id.video.dislike.button");
+        if (like && dislike) { parent = candidate; break; }
+    }
+    CALayer *surface = objc_getAssociatedObject(parent, "YMVotePill");
+    if (!like || !dislike || !parent.isNodeLoaded || parent.bounds.size.width < 64 || parent.bounds.size.height < 28 ||
+        YMFindVoteNode(parent, @"id.video.share.button") || YMFindVoteNode(parent, @"id.ui.channel.subscribe")) {
+        [surface removeFromSuperlayer];
+        return NO;
+    }
+    if (!visible || !IS_ENABLED(ReturnYouTubeDislike)) {
+        [surface removeFromSuperlayer];
+        return YES;
+    }
+    if (!surface) {
+        surface = [CALayer layer];
+        surface.actions = @{ @"bounds": NSNull.null, @"position": NSNull.null, @"contents": NSNull.null };
+        surface.zPosition = 1;
+        surface.contentsScale = UIScreen.mainScreen.scale;
+        objc_setAssociatedObject(parent, "YMVotePill", surface, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    BOOL dark = isDarkMode([parent closestViewController].viewIfLoaded);
+    BOOL liked = (like.accessibilityTraits & UIAccessibilityTraitSelected) != 0;
+    BOOL disliked = (dislike.accessibilityTraits & UIAccessibilityTraitSelected) != 0;
+    CGRect left = [like convertRect:like.bounds toNode:parent];
+    CGRect right = [dislike convertRect:dislike.bounds toNode:parent];
+    CGFloat split = (CGRectGetMidX(left) + CGRectGetMidX(right)) / 2;
+    NSString *likes = IS_ENABLED(RYDShowLikes) ? (votes ? YouModFormatVoteCount([votes[@"likes"] integerValue]) : @"—") : @"";
+    NSString *dislikes = IS_ENABLED(RYDShowDislikes) ? (votes ? YouModFormatVoteCount([votes[@"dislikes"] integerValue]) : @"—") : @"";
+    NSString *key = [NSString stringWithFormat:@"%@/%@/%d/%d/%d/%@/%.1f", likes, dislikes, liked, disliked, dark, NSStringFromCGRect(parent.bounds), split];
+    if (![key isEqual:objc_getAssociatedObject(parent, "YMVotePillDrawing")]) {
+        UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:parent.bounds.size];
+        UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+            UIColor *ink = dark ? UIColor.whiteColor : UIColor.blackColor;
+            [(dark ? [UIColor colorWithWhite:0.14 alpha:1] : [UIColor colorWithWhite:0.94 alpha:1]) setFill];
+            UIRectFill(CGRectMake(0, 0, parent.bounds.size.width, parent.bounds.size.height));
+            NSArray *names = @[liked ? @"hand.thumbsup.fill" : @"hand.thumbsup", disliked ? @"hand.thumbsdown.fill" : @"hand.thumbsdown"];
+            NSArray *values = @[likes, dislikes];
+            for (NSUInteger i = 0; i < 2; i++) {
+                CGFloat start = i ? split : 0, end = i ? parent.bounds.size.width : split;
+                CGFloat center = (start + end) / 2;
+                UIImage *icon = [[UIImage systemImageNamed:names[i]] imageWithTintColor:ink renderingMode:UIImageRenderingModeAlwaysOriginal];
+                [icon drawInRect:CGRectMake(center - 9, 1, 18, 18)];
+                NSString *text = values[i];
+                NSDictionary *attributes = @{NSFontAttributeName: [UIFont systemFontOfSize:10], NSForegroundColorAttributeName: ink};
+                CGSize size = [text sizeWithAttributes:attributes];
+                [text drawAtPoint:CGPointMake(center - size.width / 2, parent.bounds.size.height - 12) withAttributes:attributes];
+            }
+        }];
+        surface.contents = (__bridge id)image.CGImage;
+        objc_setAssociatedObject(parent, "YMVotePillDrawing", key, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    }
+    surface.frame = parent.bounds;
+    surface.cornerRadius = parent.bounds.size.height / 2;
+    surface.masksToBounds = YES;
+    if (surface.superlayer != parent.layer) [parent.layer addSublayer:surface];
+    return YES;
+}
+
+static ASTextNode *YMNativeVoteText(ASDisplayNode *node, ASDisplayNode *button, ASDisplayNode *other) {
+    if ([node isKindOfClass:%c(ASTextNode)]) {
+        ASTextNode *text = (ASTextNode *)node;
+        if (!text.attributedText.length) return nil;
+        CGRect rect = [text convertRect:text.bounds toNode:button];
+        CGFloat center = CGRectGetMidX(rect);
+        if (other) {
+            CGFloat otherCenter = CGRectGetMidX([other convertRect:other.bounds toNode:button]);
+            if (fabs(center - otherCenter) < fabs(center - CGRectGetMidX(button.bounds))) return nil;
+        }
+        return text;
+    }
+    for (ASDisplayNode *child in node.subnodes) {
+        if (child == other) continue;
+        ASTextNode *text = YMNativeVoteText(child, button, other);
+        if (text) return text;
+    }
+    return nil;
+}
+
+static CGRect YMVoteLabelFrame(CGRect button, CGRect host) {
+    CGFloat width = MIN(42, button.size.width);
+    return CGRectMake(CGRectGetMidX(button) - width / 2,
+                      MAX(CGRectGetMinY(button), CGRectGetMaxY(host) - 12), width, 12);
 }
 
 // Never add Yoga children to a native measured/automatically managed node.
@@ -210,14 +315,37 @@ static void YouModUpdateVoteNode(ASDisplayNode *button) {
     CATextLayer *label = objc_getAssociatedObject(button, "kYMVoteLabel");
     BOOL likes = [button.accessibilityIdentifier isEqualToString:@"id.video.like.button"];
     NSString *videoID = YouModGetCurrentVideoID();
-    if (!IS_ENABLED(ReturnYouTubeDislike) || !(likes ? IS_ENABLED(RYDShowLikes) : IS_ENABLED(RYDShowDislikes)) || !videoID.length || !(button.interfaceState & 8)) {
+    ASDisplayNode *parent = button.yogaParent ?: button.supernode;
+    if (!IS_ENABLED(ReturnYouTubeDislike) || !videoID.length || !(button.interfaceState & 8)) {
         [label removeFromSuperlayer];
+        YMUpdateVotePill(parent, nil, NO);
         return;
     }
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID];
     if (!votes) [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
     id number = votes[likes ? @"likes" : @"dislikes"];
     NSString *text = [number isKindOfClass:NSNumber.class] ? YouModFormatVoteCount([number integerValue]) : @"—";
+    if (YMUpdateVotePill(parent, votes, YES)) {
+        [label removeFromSuperlayer];
+        return;
+    }
+    if (!(likes ? IS_ENABLED(RYDShowLikes) : IS_ENABLED(RYDShowDislikes))) {
+        [label removeFromSuperlayer];
+        return;
+    }
+    ASDisplayNode *other = YMFindVoteNode(parent, likes ? @"id.video.dislike.button" : @"id.video.like.button");
+    ASTextNode *nativeText = YMNativeVoteText(button, button, other);
+    if (!nativeText && parent && !other && parent.bounds.size.width <= 100 && parent.bounds.size.height <= 48)
+        nativeText = YMNativeVoteText(parent, button, nil);
+    if (nativeText) {
+        [label removeFromSuperlayer];
+        if (votes && ![nativeText.attributedText.string isEqualToString:text]) {
+            NSMutableAttributedString *value = [nativeText.attributedText mutableCopy];
+            [value.mutableString setString:text];
+            nativeText.attributedText = value;
+        }
+        return;
+    }
     if (!label) {
         label = [CATextLayer layer];
         label.fontSize = 10;
@@ -232,8 +360,10 @@ static void YouModUpdateVoteNode(ASDisplayNode *button) {
     [CATransaction setDisableActions:YES];
     label.string = text;
     label.foregroundColor = (isDarkMode([button closestViewController].viewIfLoaded) ? UIColor.whiteColor : UIColor.blackColor).CGColor;
-    CGFloat width = MIN(42, host.bounds.size.width);
-    label.frame = CGRectMake((host.bounds.size.width - width) / 2, MAX(0, host.bounds.size.height - 12), width, 12);
+    // The tablet's two icons may share a pill parent. Position each label
+    // beneath its own icon, never at that shared parent's center.
+    CGRect icon = [button.layer convertRect:button.bounds toLayer:host];
+    label.frame = YMVoteLabelFrame(icon, host.bounds);
     if (label.superlayer != host) [host addSublayer:label];
     [CATransaction commit];
 }
@@ -293,6 +423,112 @@ static void YouModUpdateVoteNode(ASDisplayNode *button) {
     NSString *title = YouModFormatVoteCount([number integerValue]);
     [self setTitle:title forState:UIControlStateNormal];
     [self setTitle:title forState:UIControlStateSelected];
+}
+%end
+
+#pragma mark - Feed metadata
+
+extern BOOL YouModIsOverflowButtonView(UIView *view);
+extern UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *images, NSString **videoID);
+
+@interface ASTextNode (YouModFeedVotes)
+@property (nonatomic) NSUInteger maximumNumberOfLines;
+@end
+
+static NSRange YMFeedViewCountRange(NSString *text) {
+    if (!text.length) return NSMakeRange(NSNotFound, 0);
+    static NSRegularExpression *pattern, *standalone;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        standalone = [NSRegularExpression regularExpressionWithPattern:@"^[0-9]+(?:[.,][0-9]+|[ \\x{00A0}][0-9]{3})*(?:\\s*[KMBkmb])?$" options:0 error:nil];
+        pattern = [NSRegularExpression regularExpressionWithPattern:@"(?:[▷▹▶\\uFFFC]\\s*[0-9]+(?:[.,][0-9]+|[ \\x{00A0}][0-9]{3})*(?:\\s*[KMBkmb])?|[0-9]+(?:[.,][0-9]+|[ \\x{00A0}][0-9]{3})*(?:\\s*[KMBkmb])?\\s+(?:views?|vues?))" options:NSRegularExpressionCaseInsensitive error:nil];
+    });
+    NSTextCheckingResult *match = [pattern firstMatchInString:text options:0 range:NSMakeRange(0, text.length)];
+    if (!match) match = [standalone firstMatchInString:text options:0 range:NSMakeRange(0, text.length)];
+    return match ? match.range : NSMakeRange(NSNotFound, 0);
+}
+
+static void YMSetFeedVoteText(ASTextNode *node, NSAttributedString *text) {
+    if ([node.attributedText isEqualToAttributedString:text]) return;
+    objc_setAssociatedObject(node, "YMSettingFeedVotes", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    node.attributedText = text;
+    objc_setAssociatedObject(node, "YMFeedRenderedText", text.string, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(node, "YMSettingFeedVotes", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+static void YMUpdateFeedVotes(UIView *menu) {
+    if (!menu.window || !YouModIsOverflowButtonView(menu)) return;
+    NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
+    NSString *videoID = nil;
+    if (!YouModVideoCard(menu, texts, images, &videoID) || videoID.length != 11) return;
+    BOOL enabled = IS_ENABLED(ReturnYouTubeDislike) && (IS_ENABLED(RYDShowLikes) || IS_ENABLED(RYDShowDislikes));
+    NSDictionary *votes = enabled ? [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID] : nil;
+    BOOL found = NO;
+    for (ASTextNode *node in texts) {
+        NSAttributedString *base = objc_getAssociatedObject(node, "YMFeedBaseText") ?: node.attributedText;
+        if (!base.length) continue;
+        // ponytail: recognize current English/French view metadata and numeric
+        // labels; add renderer field mapping if other locales need support.
+        UIFont *font = [base attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL];
+        NSNumber *weight = font.fontDescriptor.fontAttributes[UIFontDescriptorTraitsAttribute][UIFontWeightTrait];
+        if (font.pointSize > 14 || weight.doubleValue >= UIFontWeightMedium) continue;
+        NSRange range = YMFeedViewCountRange(base.string);
+        if (range.location == NSNotFound) continue;
+        found = YES;
+        objc_setAssociatedObject(node, "YMFeedBaseText", base, OBJC_ASSOCIATION_COPY_NONATOMIC);
+        NSNumber *lines = objc_getAssociatedObject(node, "YMFeedBaseLines");
+        if (!lines) {
+            lines = @(node.maximumNumberOfLines);
+            objc_setAssociatedObject(node, "YMFeedBaseLines", lines, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        if (!votes) {
+            node.maximumNumberOfLines = lines.unsignedIntegerValue;
+            YMSetFeedVoteText(node, base);
+            continue;
+        }
+        NSMutableString *counts = [NSMutableString string];
+        if (IS_ENABLED(RYDShowLikes)) [counts appendFormat:@" · 👍 %@", YouModFormatVoteCount([votes[@"likes"] integerValue])];
+        if (IS_ENABLED(RYDShowDislikes)) [counts appendFormat:@" · 👎 %@", YouModFormatVoteCount([votes[@"dislikes"] integerValue])];
+        NSMutableDictionary *attributes = [[base attributesAtIndex:NSMaxRange(range) - 1 effectiveRange:NULL] mutableCopy];
+        [attributes removeObjectForKey:NSAttachmentAttributeName];
+        NSMutableAttributedString *value = [base mutableCopy];
+        [value insertAttributedString:[[NSAttributedString alloc] initWithString:counts attributes:attributes] atIndex:NSMaxRange(range)];
+        // Let native text measurement wrap the extra metadata on narrow cards.
+        if (node.maximumNumberOfLines != 0) node.maximumNumberOfLines = 0;
+        YMSetFeedVoteText(node, value);
+    }
+    if (found && enabled && !votes) [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
+}
+
+%hook ASTextNode
+- (void)setAttributedText:(NSAttributedString *)text {
+    if (!objc_getAssociatedObject(self, "YMSettingFeedVotes") &&
+        ![text.string isEqual:objc_getAssociatedObject(self, "YMFeedRenderedText")]) {
+        NSNumber *lines = objc_getAssociatedObject(self, "YMFeedBaseLines");
+        if (lines) self.maximumNumberOfLines = lines.unsignedIntegerValue;
+        objc_setAssociatedObject(self, "YMFeedBaseLines", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, "YMFeedBaseText", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    %orig;
+}
+%end
+
+%hook _ASDisplayView
+- (void)didMoveToWindow {
+    %orig;
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:kYMReturnDislikeNotification object:nil];
+    if (!self.window || !YouModIsOverflowButtonView(self)) return;
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_refreshFeedVotes:) name:kYMReturnDislikeNotification object:nil];
+    [self setNeedsLayout];
+}
+- (void)layoutSubviews {
+    %orig;
+    YMUpdateFeedVotes(self);
+}
+%new
+- (void)youmod_refreshFeedVotes:(NSNotification *)note {
+    // Resolve the current thumbnail again; a recycled cell may now be another video.
+    YMUpdateFeedVotes(self);
 }
 %end
 

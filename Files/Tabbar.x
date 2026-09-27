@@ -97,9 +97,11 @@ static NSString *ymTitleForTabID(NSString *tabID) {
     return nil;
 }
 
-%hook YTPivotBarView
-- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
+static YTIPivotBarRenderer *YMOrderedPivotRenderer(YTIPivotBarRenderer *original) {
+    if (!original) return nil;
     NSArray *savedOrder = [[NSUserDefaults standardUserDefaults] arrayForKey:TabOrder];
+    if (!savedOrder.count) return original;
+    YTIPivotBarRenderer *renderer = [original copy];
     if (savedOrder.count > 0) {
         NSMutableArray <YTIPivotBarSupportedRenderers *> *items = [renderer itemsArray];
 
@@ -115,6 +117,8 @@ static NSString *ymTitleForTabID(NSString *tabID) {
         // Build ordered array from saved data
         NSMutableArray *ordered = [NSMutableArray array];
         for (NSDictionary *entry in savedOrder) {
+            if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"id"] isKindOfClass:NSString.class] ||
+                ![entry[@"enabled"] respondsToSelector:@selector(boolValue)]) continue;
             NSString *tabID = entry[@"id"];
             BOOL enabled = [entry[@"enabled"] boolValue];
             if (!enabled) continue;
@@ -136,10 +140,23 @@ static NSString *ymTitleForTabID(NSString *tabID) {
             }
         }
         // Replace items with ordered set
-        [items removeAllObjects];
-        [items addObjectsFromArray:ordered];
+        if (ordered.count) {
+            [items removeAllObjects];
+            [items addObjectsFromArray:ordered];
+        }
     }
-    %orig(renderer);
+    return renderer;
+}
+
+%hook YTPivotBarView
+- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
+    %orig(YMOrderedPivotRenderer(renderer));
+}
+%end
+
+%hook YTPivotBarViewController
+- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
+    %orig(YMOrderedPivotRenderer(renderer));
 }
 %end
 

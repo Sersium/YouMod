@@ -464,6 +464,7 @@ typedef NS_ENUM(NSUInteger, GestureSection) {
 @interface YTPivotBarViewController : UIViewController
 - (void)selectItemWithPivotIdentifier:(NSString *)pivotIndentifier;
 - (void)YouModReloadTabBar:(id)arg;
+- (void)loadPivotBarWithOffline:(BOOL)offline triggeredByNotification:(BOOL)notification;
 @end
 
 @interface YTReelWatchPlaybackOverlayView : UIView <UIGestureRecognizerDelegate>

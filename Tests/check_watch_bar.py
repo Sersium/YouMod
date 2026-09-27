@@ -6,6 +6,9 @@ root = Path(__file__).resolve().parents[1]
 source = (root / 'Files/WatchActionBar.x').read_text()
 start = source.index('static CGRect YMWatchViewCountFrame(')
 helper = source[start:source.index('\n}\n', start) + 3]
+for name, file in [('YMWatchPrefixFrame', source), ('YMVoteLabelFrame', (root / 'Files/ReturnYouTubeDislike.x').read_text())]:
+    start = file.index('static CGRect ' + name + '(')
+    helper += file[start:file.index('\n}\n', start) + 3]
 stubs = '''
 #include <assert.h>
 typedef double CGFloat;
@@ -16,6 +19,9 @@ typedef struct { CGPoint origin; CGSize size; } CGRect;
 #define CGRectMake(x,y,w,h) ((CGRect){{x,y},{w,h}})
 #define CGRectZero CGRectMake(0,0,0,0)
 #define CGRectIsEmpty(r) ((r).size.width<=0 || (r).size.height<=0)
+#define CGRectGetMinY(r) ((r).origin.y)
+#define CGRectGetMaxY(r) ((r).origin.y+(r).size.height)
+#define CGRectGetMidX(r) ((r).origin.x+(r).size.width/2)
 #define CGRectGetMinX(r) ((r).origin.x)
 #define CGRectGetMaxX(r) ((r).origin.x+(r).size.width)
 #define CGRectGetMidY(r) ((r).origin.y+(r).size.height/2)
@@ -30,6 +36,16 @@ int main(void) {
     // Channel without a Join button, including a narrower screen.
     CGRect b=YMWatchViewCountFrame(CGRectMake(44,0,96,44),CGRectZero,CGRectMake(150,0,40,44),1);
     assert(b.size.width>=44 && b.origin.x>=88 && CGRectGetMaxX(b)<150);
+    // Tablet action row without Subscribe: a 52pt prefix and a 4pt gap.
+    CGRect tabletLike=CGRectMake(12,0,107,32);
+    CGRect prefix=YMWatchPrefixFrame(tabletLike);
+    assert(prefix.size.width==52 && CGRectGetMaxX(prefix)+4==tabletLike.origin.x+56);
+    // Shared tablet pill: labels must remain anchored to distinct icons.
+    CGRect host=CGRectMake(0,0,107,32);
+    CGRect like=YMVoteLabelFrame(CGRectMake(8,4,24,24),host);
+    CGRect dislike=YMVoteLabelFrame(CGRectMake(79,4,24,24),host);
+    assert(CGRectGetMaxX(like)<dislike.origin.x);
+    assert(CGRectGetMidX(like)==20 && CGRectGetMidX(dislike)==91);
     // Missing native subscription target: preserve its existing hit target.
     CGRect c=YMWatchViewCountFrame(CGRectMake(114,0,56,44),CGRectMake(52,0,56,44),CGRectMake(192,0,40,44),0);
     assert(c.origin.x==52 && CGRectGetMaxX(c)<=114);
@@ -43,4 +59,7 @@ with tempfile.TemporaryDirectory() as tmp:
 assert 'addYogaChild:' not in source and 'addSubnode:' not in source
 assert 'addTarget:target action:@selector(handleTap)' in source
 assert 'id.sponsorship.sponsor.button' in source
-print('PASS: view-count placement, subscription hit target, native actions and no Yoga mutation')
+assert 'YMWatchRowForControl(self)' in source
+assert 'if (!like || !subscribe)' not in source, 'Tablet actions do not contain Subscribe'
+assert 'if (!subscribe && CGRectIsEmpty(frame))' in source
+print('PASS: phone/tablet view placement, separate vote labels, native actions and no Yoga mutation')

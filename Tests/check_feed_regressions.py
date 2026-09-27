@@ -92,3 +92,48 @@ assert 'view.frame =' not in ryd and 'pf.size.width += diff' not in ryd
 assert 'didActivateNewPlaybackWithContentVideo:' in ryd and 'currentWatchPlayer.contentVideoID' in ryd
 assert '%hook ELMContainerNode' in ryd, 'Both action bars need counts, independent of collection ID'
 print('PASS: six card layouts, clipping, hit targets, and feed/audio/count regression guards')
+
+# Initial/default sections must go through the same filter as network sections.
+ads = (root / 'Files/Ads.x').read_text()
+assert 'sectionControllersForSectionRenderers:' in ads
+assert 'return %orig(filteredArray(renderers), reloading)' in ads
+assert 'kFilteredSectionKey' not in ads, 'A renderer can change after its first pass'
+assert '%init(YouModFeedFilters)' in ads, 'Feed preferences also apply with ads enabled'
+tabs = (root / 'Files/Tabbar.x').read_text()
+settings = (root / 'Files/YouModSettings.x').read_text()
+assert 'YTIPivotBarRenderer *renderer = [original copy]' in tabs, 'Keep server tabs available for re-enabling'
+assert 'if (ordered.count)' in tabs, 'An invalid saved order must not blank navigation'
+assert '[self loadPivotBarWithOffline:NO triggeredByNotification:YES]' in settings
+assert 'performSelector:@selector(refreshPivotBarWithTriggedByNotification:)' not in settings
+
+# Exercise the actual ICU-pattern text from the implementation, translating the
+# Unicode-codepoint escape into Python's equivalent for this portable check.
+import ast
+import re
+start = ryd.index('static NSRange YMFeedViewCountRange(')
+pattern_literal = re.search(r'pattern = \[NSRegularExpression regularExpressionWithPattern:@("(?:[^"\\]|\\.)*")', ryd[start:]).group(1)
+pattern = ast.literal_eval(pattern_literal).replace(r'\x{00A0}', '\u00a0')
+for text, views in [
+    ('Channel  ▷319K  1d ago', '▷319K'),
+    ('Channel  ▷2.7M  4y ago', '▷2.7M'),
+    ('738K views · 1 day ago', '738K views'),
+    ('201,361 views  2d ago', '201,361 views'),
+    ('42 vues · hier', '42 vues'),
+    ('Channel \ufffc124 3h ago', '\ufffc124'),
+]:
+    match = re.search(pattern, text, re.I)
+    assert match and match.group().rstrip() == views, (text, match)
+    decorated = text[:match.end()] + ' · 👍 10 · 👎 2' + text[match.end():]
+    assert decorated.index('👍') > decorated.index(views)
+plain_literal = re.search(r'standalone = \[NSRegularExpression regularExpressionWithPattern:@("(?:[^"\\]|\\.)*")', ryd[start:]).group(1)
+plain = ast.literal_eval(plain_literal).replace(r'\x{00A0}', '\u00a0')
+for text in ['124', '319K', '2.7M', '201,361']:
+    assert re.fullmatch(plain, text), text
+for text in ['Channel name', '12:34', '7y ago', 'LIVE', '544K subscribers']:
+    assert not re.search(pattern, text, re.I) and not re.fullmatch(plain, text), text
+feed = ryd.split('#pragma mark - Feed metadata', 1)[1].split('#pragma mark - Protobuf Model Hooks', 1)[0]
+assert 'YouModVideoCard(menu, texts, images, &videoID)' in feed
+assert 'YouModGetCurrentVideoID' not in feed, 'Feed identity must come from the card'
+assert 'YMFeedBaseText' in feed and 'YMSettingFeedVotes' in feed
+assert 'cachedVotesForVideoID:videoID' in feed and 'fetchVotesForVideoID:videoID' in feed
+print('PASS: cold-start filter path, reversible tabs, feed metadata patterns and recycled-card identity guards')

@@ -1,7 +1,5 @@
 #import "Headers.h"
 
-static const void *kFilteredSectionKey = &kFilteredSectionKey;
-
 // YouTube-X (https://github.com/PoomSmart/YouTube-X)
 static BOOL isProductList(YTICommand *command) {
     if ([command respondsToSelector:@selector(yt_showEngagementPanelEndpoint)]) {
@@ -70,6 +68,7 @@ static NSString *getAdString(NSString *description) {
 }
 
 static BOOL isAdRenderer(YTIElementRenderer *elementRenderer, int kind) {
+    if (!IS_ENABLED(RemoveAds)) return NO;
     if (elementRenderer.hasCompatibilityOptions && elementRenderer.compatibilityOptions.hasAdLoggingData) {
         return YES;
     }
@@ -94,19 +93,13 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
 
     NSMutableArray <YTIItemSectionRenderer *> *newArray = [array mutableCopy];
     NSIndexSet *removeIndexes = [newArray indexesOfObjectsPassingTest:^BOOL(YTIItemSectionRenderer *sectionRenderer, NSUInteger idx, BOOL *stop) {
-        if (objc_getAssociatedObject(sectionRenderer, kFilteredSectionKey)) {
-            return NO;
-        }
-
         if ([sectionRenderer isKindOfClass:%c(YTIShelfRenderer)]) {
             NSString *description = [sectionRenderer description];
             if ([description containsString:@"community-tab-chip-posts-section"]) {
-                objc_setAssociatedObject(sectionRenderer, kFilteredSectionKey, @YES, OBJC_ASSOCIATION_ASSIGN);
                 return NO;
             }
             if (hideShorts) {
                 if (keepShortsSub && [description containsString:@"subscriptions-shorts-shelf-item"]) {
-                    objc_setAssociatedObject(sectionRenderer, kFilteredSectionKey, @YES, OBJC_ASSOCIATION_ASSIGN);
                     return NO;
                 } else if ([description containsString:@"shorts_video_cell.eml"]) {
                     return YES;
@@ -118,6 +111,12 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
                 return YES;
             }
 
+            if (hideHoriShelf && ((YTIShelfRenderer *)sectionRenderer).content.horizontalListRenderer &&
+                ![description containsString:@"UCYfdidRxbB8Qhf0Nx7ioOYw"] &&
+                ![description containsString:@"FElibrary"] && ![description containsString:@"FEplaylist_aggregation"] &&
+                ![description containsString:@"mini_game_card.eml"] &&
+                ![description containsString:@"subscriptions-shorts-shelf-item"]) return YES;
+
             YTIShelfSupportedRenderers *content = ((YTIShelfRenderer *)sectionRenderer).content;
             YTIHorizontalListRenderer *horizontalListRenderer = content.horizontalListRenderer;
             NSMutableArray <YTIHorizontalListSupportedRenderers *> *itemsArray = horizontalListRenderer.itemsArray;
@@ -128,12 +127,10 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
                 }];
                 [itemsArray removeObjectsAtIndexes:removeItemsArrayIndexes];
             }
-            objc_setAssociatedObject(sectionRenderer, kFilteredSectionKey, @YES, OBJC_ASSOCIATION_ASSIGN);
             return NO;
         } else if ([sectionRenderer isKindOfClass:%c(YTIItemSectionRenderer)]) {
             NSString *description = [sectionRenderer description];
             if ([description containsString:@"community-tab-chip-posts-section"]) {
-                objc_setAssociatedObject(sectionRenderer, kFilteredSectionKey, @YES, OBJC_ASSOCIATION_ASSIGN);
                 return NO;
             }
             if ([description containsString:@"UNLIMITED"] && [description containsString:@"SPunlimited"]) {
@@ -153,7 +150,6 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
                     }
                 }];
                 [contentsArray removeObjectsAtIndexes:indexesToRemove];
-                objc_setAssociatedObject(sectionRenderer, kFilteredSectionKey, @YES, OBJC_ASSOCIATION_ASSIGN);
                 return NO;
             }
 
@@ -204,16 +200,16 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
             YTIElementRenderer *elementRenderer = firstObject.elementRenderer;
             if (isAdRenderer(elementRenderer, 2)) return YES;
 
-            objc_setAssociatedObject(sectionRenderer, kFilteredSectionKey, @YES, OBJC_ASSOCIATION_ASSIGN);
             return NO;
         }
 
-        objc_setAssociatedObject(sectionRenderer, kFilteredSectionKey, @YES, OBJC_ASSOCIATION_ASSIGN);
         return NO;
     }];
     [newArray removeObjectsAtIndexes:removeIndexes];
     return newArray;
 }
+
+%group YouModAds
 
 // Filering new ads
 %hook YTIElementRenderer
@@ -364,16 +360,22 @@ static BOOL isAdsReelContentModel(YTReelContentModel *model) {
 }
 %end
 
+%end
+
+// Filtering is independent of ad blocking. This method receives both the
+// cached/default startup sections and the network/continuation sections.
+%group YouModFeedFilters
 %hook YTInnerTubeCollectionViewController
-- (void)displaySectionsWithReloadingSectionControllerByRenderer:(id)renderer {
-    NSMutableArray *sectionRenderers = [self valueForKey:@"_sectionRenderers"];
-    [self setValue:filteredArray(sectionRenderers) forKey:@"_sectionRenderers"];
-    %orig;
+- (id)sectionControllersForSectionRenderers:(NSArray *)renderers reloadingSectionControllerByRenderer:(id)reloading {
+    return %orig(filteredArray(renderers), reloading);
 }
-- (void)addSectionsFromArray:(NSArray <YTIItemSectionRenderer *> *)array {
+- (void)addSectionsFromArray:(NSArray *)array {
     %orig(filteredArray(array));
 }
 %end
+%end
+%group YouModAds
+
 
 void YouModFilterAdsDisplayView(_ASDisplayView *view, NSString *iden) {
     if ([iden isEqualToString:@"eml.expandable_metadata.vpp"]) {
@@ -484,10 +486,12 @@ void YouModRemoveDrawerAds(YTELMViewController *self) {
 - (void)showSurveyWithRenderer:(id)arg1 surveyParentResponder:(id)arg2 {}
 %end
 
+%end
+
 %ctor {
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{
         RemoveAds: @YES
     }];
-    if (!IS_ENABLED(RemoveAds)) return;
-    %init;
+    %init(YouModFeedFilters);
+    if (IS_ENABLED(RemoveAds)) { %init(YouModAds); }
 }

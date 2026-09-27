@@ -867,7 +867,7 @@ static void YouModRefreshThumbnailNode(ASNetworkImageNode *node) {
 
 #pragma mark - DeArrow Indicator (Web-Style) next to 3-dots Menu & Feed Quick Swap
 
-static BOOL YouModIsOverflowButtonView(UIView *view) {
+BOOL YouModIsOverflowButtonView(UIView *view) {
     if (!view) return NO;
     NSString *iden = view.accessibilityIdentifier;
     if ([iden isEqualToString:@"eml.overflow_button"] ||
@@ -1024,7 +1024,7 @@ static CGRect YouModDeArrowButtonFrame(CGRect bounds, CGRect menu) {
     return CGRectContainsRect(bounds, frame) ? frame : CGRectZero;
 }
 
-static UIView *YouModDeArrowCard(UIView *menu, NSMutableArray *texts, NSMutableArray *images, NSString **videoID) {
+UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *images, NSString **videoID) {
     // Stop at the collection cell; never scan another card or the entire feed.
     for (UIView *card = menu.superview; card; card = card.superview) {
         if ([card isKindOfClass:[UIScrollView class]]) break;
@@ -1064,7 +1064,7 @@ static UIView *YouModDeArrowCard(UIView *menu, NSMutableArray *texts, NSMutableA
     NSMutableArray *texts = [NSMutableArray array];
     NSMutableArray *images = [NSMutableArray array];
     NSString *videoID = nil;
-    UIView *card = YouModDeArrowCard(self, texts, images, &videoID);
+    UIView *card = YouModVideoCard(self, texts, images, &videoID);
     if (!card) {
         [button removeFromSuperview];
         return;

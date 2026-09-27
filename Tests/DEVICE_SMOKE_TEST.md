@@ -1,4 +1,4 @@
-Test with YouTube 21.38.2 and YouMod 2.1.7.<build>. These are device checks, not results claimed by the automated test.
+Test with YouTube 21.38.2 and the build containing these changes. These are device checks, not results claimed by the automated test.
 
 - Home: confirm one DeArrow toggle below each three-dot menu; tap both controls independently. Swap a title/thumbnail twice, then scroll away and back.
 - MrBeast channel Videos: repeat for Latest/Popular/Oldest and horizontal shelves. Scroll rapidly for several minutes, open/close a video and comments, and verify no freeze or wrong-video swaps after cell reuse.
@@ -15,7 +15,7 @@ must never add Yoga children, add Texture subnodes, or alter layout styles.
 The September 23 missing libroothide launch failure and watchdog exit are
 separate failures; the September 24 disk-writes report is not this crash.
 
-Publication: every main push receives a unique run-number suffix. Confirm the
+Publication: new workflow runs advance 2.3, 2.4, …, 2.9, 3.0; retries retain their version. Confirm the
 IPA release exists before its Feather entry is published; inspect the latest
 entry, an older entry, version history, release notes and the comparison link.
 
@@ -24,3 +24,11 @@ Test Subscribe on a channel you do not follow, then its subscribed notification
 menu. Both must still dispatch the original YouTube action. Repeat without a
 Join button and on a narrow display; if Gemini moves, test both Gemini and
 More actions in the three-dot menu. Check that existing vote counts still align.
+
+September 27 phone/iPad regressions (pending device verification):
+
+- Force-quit and launch on iPad with Hide Shorts Shelf and Hide Horizontal Shelf enabled. The first Home render must match a pull-to-refresh, with no forbidden shelves flashing in. Repeat with Remove Ads disabled and with Keep Shorts in Subscriptions on/off.
+- On iPhone and iPad, open a video with/without Join. Views must sit immediately before the vote controls. On iPad, both counters must be distinct and readable, with no original count underneath. Tap like/dislike and confirm selected state still updates; rotate and test Split View.
+- Manage Tabs: disable Shorts, return to Home, re-enable it, and reorder two tabs. The changes must apply without relaunching. Repeat on iPad and with one valid navigation tab left.
+- Home, Subscriptions and related-video previews: verify likes/dislikes beside native views. Scroll quickly to recycle cards, enter a different video, and rotate. Counts must stay with each preview and metadata must wrap without covering the next row or DeArrow toggle. Repeat with DeArrow off and each RYD count preference off.
+- With RYD unreachable, feed cards retain their original metadata; no fabricated counts or request loop. Restore connectivity, re-enter the card after a minute and verify counts appear once.
