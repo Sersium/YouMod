@@ -7,19 +7,26 @@
   "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
   "apps": [
     {
-      "name": "YouTube (YouMod 2.5) \u00b7 Latest",
+      "name": "YouTube (YouMod 2.6) \u00b7 Latest",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "2.5",
-      "versionDate": "2026-09-27T14:37:30-04:00",
-      "versionDescription": "YouMod 2.5 \u00b7 YouTube 21.38.2\n\n- Keep DeArrow and feed counters out of fullscreen player transitions (115654c)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.4...115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\nSource: 115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\n",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.5/YouTube_YouMod.ipa",
-      "localizedDescription": "YouMod 2.5 \u00b7 YouTube 21.38.2\n\n- Keep DeArrow and feed counters out of fullscreen player transitions (115654c)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.4...115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\nSource: 115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\n",
+      "version": "2.6",
+      "versionDate": "2026-09-27T14:47:13-04:00",
+      "versionDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.6/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 129323770,
+      "size": 129323762,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "2.6",
+          "date": "2026-09-27T14:47:13-04:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.6/YouTube_YouMod.ipa",
+          "size": 129323762,
+          "localizedDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n"
+        },
         {
           "version": "2.5",
           "date": "2026-09-27T14:37:30-04:00",
@@ -47,6 +54,29 @@
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.2.0.41/YouTube_YouMod.ipa",
           "size": 129317180,
           "localizedDescription": "YouMod 2.2.0.41 \u00b7 YouTube 21.38.2\n\n- Add DeArrow, video stats, preview defaults and versioned IPA builds (4839f79)\n\nFull diff: https://github.com/Sersium/YouMod/compare/9fd5117f780f6a0b9cf08cec29c47d5106781a7d...4839f798d6f57efa1fe755ae7e6c9d8966c32c31\nSource: 4839f798d6f57efa1fe755ae7e6c9d8966c32c31\n"
+        }
+      ]
+    },
+    {
+      "name": "YouTube (YouMod 2.5)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "2.5",
+      "versionDate": "2026-09-27T14:37:30-04:00",
+      "versionDescription": "YouMod 2.5 \u00b7 YouTube 21.38.2\n\n- Keep DeArrow and feed counters out of fullscreen player transitions (115654c)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.4...115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\nSource: 115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.5/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 2.5 \u00b7 YouTube 21.38.2\n\n- Keep DeArrow and feed counters out of fullscreen player transitions (115654c)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.4...115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\nSource: 115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 129323770,
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "2.5",
+          "date": "2026-09-27T14:37:30-04:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.5/YouTube_YouMod.ipa",
+          "size": 129323770,
+          "localizedDescription": "YouMod 2.5 \u00b7 YouTube 21.38.2\n\n- Keep DeArrow and feed counters out of fullscreen player transitions (115654c)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.4...115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\nSource: 115654c66fa9db7cc1c45a80ea11bdb6e3c19e45\n"
         }
       ]
     },
@@ -121,6 +151,14 @@
     }
   ],
   "news": [
+    {
+      "identifier": "youmod-2.6",
+      "title": "YouMod 2.6",
+      "caption": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n",
+      "date": "2026-09-27T14:47:13-04:00",
+      "url": "https://github.com/Sersium/YouMod/releases/tag/v2.6",
+      "notify": true
+    },
     {
       "identifier": "youmod-2.5",
       "title": "YouMod 2.5",
