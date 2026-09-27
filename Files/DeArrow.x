@@ -904,6 +904,10 @@ static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
         indBtn.tintColor = [UIColor colorWithRed:0.0 green:0.72 blue:1.0 alpha:1.0]; // DeArrow cyan
         indBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.72 blue:1.0 alpha:0.15];
     }
+    if ([objc_getAssociatedObject(indBtn, "YMDeArrowOverThumbnail") boolValue]) {
+        indBtn.backgroundColor = [UIColor colorWithWhite:0 alpha:0.8];
+        if (isOriginal || !hasBranding) indBtn.tintColor = UIColor.whiteColor;
+    }
 }
 
 static void YouModCollectCardNodes(ASDisplayNode *node, NSMutableArray *textNodes, NSMutableArray *imageNodes) {
@@ -1021,7 +1025,12 @@ static CGRect YouModDeArrowButtonFrame(CGRect bounds, CGRect menu) {
     CGFloat x = CGRectGetMidX(menu) - size / 2.0;
     CGFloat y = CGRectGetMaxY(menu) + 10.0;
     CGRect frame = CGRectMake(x, y, size, size);
-    return CGRectContainsRect(bounds, frame) ? frame : CGRectZero;
+    if (CGRectContainsRect(bounds, frame)) return frame;
+    // Short tablet cards have no spare metadata row. Use the thumbnail's
+    // upper menu-side corner, with the full 44pt hit target inside the card.
+    frame = CGRectMake(x, bounds.origin.y + 9, size, size);
+    CGRect hit = CGRectInset(frame, -9, -9);
+    return CGRectContainsRect(bounds, hit) && CGRectGetMaxY(hit) <= menu.origin.y ? frame : CGRectZero;
 }
 
 UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *images, NSString **videoID) {
@@ -1093,6 +1102,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     objc_setAssociatedObject(button, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
     if (button.superview != card) [card addSubview:button];
     if (!CGRectEqualToRect(button.frame, frame)) button.frame = frame;
+    objc_setAssociatedObject(button, "YMDeArrowOverThumbnail", @(frame.origin.y < menu.origin.y), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     YouModUpdateOverflowIndicator(button, videoID);
 
     ASTextNode *title = YouModFindTitleNode(texts);
@@ -1118,7 +1128,9 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
 
 %new
 - (void)youmod_onDeArrowNotification:(NSNotification *)note {
-    if ([note.userInfo[@"videoID"] isEqual:objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey")]) {
+    UIButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
+    if (!button.superview || [note.userInfo[@"videoID"] isEqual:objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey")]) {
+        // Retry cards whose thumbnail identity was not ready on first layout.
         [self setNeedsLayout];
     }
 }

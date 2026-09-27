@@ -101,7 +101,8 @@ static YTIPivotBarRenderer *YMOrderedPivotRenderer(YTIPivotBarRenderer *original
     if (!original) return nil;
     NSArray *savedOrder = [[NSUserDefaults standardUserDefaults] arrayForKey:TabOrder];
     if (!savedOrder.count) return original;
-    YTIPivotBarRenderer *renderer = [original copy];
+    // Navigation and the visible bar must share the same renderer/items.
+    YTIPivotBarRenderer *renderer = original;
     if (savedOrder.count > 0) {
         NSMutableArray <YTIPivotBarSupportedRenderers *> *items = [renderer itemsArray];
 
@@ -149,12 +150,6 @@ static YTIPivotBarRenderer *YMOrderedPivotRenderer(YTIPivotBarRenderer *original
 }
 
 %hook YTPivotBarView
-- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
-    %orig(YMOrderedPivotRenderer(renderer));
-}
-%end
-
-%hook YTPivotBarViewController
 - (void)setRenderer:(YTIPivotBarRenderer *)renderer {
     %orig(YMOrderedPivotRenderer(renderer));
 }

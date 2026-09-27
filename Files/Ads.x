@@ -111,12 +111,6 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
                 return YES;
             }
 
-            if (hideHoriShelf && ((YTIShelfRenderer *)sectionRenderer).content.horizontalListRenderer &&
-                ![description containsString:@"UCYfdidRxbB8Qhf0Nx7ioOYw"] &&
-                ![description containsString:@"FElibrary"] && ![description containsString:@"FEplaylist_aggregation"] &&
-                ![description containsString:@"mini_game_card.eml"] &&
-                ![description containsString:@"subscriptions-shorts-shelf-item"]) return YES;
-
             YTIShelfSupportedRenderers *content = ((YTIShelfRenderer *)sectionRenderer).content;
             YTIHorizontalListRenderer *horizontalListRenderer = content.horizontalListRenderer;
             NSMutableArray <YTIHorizontalListSupportedRenderers *> *itemsArray = horizontalListRenderer.itemsArray;
@@ -362,12 +356,16 @@ static BOOL isAdsReelContentModel(YTReelContentModel *model) {
 
 %end
 
-// Filtering is independent of ad blocking. This method receives both the
-// cached/default startup sections and the network/continuation sections.
+// Filter the backing arrays before YouTube builds controllers and grid indices.
+// Initial cached/default sections need the same treatment as network sections.
 %group YouModFeedFilters
 %hook YTInnerTubeCollectionViewController
-- (id)sectionControllersForSectionRenderers:(NSArray *)renderers reloadingSectionControllerByRenderer:(id)reloading {
-    return %orig(filteredArray(renderers), reloading);
+- (void)displaySectionsWithReloadingSectionControllerByRenderer:(id)renderer {
+    for (NSString *key in @[@"_sectionRenderers", @"_defaultSectionRenderers"]) {
+        NSArray *sections = [self valueForKey:key];
+        if (sections) [self setValue:filteredArray(sections) forKey:key];
+    }
+    %orig;
 }
 - (void)addSectionsFromArray:(NSArray *)array {
     %orig(filteredArray(array));

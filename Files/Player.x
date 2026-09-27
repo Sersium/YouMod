@@ -776,6 +776,14 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 %end
 
 
+// iPad grids otherwise pause previews when the feed omits the landscape flag.
+// Keep YouTube's native playback-in-feeds preference and lifecycle checks.
+%hook YTInlineMutedPlaybackStateControllerImpl
+- (void)setSupportsGridSurfaceInlinePlayback:(BOOL)supported {
+    %orig(supported || UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad);
+}
+%end
+
 // Initialize the native preference once per preview. The native getter must
 // remain live: it is read again after taps to synchronize the audio icon.
 @interface NSObject (YouModInlineAudioState)

@@ -24,6 +24,7 @@ typedef struct { double width, height; } CGSize;
 typedef struct { CGPoint origin; CGSize size; } CGRect;
 #define CGRectZero ((CGRect){{0,0},{0,0}})
 #define CGRectMake(x,y,w,h) ((CGRect){{x,y},{w,h}})
+#define CGRectInset(r,dx,dy) CGRectMake((r).origin.x+(dx),(r).origin.y+(dy),(r).size.width-2*(dx),(r).size.height-2*(dy))
 #define CGRectGetMidX(r) ((r).origin.x + (r).size.width / 2)
 #define CGRectGetMaxX(r) ((r).origin.x + (r).size.width)
 #define CGRectGetMaxY(r) ((r).origin.y + (r).size.height)
@@ -57,6 +58,14 @@ int main(void) {
         CGRect hit = CGRectMake(frame.origin.x-9, frame.origin.y-9,44,44);
         assert(!intersects(hit, cases[i][1]));
     }
+    // A one-line tablet card has no space below its menu. The fallback must
+    // remain visible and keep the entire hit target away from menu and metadata.
+    CGRect shortCard = CGRectMake(0,0,400,260), menu = CGRectMake(348,226,44,24);
+    CGRect fallback = YouModDeArrowButtonFrame(shortCard, menu);
+    assert(fallback.size.width==26 && fallback.origin.y==9);
+    assert(CGRectContainsRect(shortCard, CGRectInset(fallback,-9,-9)));
+    assert(!intersects(CGRectInset(fallback,-9,-9),menu));
+    assert(CGRectGetMaxY(fallback)<226);
     CGRect frame = YouModDeArrowButtonFrame(CGRectMake(0,0,30,24), CGRectMake(0,0,30,24));
     assert(frame.size.width == 0); // Clipped wrapper: caller must ascend to the card.
 }
@@ -95,13 +104,17 @@ print('PASS: six card layouts, clipping, hit targets, and feed/audio/count regre
 
 # Initial/default sections must go through the same filter as network sections.
 ads = (root / 'Files/Ads.x').read_text()
-assert 'sectionControllersForSectionRenderers:' in ads
-assert 'return %orig(filteredArray(renderers), reloading)' in ads
+assert 'sectionControllersForSectionRenderers:' not in ads, 'Do not desynchronize backing sections and grid controllers'
+assert '@[@"_sectionRenderers", @"_defaultSectionRenderers"]' in ads
+assert 'hideHoriShelf && ((YTIShelfRenderer *)sectionRenderer)' not in ads, 'Preserve native recommendation shelves'
 assert 'kFilteredSectionKey' not in ads, 'A renderer can change after its first pass'
 assert '%init(YouModFeedFilters)' in ads, 'Feed preferences also apply with ads enabled'
 tabs = (root / 'Files/Tabbar.x').read_text()
 settings = (root / 'Files/YouModSettings.x').read_text()
-assert 'YTIPivotBarRenderer *renderer = [original copy]' in tabs, 'Keep server tabs available for re-enabling'
+assert 'YTIPivotBarRenderer *renderer = original;' in tabs, 'Preserve native tab renderer identity'
+assert '[original copy]' not in tabs
+assert tabs.count('%orig(YMOrderedPivotRenderer(renderer))') == 1, 'Order tabs once, in the shared view renderer'
+assert 'if (!button.superview ||' in dearrow, 'Retry cards whose thumbnails arrive after initial layout'
 assert 'if (ordered.count)' in tabs, 'An invalid saved order must not blank navigation'
 assert '[self loadPivotBarWithOffline:NO triggeredByNotification:YES]' in settings
 assert 'performSelector:@selector(refreshPivotBarWithTriggedByNotification:)' not in settings
@@ -137,3 +150,6 @@ assert 'YouModGetCurrentVideoID' not in feed, 'Feed identity must come from the 
 assert 'YMFeedBaseText' in feed and 'YMSettingFeedVotes' in feed
 assert 'cachedVotesForVideoID:videoID' in feed and 'fetchVotesForVideoID:videoID' in feed
 print('PASS: cold-start filter path, reversible tabs, feed metadata patterns and recycled-card identity guards')
+
+assert 'setSupportsGridSurfaceInlinePlayback:(BOOL)supported' in player
+assert '%orig(supported || UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad)' in player

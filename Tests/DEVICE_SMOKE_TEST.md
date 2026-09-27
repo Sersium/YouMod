@@ -32,3 +32,10 @@ September 27 phone/iPad regressions (pending device verification):
 - Manage Tabs: disable Shorts, return to Home, re-enable it, and reorder two tabs. The changes must apply without relaunching. Repeat on iPad and with one valid navigation tab left.
 - Home, Subscriptions and related-video previews: verify likes/dislikes beside native views. Scroll quickly to recycle cards, enter a different video, and rotate. Counts must stay with each preview and metadata must wrap without covering the next row or DeArrow toggle. Repeat with DeArrow off and each RYD count preference off.
 - With RYD unreachable, feed cards retain their original metadata; no fabricated counts or request loop. Restore connectivity, re-enter the card after a minute and verify counts appear once.
+
+2.4 regression checks (pending device verification):
+
+- iPhone/iPad: Home → Notifications → Home, then Subscriptions → Home. Repeat after reordering tabs and after disabling/re-enabling Shorts. Confirm both the selected icon and displayed feed change.
+- iPad landscape: open several videos and verify the right-hand recommendations remain visible with Hide Related Videos off, including when Hide Horizontal Shelf is on. Rotate and return to Home.
+- iPad: compare one-line and multiline cards. Short cards without room below the menu must show the DeArrow toggle in the top corner. Test delayed thumbnail loading, scrolling/reuse, both toggle states, and independent menu taps.
+- iPad Home/Subscriptions: with Playback in feeds enabled, leave a normal video centered until it starts, then scroll, rotate, open/close a video and return from Notifications. Repeat with the native playback setting off to confirm it remains respected.
