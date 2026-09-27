@@ -153,3 +153,12 @@ print('PASS: cold-start filter path, reversible tabs, feed metadata patterns and
 
 assert 'setSupportsGridSurfaceInlinePlayback:(BOOL)supported' in player
 assert '%orig(supported || UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad)' in player
+
+# Shared by DeArrow and feed votes: reject player/detached controls before
+# traversing Texture nodes during fullscreen transitions.
+card_lookup = dearrow.split('UIView *YouModVideoCard(', 1)[1].split('%hook _ASDisplayView', 1)[0]
+assert card_lookup.index('if (!cell) return nil;') < card_lookup.index('YouModCollectNodesFromView(')
+assert '[cell isKindOfClass:%c(YTPlayerView)]' in card_lookup
+assert '[cell isKindOfClass:%c(YTMainAppPlayerOverlayView)]' in card_lookup
+assert '[cell isKindOfClass:[UICollectionViewCell class]]' in card_lookup
+assert 'if (card == cell) break;' in card_lookup

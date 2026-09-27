@@ -39,3 +39,7 @@ September 27 phone/iPad regressions (pending device verification):
 - iPad landscape: open several videos and verify the right-hand recommendations remain visible with Hide Related Videos off, including when Hide Horizontal Shelf is on. Rotate and return to Home.
 - iPad: compare one-line and multiline cards. Short cards without room below the menu must show the DeArrow toggle in the top corner. Test delayed thumbnail loading, scrolling/reuse, both toggle states, and independent menu taps.
 - iPad Home/Subscriptions: with Playback in feeds enabled, leave a normal video centered until it starts, then scroll, rotate, open/close a video and return from Notifications. Repeat with the native playback setting off to confirm it remains respected.
+
+2.5 fullscreen regression (pending device verification):
+
+- iPhone/iPad: enter and exit fullscreen repeatedly using the button and rotation, with controls visible/hidden and DeArrow/RYD enabled. No DeArrow toggle should appear on player controls, and exiting must not crash. Return to Home and verify card toggles and feed counts still work; repeat with an inline preview playing.

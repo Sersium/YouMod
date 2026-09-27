@@ -1034,15 +1034,26 @@ static CGRect YouModDeArrowButtonFrame(CGRect bounds, CGRect menu) {
 }
 
 UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *images, NSString **videoID) {
-    // Stop at the collection cell; never scan another card or the entire feed.
+    // Establish a feed-cell boundary before touching Texture nodes. Player
+    // overflow controls also match the menu identifiers, including mid-transition.
+    UIView *cell = menu.superview;
+    while (cell) {
+        if ([cell isKindOfClass:%c(YTPlayerView)] ||
+            [cell isKindOfClass:%c(YTMainAppPlayerOverlayView)] ||
+            [cell isKindOfClass:[UIScrollView class]]) return nil;
+        if ([cell isKindOfClass:[UICollectionViewCell class]]) break;
+        cell = cell.superview;
+    }
+    if (!cell) return nil;
+
+    // Stop at the verified cell; never scan the player or the entire feed.
     for (UIView *card = menu.superview; card; card = card.superview) {
-        if ([card isKindOfClass:[UIScrollView class]]) break;
         [texts removeAllObjects];
         [images removeAllObjects];
         YouModCollectNodesFromView(card, texts, images);
         YouModFindThumbnailNode(images, videoID);
         if (*videoID) return card;
-        if ([card isKindOfClass:[UICollectionViewCell class]]) break;
+        if (card == cell) break;
     }
     return nil;
 }
