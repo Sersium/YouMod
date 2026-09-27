@@ -162,3 +162,15 @@ assert '[cell isKindOfClass:%c(YTPlayerView)]' in card_lookup
 assert '[cell isKindOfClass:%c(YTMainAppPlayerOverlayView)]' in card_lookup
 assert '[cell isKindOfClass:[UICollectionViewCell class]]' in card_lookup
 assert 'if (card == cell) break;' in card_lookup
+
+# Logos hook self is unsafe-unretained: deferred work must resolve a weak
+# reference while alive, then hold it strongly for the callback's duration.
+assert '__weak ASNetworkImageNode *weakNode = self;' in image_hook
+assert 'ASNetworkImageNode *node = weakNode;' in image_hook
+assert 'if (node) YouModRefreshThumbnailNode(node);' in image_hook
+assert 'YouModRefreshThumbnailNode(self); });' not in image_hook
+watch = (root / 'Files/WatchActionBar.x').read_text()
+deferred_watch = watch.split('dispatch_async(dispatch_get_main_queue(), ^{', 1)[1].split('});', 1)[0]
+assert 'UIView *control = weakControl;' in deferred_watch
+assert 'if (!control.window) return;' in deferred_watch
+assert 'YMWatchRowForControl(self)' not in deferred_watch

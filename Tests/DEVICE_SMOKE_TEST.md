@@ -43,3 +43,7 @@ September 27 phone/iPad regressions (pending device verification):
 2.5 fullscreen regression (pending device verification):
 
 - iPhone/iPad: enter and exit fullscreen repeatedly using the button and rotation, with controls visible/hidden and DeArrow/RYD enabled. No DeArrow toggle should appear on player controls, and exiting must not crash. Return to Home and verify card toggles and feed counts still work; repeat with an inline preview playing.
+
+2.6 crash follow-up (pending device verification):
+
+- Repeat the fullscreen check above, including repeated taps to show/hide controls and rapid video changes. The September 27 14:43 report matches the 2.5 YouMod UUID `D641DCA4-EF77-3059-ABFB-8C7B332EF280`: return offset `0x10688` follows `objc_retain` in `YouModRefreshThumbnailNode`, entered by the queued `setURL:resetToDefault:` block. Logos captures hook `self` without retaining it; queued thumbnail/watch-row callbacks must use zeroing weak references and skip destroyed or detached controls.

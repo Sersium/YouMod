@@ -264,10 +264,14 @@ static void YMMarkWatchRow(UIView *row) {
     if ([self.accessibilityIdentifier isEqualToString:@"id.sponsorship.sponsor.button"]) self.hidden = YES;
     if ([self.accessibilityIdentifier isEqualToString:@"id.video.like.button"]) {
         [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModWatchStatsChanged" object:nil];
-        if (self.window) [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_refreshWatchBar:) name:@"YouModWatchStatsChanged" object:nil];
+        if (!self.window) return;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_refreshWatchBar:) name:@"YouModWatchStatsChanged" object:nil];
         // The row's other children may not be attached until this turn finishes.
+        __weak UIView *weakControl = self;
         dispatch_async(dispatch_get_main_queue(), ^{
-            UIView *row = YMWatchRowForControl(self);
+            UIView *control = weakControl;
+            if (!control.window) return;
+            UIView *row = YMWatchRowForControl(control);
             YMMarkWatchRow(row);
             YMUpdateWatchBar(row);
         });

@@ -553,7 +553,13 @@ static void YouModRefreshThumbnailNode(ASNetworkImageNode *node) {
 - (void)setURL:(NSURL *)url resetToDefault:(BOOL)reset {
     %orig(url, reset);
     // Read current identity on main, so an old completion cannot paint a reused card.
-    dispatch_async(dispatch_get_main_queue(), ^{ YouModRefreshThumbnailNode(self); });
+    // Logos self is unsafe-unretained; a fullscreen transition can destroy it
+    // before this block runs. Resolve a zeroing weak reference on the main queue.
+    __weak ASNetworkImageNode *weakNode = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        ASNetworkImageNode *node = weakNode;
+        if (node) YouModRefreshThumbnailNode(node);
+    });
 }
 - (id)drawParametersForAsyncLayer:(id)layer {
     id parameters = %orig;
