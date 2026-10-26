@@ -76,8 +76,8 @@ jobs:
       - name: Pin compatible Logos parser
         # Newer Logos consumes the rest of a line after %orig, including closing braces.
         run: |
-          git -C "$THEOS/vendor/logos" fetch --quiet --depth=1 origin 5f1138cf79cc546e8cde64c93a1dab74b9918c3c
-          git -C "$THEOS/vendor/logos" checkout --quiet --detach 5f1138cf79cc546e8cde64c93a1dab74b9918c3c
+          git -C "$THEOS/vendor/logos" fetch --quiet --depth=1 origin a62370066a97e36d59b200a9fa10c5091f5e8972
+          git -C "$THEOS/vendor/logos" checkout --quiet --detach a62370066a97e36d59b200a9fa10c5091f5e8972
 
       - name: Clone headers
         run: |
