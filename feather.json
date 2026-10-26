@@ -7,19 +7,26 @@
   "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
   "apps": [
     {
-      "name": "YouTube (YouMod 2.6) \u00b7 Latest",
+      "name": "YouTube (YouMod 3.0) \u00b7 Latest",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "2.6",
-      "versionDate": "2026-09-27T14:47:13-04:00",
-      "versionDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.6/YouTube_YouMod.ipa",
-      "localizedDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n",
+      "version": "3.0",
+      "versionDate": "2026-10-26T16:48:43-04:00",
+      "versionDescription": "YouMod 3.0 \u00b7 YouTube 21.42.4\n\n- Use the last Logos revision before the parser regression (8ec3f54)\n- Pin Logos before its remainder-of-line parsing regression (f433032)\n- Resolve UIKit property collision and expand OLED hooks for current Logos (e6d9581)\n- Fix grouped notification titles, exclude comments from DeArrow and stabilize feed toggles (b8fb99d)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.6...8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\nSource: 8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.0/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.0 \u00b7 YouTube 21.42.4\n\n- Use the last Logos revision before the parser regression (8ec3f54)\n- Pin Logos before its remainder-of-line parsing regression (f433032)\n- Resolve UIKit property collision and expand OLED hooks for current Logos (e6d9581)\n- Fix grouped notification titles, exclude comments from DeArrow and stabilize feed toggles (b8fb99d)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.6...8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\nSource: 8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\n",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 129323762,
+      "size": 130698432,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "3.0",
+          "date": "2026-10-26T16:48:43-04:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.0/YouTube_YouMod.ipa",
+          "size": 130698432,
+          "localizedDescription": "YouMod 3.0 \u00b7 YouTube 21.42.4\n\n- Use the last Logos revision before the parser regression (8ec3f54)\n- Pin Logos before its remainder-of-line parsing regression (f433032)\n- Resolve UIKit property collision and expand OLED hooks for current Logos (e6d9581)\n- Fix grouped notification titles, exclude comments from DeArrow and stabilize feed toggles (b8fb99d)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.6...8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\nSource: 8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\n"
+        },
         {
           "version": "2.6",
           "date": "2026-09-27T14:47:13-04:00",
@@ -54,6 +61,29 @@
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.2.0.41/YouTube_YouMod.ipa",
           "size": 129317180,
           "localizedDescription": "YouMod 2.2.0.41 \u00b7 YouTube 21.38.2\n\n- Add DeArrow, video stats, preview defaults and versioned IPA builds (4839f79)\n\nFull diff: https://github.com/Sersium/YouMod/compare/9fd5117f780f6a0b9cf08cec29c47d5106781a7d...4839f798d6f57efa1fe755ae7e6c9d8966c32c31\nSource: 4839f798d6f57efa1fe755ae7e6c9d8966c32c31\n"
+        }
+      ]
+    },
+    {
+      "name": "YouTube (YouMod 2.6)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "2.6",
+      "versionDate": "2026-09-27T14:47:13-04:00",
+      "versionDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.6/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 129323762,
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "2.6",
+          "date": "2026-09-27T14:47:13-04:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.6/YouTube_YouMod.ipa",
+          "size": 129323762,
+          "localizedDescription": "YouMod 2.6 \u00b7 YouTube 21.38.2\n\n- Fix fullscreen crash from queued callbacks using destroyed views (f8f0eed)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.5...f8f0eedee03454ccaced27e52491e03301269c2c\nSource: f8f0eedee03454ccaced27e52491e03301269c2c\n"
         }
       ]
     },
@@ -151,6 +181,14 @@
     }
   ],
   "news": [
+    {
+      "identifier": "youmod-3.0",
+      "title": "YouMod 3.0",
+      "caption": "YouMod 3.0 \u00b7 YouTube 21.42.4\n\n- Use the last Logos revision before the parser regression (8ec3f54)\n- Pin Logos before its remainder-of-line parsing regression (f433032)\n- Resolve UIKit property collision and expand OLED hooks for current Logos (e6d9581)\n- Fix grouped notification titles, exclude comments from DeArrow and stabilize feed toggles (b8fb99d)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v2.6...8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\nSource: 8ec3f5496c98b7cdc6db591487f0d8c575bf11f0\n",
+      "date": "2026-10-26T16:48:43-04:00",
+      "url": "https://github.com/Sersium/YouMod/releases/tag/v3.0",
+      "notify": true
+    },
     {
       "identifier": "youmod-2.6",
       "title": "YouMod 2.6",
