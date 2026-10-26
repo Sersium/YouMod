@@ -17,7 +17,7 @@ static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNo
 @end
 
 @interface YouModDeArrowButton : UIButton
-@property (nonatomic, weak) UIView *menu;
+@property (nonatomic, weak) UIView *overflowView;
 @end
 
 @implementation YouModDeArrowButton
@@ -1084,7 +1084,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     %orig;
     // Texture can lay out the card after its menu. Reposition after that pass.
     YouModDeArrowButton *cardButton = objc_getAssociatedObject(self, "kYMDeArrowCardButton");
-    [cardButton.menu setNeedsLayout];
+    [cardButton.overflowView setNeedsLayout];
     YouModDeArrowButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
     if (!self.window || !IS_ENABLED(DeArrowEnabled) || !YouModIsOverflowButtonView(self)) {
         [button removeFromSuperview];
@@ -1120,7 +1120,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     }
     objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
     objc_setAssociatedObject(button, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-    button.menu = self;
+    button.overflowView = self;
     if (button.superview != card) {
         objc_setAssociatedObject(button.superview, "kYMDeArrowCardButton", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [card addSubview:button];

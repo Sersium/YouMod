@@ -197,7 +197,7 @@ assert 'containsString:@"id.comment."' in card_lookup and 'containsString:@"comm
 thumbnail = dearrow.split('static ASNetworkImageNode *YouModFindThumbnailNode(', 1)[1].split('@interface', 1)[0]
 assert 'size.width < size.height * 1.2' in thumbnail, 'Avatars and emoji are not video thumbnails'
 assert 'knownID' not in thumbnail, 'Recycled thumbnails must use their current URL'
-assert 'cardButton.menu setNeedsLayout' in layout, 'Reposition after the parent card finishes layout'
+assert 'cardButton.overflowView setNeedsLayout' in layout, 'Reposition after the parent card finishes layout'
 text_hook = dearrow.split('%hook ASTextNode', 1)[1].split('%end', 1)[0]
 assert text_hook.index('videoID = nil;') < text_hook.index('YouModIsLikelyBadgeOrMetadata(curStr)')
 print('PASS: grouped upload labels, comment exclusion, thumbnail identity and delayed card layout guards')
