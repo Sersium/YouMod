@@ -8,7 +8,7 @@ A personal fork of [Tonwalter888/YouMod](https://github.com/Tonwalter888/YouMod)
 
 ## What this fork adds
 
-- **DeArrow:** replacement titles and thumbnails across Home, channels and notifications, with a quick original/replacement toggle. Short iPad cards place the toggle over the thumbnail when there is no room below the menu.
+- **DeArrow:** replacement titles and thumbnails across Home, channels and notifications, with a quick original/replacement toggle. Short cards place the toggle at the thumbnail’s lower corner when there is no room below the menu. Comments and grouped-upload headings are excluded from video title binding.
 - **Video stats:** views before the watch-page like/dislike controls on iPhone and iPad, with distinct counters in the iPad vote pill. Feed previews also show like/dislike counts beside views, using Return YouTube Dislike.
 - **Simpler watch controls:** no paid Join button and an icon-only Subscribe control.
 - **Feed and tab customization:** Shorts/horizontal-shelf filters apply to the initial feed, including iPad. Tab changes refresh directly when saved, with shared native navigation state. Native recommendation shelves are preserved on iPad.
@@ -37,7 +37,7 @@ Versioning is automatic: workflow run 42 starts at the `2.3` base in `control`, 
 - **One build:** open [Actions → Build YouMod → Run workflow](https://github.com/Sersium/YouMod/actions/workflows/build.yml), select `main`, and provide `ipa_url` and optionally `ipa_sha256`. Blank inputs use the saved default. A manual override does not change that default.
 - If a hosting service replaces a file at the **same URL**, select **refresh_ipa**, or update its checksum.
 
-Provide a direct download to a **decrypted YouTube IPA**, not a download webpage. The build checks the IPA and reads its YouTube version automatically; changing the source also changes the cache key. New YouTube versions can change private APIs, so a successful build still needs device testing. YouTube **21.38.2** is the currently device-tested base; the minimum iOS version also depends on the base IPA.
+Provide a direct download to a **decrypted YouTube IPA**, not a download webpage. The build checks the IPA and reads its YouTube version automatically; changing the source also changes the cache key. New YouTube versions can change private APIs, so a successful build still needs device testing. The default base is now **21.42.4**; device validation for this version is pending. YouTube **21.38.2** was the previously tested base; this 21.42.4 base requires iOS 17 or later. Its known stale executable ZIP checksum is repaired only for the exact pinned archive; executable contents are preserved and the prepared IPA is fully validated.
 
 ## AI disclosure, license and credits
 

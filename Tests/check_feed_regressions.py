@@ -62,10 +62,16 @@ int main(void) {
     // remain visible and keep the entire hit target away from menu and metadata.
     CGRect shortCard = CGRectMake(0,0,400,260), menu = CGRectMake(348,226,44,24);
     CGRect fallback = YouModDeArrowButtonFrame(shortCard, menu);
-    assert(fallback.size.width==26 && fallback.origin.y==9);
+    assert(fallback.size.width==26 && fallback.origin.y==191);
     assert(CGRectContainsRect(shortCard, CGRectInset(fallback,-9,-9)));
     assert(!intersects(CGRectInset(fallback,-9,-9),menu));
-    assert(CGRectGetMaxY(fallback)<226);
+    assert(CGRectGetMaxY(CGRectInset(fallback,-9,-9))==menu.origin.y);
+    // A temporarily short wrapper must never move the toggle to the top.
+    CGRect transient = YouModDeArrowButtonFrame(CGRectMake(0,0,400,250), menu);
+    assert(transient.origin.y == fallback.origin.y);
+    // After final Texture measurement, return to the normal menu column.
+    CGRect settled = YouModDeArrowButtonFrame(CGRectMake(0,0,400,310), menu);
+    assert(settled.origin.y == 260);
     CGRect frame = YouModDeArrowButtonFrame(CGRectMake(0,0,30,24), CGRectMake(0,0,30,24));
     assert(frame.size.width == 0); // Clipped wrapper: caller must ascend to the card.
 }
@@ -174,3 +180,24 @@ deferred_watch = watch.split('dispatch_async(dispatch_get_main_queue(), ^{', 1)[
 assert 'UIView *control = weakControl;' in deferred_watch
 assert 'if (!control.window) return;' in deferred_watch
 assert 'YMWatchRowForControl(self)' not in deferred_watch
+
+# Grouped upload labels must never become a video's cached original title.
+start = dearrow.index('static BOOL YouModIsGroupedUploadText(')
+literal = re.search(r'regularExpressionWithPattern:@("(?:[^"\\]|\\.)*")', dearrow[start:]).group(1)
+grouped = re.compile(ast.literal_eval(literal), re.I)
+for text in ['Uploaded 7 videos', 'uploaded 12 videos', 'Aba N Preach Uploaded 7 videos']:
+    assert grouped.search(text), text
+for text in ["Ethan Klein Announces He's Quitting", 'Uploaded: Your Router Spies On You', 'How I uploaded 7 videos in a day']:
+    assert not grouped.search(text), text
+register = dearrow.split('- (void)registerOriginalTitle:', 2)[2].split('- (BOOL)isOriginalToggled', 1)[0]
+assert register.index('YouModIsGroupedUploadText(title)') < register.index('_brandingCache')
+assert 'YouModIsGroupedUploadText(node.attributedText.string)) return nil;' in dearrow
+assert 'videoIDForTitle:' not in dearrow, 'Comment text must not inherit a video identity from its words'
+assert 'containsString:@"id.comment."' in card_lookup and 'containsString:@"comment"' in card_lookup
+thumbnail = dearrow.split('static ASNetworkImageNode *YouModFindThumbnailNode(', 1)[1].split('@interface', 1)[0]
+assert 'size.width < size.height * 1.2' in thumbnail, 'Avatars and emoji are not video thumbnails'
+assert 'knownID' not in thumbnail, 'Recycled thumbnails must use their current URL'
+assert 'cardButton.menu setNeedsLayout' in layout, 'Reposition after the parent card finishes layout'
+text_hook = dearrow.split('%hook ASTextNode', 1)[1].split('%end', 1)[0]
+assert text_hook.index('videoID = nil;') < text_hook.index('YouModIsLikelyBadgeOrMetadata(curStr)')
+print('PASS: grouped upload labels, comment exclusion, thumbnail identity and delayed card layout guards')

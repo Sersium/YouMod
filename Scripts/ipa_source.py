@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import struct
 import sys
 from urllib.parse import urlparse
@@ -68,10 +69,45 @@ def inspect(path, checksum=''):
         return version
 
 
+def repair_zip_crc(path, member, crc):
+    with zipfile.ZipFile(path) as archive:
+        entry = archive.getinfo(member)
+        directory = archive.start_dir
+    with open(path, 'r+b') as file:
+        file.seek(entry.header_offset + 14)
+        file.write(struct.pack('<I', crc))
+        file.seek(directory)
+        while True:
+            position = file.tell()
+            header = file.read(46)
+            if header[:4] != b'PK\x01\x02':
+                raise ValueError('Missing ZIP central directory entry')
+            if struct.unpack_from('<I', header, 42)[0] == entry.header_offset:
+                file.seek(position + 16)
+                file.write(struct.pack('<I', crc))
+                return
+            file.seek(sum(struct.unpack_from('<3H', header, 28)), 1)
+
+
+def prepare(path, output, checksum=''):
+    with open(path, 'rb') as file:
+        digest = hashlib.file_digest(file, 'sha256').hexdigest()
+    if checksum and digest != checksum:
+        raise ValueError('IPA SHA-256 does not match')
+    shutil.copyfile(path, output)
+    # This exact decrypted 21.42.4 upload retained the executable's pre-decryption
+    # CRC. Repair ZIP metadata only; inspect still validates every member and Mach-O.
+    if digest == '55d2f00842e71805ddd978afc6cdcaa5b49f1cf0232e170998607a5fe231873e':
+        repair_zip_crc(output, 'Payload/YouTube.app/YouTube', 0x17a64605)
+    return inspect(output)
+
+
 if __name__ == '__main__':
     if sys.argv[1] == 'resolve':
         result = source(json.loads(Path('ipa-source.json').read_text()), os.environ.get('IPA_URL', ''),
                         os.environ.get('IPA_SHA256', ''), os.environ.get('CACHE_REFRESH', ''))
+    elif sys.argv[1] == 'prepare':
+        result = {'youtube_version': prepare(sys.argv[2], sys.argv[3], os.environ.get('IPA_SHA256', ''))}
     else:
         result = {'youtube_version': inspect(sys.argv[2], os.environ.get('IPA_SHA256', ''))}
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:

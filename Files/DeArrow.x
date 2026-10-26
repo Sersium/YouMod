@@ -17,6 +17,7 @@ static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNo
 @end
 
 @interface YouModDeArrowButton : UIButton
+@property (nonatomic, weak) UIView *menu;
 @end
 
 @implementation YouModDeArrowButton
@@ -26,8 +27,17 @@ static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNo
 }
 @end
 
+static BOOL YouModIsGroupedUploadText(NSString *text) {
+    static NSRegularExpression *pattern;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        pattern = [NSRegularExpression regularExpressionWithPattern:@"\\buploaded\\s+[0-9]+\\s+videos\\s*$" options:NSRegularExpressionCaseInsensitive error:nil];
+    });
+    return text.length && [pattern firstMatchInString:text options:0 range:NSMakeRange(0, text.length)] != nil;
+}
+
 static BOOL YouModIsLikelyBadgeOrMetadata(NSString *str) {
-    if (!str || str.length < 4) return YES;
+    if (!str || str.length < 4 || YouModIsGroupedUploadText(str)) return YES;
     if ([str containsString:@" views"] || [str containsString:@" watching"] || 
         [str containsString:@" ago"] || [str containsString:@" • "] || 
         [str containsString:@"subscribers"]) {
@@ -57,7 +67,6 @@ static BOOL YouModIsLikelyBadgeOrMetadata(NSString *str) {
 @property (nonatomic, strong) NSCache<NSString *, UIImage *> *thumbnailCache;
 @property (nonatomic, strong) NSMutableSet<NSString *> *thumbnailRequests;
 @property (nonatomic, strong) NSCache<NSString *, NSDate *> *thumbnailRequestDates;
-@property (nonatomic, strong) NSCache<NSString *, NSString *> *titleToVideoIDCache;
 @property (nonatomic, strong) NSMutableSet<NSString *> *inFlightRequests;
 @property (nonatomic, strong) NSCache<NSString *, NSDate *> *requestDates;
 @property (nonatomic, strong) NSMutableSet<NSString *> *toggledOriginalVideoIDs;
@@ -72,7 +81,6 @@ static BOOL YouModIsLikelyBadgeOrMetadata(NSString *str) {
 - (BOOL)toggleDeArrowForVideoID:(NSString *)videoID;
 - (BOOL)hasDeArrowBrandingForVideoID:(NSString *)videoID;
 - (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID;
-- (NSString *)videoIDForTitle:(NSString *)title;
 @end
 
 @implementation YouModDeArrowManager
@@ -96,8 +104,6 @@ static BOOL YouModIsLikelyBadgeOrMetadata(NSString *str) {
         _thumbnailRequests = [NSMutableSet set];
         _thumbnailRequestDates = [[NSCache alloc] init];
         _thumbnailRequestDates.countLimit = 500;
-        _titleToVideoIDCache = [[NSCache alloc] init];
-        _titleToVideoIDCache.countLimit = 1000;
         _inFlightRequests = [NSMutableSet set];
         _requestDates = [[NSCache alloc] init];
         _requestDates.countLimit = 500;
@@ -190,8 +196,7 @@ static NSString *YouModFormatDeArrowTitle(NSString *origTitle) {
 }
 
 - (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID {
-    if (!title || title.length == 0 || !videoID || videoID.length == 0) return;
-    [_titleToVideoIDCache setObject:videoID forKey:title];
+    if (!title.length || !videoID.length || YouModIsGroupedUploadText(title)) return;
     NSMutableDictionary *entry = [[_brandingCache objectForKey:videoID] mutableCopy];
     if (!entry) {
         entry = [NSMutableDictionary dictionary];
@@ -201,11 +206,6 @@ static NSString *YouModFormatDeArrowTitle(NSString *origTitle) {
         entry[@"originalTitle"] = [title copy];
     }
     [_brandingCache setObject:[entry copy] forKey:videoID];
-}
-
-- (NSString *)videoIDForTitle:(NSString *)title {
-    if (!title || title.length == 0) return nil;
-    return [_titleToVideoIDCache objectForKey:title];
 }
 
 - (BOOL)isOriginalToggledForVideoID:(NSString *)videoID {
@@ -796,22 +796,7 @@ static void YouModRefreshThumbnailNode(ASNetworkImageNode *node) {
         return;
     }
 
-    // Skip text nodes that belong to thumbnails (e.g. duration badges, CC overlays)
-    ASDisplayNode *ancestor = self.supernode;
-    while (ancestor) {
-        if ([ancestor isKindOfClass:%c(ASNetworkImageNode)]) {
-            %orig(attributedString);
-            return;
-        }
-        ancestor = ancestor.supernode;
-    }
-
     NSString *curStr = attributedString.string;
-    if (YouModIsLikelyBadgeOrMetadata(curStr)) {
-        %orig(attributedString);
-        return;
-    }
-
     NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
     NSAttributedString *previous = objc_getAssociatedObject(self, "kYMDeArrowOrigAttrKey");
     NSString *replacement = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
@@ -820,8 +805,19 @@ static void YouModRefreshThumbnailNode(ASNetworkImageNode *node) {
         objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         objc_setAssociatedObject(self, "kYMDeArrowOrigAttrKey", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    if (!videoID) {
-        videoID = [[YouModDeArrowManager sharedInstance] videoIDForTitle:curStr];
+    if (YouModIsLikelyBadgeOrMetadata(curStr)) {
+        %orig(attributedString);
+        return;
+    }
+
+    // Skip text nodes that belong to thumbnails (e.g. duration badges, CC overlays)
+    ASDisplayNode *ancestor = self.supernode;
+    while (ancestor) {
+        if ([ancestor isKindOfClass:%c(ASNetworkImageNode)]) {
+            %orig(attributedString);
+            return;
+        }
+        ancestor = ancestor.supernode;
     }
 
     if (videoID && videoID.length == 11) {
@@ -938,6 +934,10 @@ static void YouModCollectNodesFromView(UIView *view, NSMutableArray *textNodes, 
 }
 
 static ASTextNode *YouModFindTitleNode(NSArray *textNodes) {
+    // An aggregate notification has a channel heading, not a video title.
+    for (ASTextNode *node in textNodes) {
+        if (YouModIsGroupedUploadText(node.attributedText.string)) return nil;
+    }
     ASTextNode *bestNode = nil;
     NSUInteger maxLen = 0;
     for (id node in textNodes) {
@@ -972,11 +972,8 @@ static ASNetworkImageNode *YouModFindThumbnailNode(NSArray *imageNodes, NSString
     for (id node in imageNodes) {
         if (![node isKindOfClass:%c(ASNetworkImageNode)]) continue;
         ASNetworkImageNode *inNode = (ASNetworkImageNode *)node;
-        NSString *knownID = objc_getAssociatedObject(inNode, "kYMDeArrowVideoIDKey");
-        if (knownID.length == 11) {
-            if (outVideoID) *outVideoID = knownID;
-            return inNode;
-        }
+        CGSize size = inNode.bounds.size;
+        if (size.width < 80 || size.height < 40 || size.width < size.height * 1.2) continue;
         NSURL *u = nil;
         if ([inNode respondsToSelector:@selector(URL)]) {
             u = [inNode URL];
@@ -1032,9 +1029,8 @@ static CGRect YouModDeArrowButtonFrame(CGRect bounds, CGRect menu) {
     CGFloat y = CGRectGetMaxY(menu) + 10.0;
     CGRect frame = CGRectMake(x, y, size, size);
     if (CGRectContainsRect(bounds, frame)) return frame;
-    // Short tablet cards have no spare metadata row. Use the thumbnail's
-    // upper menu-side corner, with the full 44pt hit target inside the card.
-    frame = CGRectMake(x, bounds.origin.y + 9, size, size);
+    // Short cards keep the full hit target at the thumbnail's lower corner.
+    frame = CGRectMake(x, menu.origin.y - size - 9, size, size);
     CGRect hit = CGRectInset(frame, -9, -9);
     return CGRectContainsRect(bounds, hit) && CGRectGetMaxY(hit) <= menu.origin.y ? frame : CGRectZero;
 }
@@ -1042,8 +1038,9 @@ static CGRect YouModDeArrowButtonFrame(CGRect bounds, CGRect menu) {
 UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *images, NSString **videoID) {
     // Establish a feed-cell boundary before touching Texture nodes. Player
     // overflow controls also match the menu identifiers, including mid-transition.
-    UIView *cell = menu.superview;
+    UIView *cell = menu;
     while (cell) {
+        if ([cell.accessibilityIdentifier.lowercaseString containsString:@"comment"]) return nil;
         if ([cell isKindOfClass:%c(YTPlayerView)] ||
             [cell isKindOfClass:%c(YTMainAppPlayerOverlayView)] ||
             [cell isKindOfClass:[UIScrollView class]]) return nil;
@@ -1057,6 +1054,9 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
         [texts removeAllObjects];
         [images removeAllObjects];
         YouModCollectNodesFromView(card, texts, images);
+        for (ASTextNode *text in texts) {
+            if ([[text description] containsString:@"id.comment."]) return nil;
+        }
         YouModFindThumbnailNode(images, videoID);
         if (*videoID) return card;
         if (card == cell) break;
@@ -1082,7 +1082,10 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
 
 - (void)layoutSubviews {
     %orig;
-    UIButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
+    // Texture can lay out the card after its menu. Reposition after that pass.
+    YouModDeArrowButton *cardButton = objc_getAssociatedObject(self, "kYMDeArrowCardButton");
+    [cardButton.menu setNeedsLayout];
+    YouModDeArrowButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
     if (!self.window || !IS_ENABLED(DeArrowEnabled) || !YouModIsOverflowButtonView(self)) {
         [button removeFromSuperview];
         return;
@@ -1117,7 +1120,12 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     }
     objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
     objc_setAssociatedObject(button, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-    if (button.superview != card) [card addSubview:button];
+    button.menu = self;
+    if (button.superview != card) {
+        objc_setAssociatedObject(button.superview, "kYMDeArrowCardButton", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [card addSubview:button];
+        objc_setAssociatedObject(card, "kYMDeArrowCardButton", button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     if (!CGRectEqualToRect(button.frame, frame)) button.frame = frame;
     objc_setAssociatedObject(button, "YMDeArrowOverThumbnail", @(frame.origin.y < menu.origin.y), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     YouModUpdateOverflowIndicator(button, videoID);

@@ -6,7 +6,7 @@ import sys
 import tempfile
 import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'Scripts'))
-from ipa_source import source, inspect
+from ipa_source import source, inspect, prepare, repair_zip_crc
 
 config = {'url': 'https://example.com/old.ipa', 'sha256': 'a' * 64}
 a = source(config)
@@ -28,6 +28,24 @@ with tempfile.TemporaryDirectory() as tmp:
             ipa.writestr('Payload/NewYouTube.app/NewYouTube', binary)
     build()
     assert inspect(path) == '22.5.1', 'Use actual IPA version and executable name'
+    output = Path(tmp) / 'prepared.ipa'
+    assert prepare(path, output) == '22.5.1'
+    assert output.read_bytes() == path.read_bytes(), 'Ordinary IPA files must remain unchanged'
+    try: prepare(path, output, '0' * 64)
+    except ValueError: pass
+    else: raise AssertionError('Wrong source checksum accepted')
+    member = 'Payload/NewYouTube.app/NewYouTube'
+    with zipfile.ZipFile(path) as archive:
+        crc = archive.getinfo(member).CRC
+        contents = archive.read(member)
+    repair_zip_crc(path, member, 0)
+    try: prepare(path, output)
+    except ValueError: pass
+    else: raise AssertionError('Unknown damaged archive accepted')
+    repair_zip_crc(path, member, crc)
+    assert inspect(path) == '22.5.1'
+    with zipfile.ZipFile(path) as archive:
+        assert archive.read(member) == contents, 'CRC repair must preserve executable bytes'
     for encrypted, identifier in ((1, 'com.google.ios.youtube'), (0, 'example.other')):
         build(encrypted, identifier)
         try: inspect(path)

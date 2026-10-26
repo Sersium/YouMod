@@ -160,11 +160,11 @@ jobs:
           IPA_URL: ${{ steps.ipa-source.outputs.url }}
         run: curl --fail --location --retry 3 --proto '=https' --proto-redir '=https' "$IPA_URL" -o youtube.ipa
 
-      - name: Validate base IPA and detect YouTube version
+      - name: Prepare and validate base IPA and detect YouTube version
         id: base-ipa
         env:
           IPA_SHA256: ${{ steps.ipa-source.outputs.sha256 }}
-        run: python3 YouMod/Scripts/ipa_source.py inspect youtube.ipa
+        run: python3 YouMod/Scripts/ipa_source.py prepare youtube.ipa youtube-prepared.ipa
 
       - name: Install cyan and tbd
         run: |
@@ -175,7 +175,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}
 
-          cyan -i youtube.ipa -o YouTube_YouMod.ipa -uwesq -f youmod.deb demc.deb ytvo.deb -n "YouTube" -b "com.google.ios.youtube"
+          cyan -i youtube-prepared.ipa -o YouTube_YouMod.ipa -uwesq -f youmod.deb demc.deb ytvo.deb -n "YouTube" -b "com.google.ios.youtube"
           python3 YouMod/Scripts/verify_ipa.py YouTube_YouMod.ipa
 
       - name: Prepare release notes

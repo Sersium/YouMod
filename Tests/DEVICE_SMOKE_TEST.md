@@ -1,4 +1,4 @@
-Test with YouTube 21.38.2 and the build containing these changes. These are device checks, not results claimed by the automated test.
+Test with YouTube 21.42.4 and the build containing these changes. These are device checks, not results claimed by the automated test.
 
 - Home: confirm one DeArrow toggle below each three-dot menu; tap both controls independently. Swap a title/thumbnail twice, then scroll away and back.
 - MrBeast channel Videos: repeat for Latest/Popular/Oldest and horizontal shelves. Scroll rapidly for several minutes, open/close a video and comments, and verify no freeze or wrong-video swaps after cell reuse.
@@ -37,7 +37,7 @@ September 27 phone/iPad regressions (pending device verification):
 
 - iPhone/iPad: Home → Notifications → Home, then Subscriptions → Home. Repeat after reordering tabs and after disabling/re-enabling Shorts. Confirm both the selected icon and displayed feed change.
 - iPad landscape: open several videos and verify the right-hand recommendations remain visible with Hide Related Videos off, including when Hide Horizontal Shelf is on. Rotate and return to Home.
-- iPad: compare one-line and multiline cards. Short cards without room below the menu must show the DeArrow toggle in the top corner. Test delayed thumbnail loading, scrolling/reuse, both toggle states, and independent menu taps.
+- iPad: compare one-line and multiline cards. Short cards without room below the menu must show the DeArrow toggle in the lower thumbnail corner. Test delayed thumbnail loading, scrolling/reuse, both toggle states, and independent menu taps.
 - iPad Home/Subscriptions: with Playback in feeds enabled, leave a normal video centered until it starts, then scroll, rotate, open/close a video and return from Notifications. Repeat with the native playback setting off to confirm it remains respected.
 
 2.5 fullscreen regression (pending device verification):
@@ -47,3 +47,9 @@ September 27 phone/iPad regressions (pending device verification):
 2.6 crash follow-up (pending device verification):
 
 - Repeat the fullscreen check above, including repeated taps to show/hide controls and rapid video changes. The September 27 14:43 report matches the 2.5 YouMod UUID `D641DCA4-EF77-3059-ABFB-8C7B332EF280`: return offset `0x10688` follows `objc_retain` in `YouModRefreshThumbnailNode`, entered by the queued `setURL:resetToDefault:` block. Logos captures hook `self` without retaining it; queued thumbnail/watch-row callbacks must use zeroing weak references and skip destroyed or detached controls.
+
+October 26 DeArrow regressions (pending device verification on YouTube 21.42.4):
+
+- Expand a channel's “Uploaded 7 videos” notification before visiting any of its videos. The group heading must stay unchanged and the first video's row must retain its actual title. Toggle original/replacement twice, collapse/re-expand, then repeat with another group from the same channel.
+- Open comments containing timestamps, linked video titles, emoji and ordinary text. No comment or reply should receive a DeArrow toggle or have its text replaced. Scroll rapidly and reopen comments to exercise reused cells.
+- Cold-launch Home and scroll through cards with one-line and multiline titles, delayed thumbnails and playing previews. Toggles must stay below the menu, or at the thumbnail's lower corner when there is no space below, without jumping to the top. Repeat after opening/closing a video, rotating and on iPad.
