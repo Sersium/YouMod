@@ -2436,6 +2436,12 @@ static void ymRegisterStyledSubclass(Class sourceClass, const char *name) {
 }
 %new
 - (void)YouModReloadTabBar:(id)arg {
+    id renderer = ((id (*)(id, SEL))objc_msgSend)(self, @selector(renderer));
+    UIView *bar = self.viewIfLoaded;
+    if (renderer && [bar respondsToSelector:@selector(setRenderer:)]) {
+        ((void (*)(id, SEL, id))objc_msgSend)(bar, @selector(setRenderer:), nil);
+        ((void (*)(id, SEL, id))objc_msgSend)(bar, @selector(setRenderer:), renderer);
+    }
     [self loadPivotBarWithOffline:NO triggeredByNotification:YES];
 }
 %end

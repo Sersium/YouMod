@@ -73,13 +73,15 @@ assert 'id.sponsorship.sponsor.button' in source
 assert 'YMWatchRowForControl(self)' in source
 assert 'if (!like || !subscribe)' not in source, 'Tablet actions do not contain Subscribe'
 assert 'frame = YMPrependWatchViews(bar, like)' in source
-configure = source.split('- (void)controllerDidApplyProperties {', 1)[1].split('%end', 1)[0]
-assert configure.index('%orig;') < configure.index('self.style.flexWrap = 1;')
-assert '@"id.video.non_scrollable_action_bar"' in configure
-assert 'self.style.height = automatic;' in configure and 'self.style.maxHeight = automatic;' in configure
+configure = source.split('static BOOL YMConfigureWatchRow(', 1)[1].split('static UIView *YMFindWatchControl', 1)[0]
+assert 'layout.style.flexWrap = 1;' in configure
+assert 'wrapper.style.height = automatic;' in configure and 'wrapper.style.maxHeight = automatic;' in configure
 assert 'margin.start = (YMWatchDimension){1, 56}' in configure, 'The counter needs measured space when actions wrap'
 assert 'child.style.flexGrow = 0' in configure, 'Do not stretch the gap after Subscribe'
 layout = source.split('%hook _ASDisplayView', 1)[1]
 assert '.style.' not in layout, 'Do not change native measurement from UIKit layout callbacks'
 assert 'parent.yogaChildren.count != 1' in configure, 'Do not collapse a Join ancestor shared with other buttons'
+assert '__weak UIView *weakBar' in source and '__weak ASDisplayNode *weakNode' in source
+assert 'if (YMConfigureWatchRow(currentNode, wrap)) [currentNode setNeedsLayout]' in source
+assert 'currentNode != ((_ASDisplayView *)currentBar).keepalive_node' in source, 'Skip recycled rows before the deferred update'
 print('PASS: tight counter placement, wrapped/RTL rows, tablet fallback, native actions and no added Yoga children')

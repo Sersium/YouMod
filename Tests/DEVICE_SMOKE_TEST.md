@@ -56,6 +56,8 @@ October 26 DeArrow regressions (pending device verification on YouTube 21.42.4):
 
 October 31 floating tab bar and OLED settings (pending device verification on YouTube 21.42.4):
 
+3.1 device result: the user confirmed the default glass tabs remained, the white row after Privacy remained, and Gemini was still clipped with excessive spacing before views. Compilation and geometry checks did not establish that the active runtime paths were reached. The revised data getters, Settings surface traversal and deferred live-node remeasurement below need another iPhone check.
+
 - With the glass bar active, disable Shorts and Create (+), enable Notifications, and reorder the remaining tabs. Return to Home without relaunching: only the enabled tabs should appear in the saved order. Tap Notifications and Home repeatedly; verify both the selected icon and displayed page change. Scroll down until the bar hides, then up until it returns; the order and disabled tabs must stay applied. Re-enable Shorts/Create and repeat, including a cold launch and rotation. Repeat with the classic bar and on iPad.
 - Enable Hide Tab Labels, scroll the glass bar away/back, then change tabs and rotate. Labels must stay hidden. Disable the preference and confirm YouTube's native label behavior returns.
 - In OLED dark mode, open Settings and scroll through Privacy and the following row: its text/icon must remain visible against black. Tap it to verify its original action and selection feedback, scroll away/back to recycle it, then switch light/dark appearance in both YouTube and iOS. Light mode must retain the original background; repeat with OLED disabled after relaunch.

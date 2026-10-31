@@ -117,26 +117,27 @@ assert 'kFilteredSectionKey' not in ads, 'A renderer can change after its first 
 assert '%init(YouModFeedFilters)' in ads, 'Feed preferences also apply with ads enabled'
 tabs = (root / 'Files/Tabbar.x').read_text()
 settings = (root / 'Files/YouModSettings.x').read_text()
-assert 'YTIPivotBarRenderer *renderer = original;' in tabs, 'Preserve native tab renderer identity'
-assert '[original copy]' not in tabs
-for bar_class in ('YTPivotBarView', 'YTFloatingPivotBarView'):
-    hook = tabs.split('%hook ' + bar_class + '\n', 1)[1].split('%end', 1)[0]
-    assert hook.count('%orig(YMOrderedPivotRenderer(renderer))') == 1, 'Both bar implementations must share the native ordered renderer'
+assert '%hook YTIPivotBarRenderer\n' in tabs, 'Filter data before Swift, UIKit and navigation read it'
+assert 'NSMutableArray *items = %orig;' in tabs and '[items setArray:ordered]' in tabs, 'Preserve the shared native item array'
+assert 'nativeItems = [items copy]' in tabs, 'Keep native commands available when a tab is re-enabled'
+assert 'return self.itemsArray.count' in tabs, 'Count-first consumers must receive the filtered item count'
+assert tabs.index('[probe itemsArray]') < tabs.index('    %init;'), 'Resolve GPB dynamic accessors before installing their hooks'
 assert '%orig(IS_ENABLED(HideTabLabels) || hidden)' in tabs, 'Native floating-bar label updates must respect Hide Labels'
 assert 'if (!button.superview ||' in dearrow, 'Retry cards whose thumbnails arrive after initial layout'
-assert 'if (ordered.count)' in tabs, 'An invalid saved order must not blank navigation'
+assert 'if (ordered.count && ![items isEqualToArray:ordered])' in tabs, 'Invalid preferences must not empty navigation or mutate it during enumeration'
 assert '[self loadPivotBarWithOffline:NO triggeredByNotification:YES]' in settings
+assert '@selector(setRenderer:), nil' in settings and '@selector(setRenderer:), renderer' in settings, 'Refresh the Swift bar even when YouTube reuses its renderer object'
 assert 'performSelector:@selector(refreshPivotBarWithTriggedByNotification:)' not in settings
 
 appearance = (root / 'Files/Apperence.x').read_text()
-oled_cell = appearance.split('%hook YTCollectionViewCell\n', 1)[1].split('%end', 1)[0]
-assert '- (void)updateBackgroundImage' in oled_cell, 'Theme native backing views when they are rebuilt'
-assert '%c(YTSettingsCell)' in oled_cell and '%c(YTSettingsLinkCell)' in oled_cell, 'Include legacy settings links without repainting feed cells'
-assert 'self.backgroundView.backgroundColor' in oled_cell and 'self.selectedBackgroundView.backgroundColor' in oled_cell
-assert ': background;' in oled_cell and ': selectedBackground;' in oled_cell, 'Preserve both original light-mode backgrounds'
-assert oled_cell.count('?: UIColor.clearColor') == 2, 'Transparent native backgrounds must remain valid dynamic colors'
-assert oled_cell.count('traits.userInterfaceStyle == UIUserInterfaceStyleDark') == 2
-assert 'self' not in oled_cell.split('^UIColor *', 1)[1].split('}];', 1)[0], 'Dynamic colors must not retain the cell'
+assert '"_pageStyleController"' in appearance, 'Use YouTube appearance even when iOS uses light mode'
+assert 'YMSettingsIsLightSurface(red, green, blue, alpha)' in appearance
+assert 'YMSettingsFixBackingImage(cell.backgroundView, dark)' in appearance
+assert 'YMSettingsFixBackingImage(cell.selectedBackgroundView, dark)' in appearance
+assert 'imageView.image = original' in appearance and '(dark ? UIColor.blackColor : original).CGColor' in appearance
+assert 'isKindOfClass:%c(YTSettingsViewController)' in appearance, 'Restrict the cell fallback to Settings'
+assert 'controller = controller.parentViewController' in appearance, 'Include the embedded searchable settings list'
+assert 'isKindOfClass:UIControl.class' in appearance, 'Keep switches and other controls intact'
 
 # Exercise the actual ICU-pattern text from the implementation, translating the
 # Unicode-codepoint escape into Python's equivalent for this portable check.
@@ -189,7 +190,7 @@ assert 'ASNetworkImageNode *node = weakNode;' in image_hook
 assert 'if (node) YouModRefreshThumbnailNode(node);' in image_hook
 assert 'YouModRefreshThumbnailNode(self); });' not in image_hook
 watch = (root / 'Files/WatchActionBar.x').read_text()
-deferred_watch = watch.split('dispatch_async(dispatch_get_main_queue(), ^{', 1)[1].split('});', 1)[0]
+deferred_watch = watch.split('__weak UIView *weakControl = self;', 1)[1].split('});', 1)[0]
 assert 'UIView *control = weakControl;' in deferred_watch
 assert 'if (!control.window) return;' in deferred_watch
 assert 'YMWatchRowForControl(self)' not in deferred_watch

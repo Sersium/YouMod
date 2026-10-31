@@ -97,68 +97,60 @@ static NSString *ymTitleForTabID(NSString *tabID) {
     return nil;
 }
 
-static YTIPivotBarRenderer *YMOrderedPivotRenderer(YTIPivotBarRenderer *original) {
-    if (!original) return nil;
+@interface YTIPivotBarRenderer (YouModTabItems)
+@property (nonatomic, readonly) NSUInteger itemsArray_Count;
+@end
+
+// Filter the protobuf data before either the Swift bar or navigation reads it.
+%hook YTIPivotBarRenderer
+- (NSMutableArray *)itemsArray {
+    NSMutableArray *items = %orig;
     NSArray *savedOrder = [[NSUserDefaults standardUserDefaults] arrayForKey:TabOrder];
-    if (!savedOrder.count) return original;
-    // Navigation and the visible bar must share the same renderer/items.
-    YTIPivotBarRenderer *renderer = original;
-    if (savedOrder.count > 0) {
-        NSMutableArray <YTIPivotBarSupportedRenderers *> *items = [renderer itemsArray];
+    if (!items.count || !savedOrder.count) return items;
+    NSArray *nativeItems = objc_getAssociatedObject(self, "YMNativePivotItems");
+    if (!nativeItems) {
+        nativeItems = [items copy];
+        objc_setAssociatedObject(self, "YMNativePivotItems", nativeItems, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    // Build lookup: pivotIdentifier -> renderer item
+    NSMutableDictionary<NSString *, YTIPivotBarSupportedRenderers *> *lookup = [NSMutableDictionary dictionary];
+    for (YTIPivotBarSupportedRenderers *item in [nativeItems arrayByAddingObjectsFromArray:items]) {
+        NSString *pID = [[item pivotBarItemRenderer] pivotIdentifier];
+        NSString *pID2 = [[item pivotBarIconOnlyItemRenderer] pivotIdentifier];
+        if (pID) lookup[pID] = item;
+        if (pID2) lookup[pID2] = item;
+    }
 
-        // Build lookup: pivotIdentifier -> renderer item
-        NSMutableDictionary<NSString *, YTIPivotBarSupportedRenderers *> *lookup = [NSMutableDictionary dictionary];
-        for (YTIPivotBarSupportedRenderers *item in items) {
-            NSString *pID = [[item pivotBarItemRenderer] pivotIdentifier];
-            NSString *pID2 = [[item pivotBarIconOnlyItemRenderer] pivotIdentifier];
-            if (pID) lookup[pID] = item;
-            if (pID2) lookup[pID2] = item;
-        }
+    // Build ordered array from saved data
+    NSMutableArray *ordered = [NSMutableArray array];
+    for (NSDictionary *entry in savedOrder) {
+        if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"id"] isKindOfClass:NSString.class] ||
+            ![entry[@"enabled"] respondsToSelector:@selector(boolValue)]) continue;
+        NSString *tabID = entry[@"id"];
+        BOOL enabled = [entry[@"enabled"] boolValue];
+        if (!enabled) continue;
 
-        // Build ordered array from saved data
-        NSMutableArray *ordered = [NSMutableArray array];
-        for (NSDictionary *entry in savedOrder) {
-            if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"id"] isKindOfClass:NSString.class] ||
-                ![entry[@"enabled"] respondsToSelector:@selector(boolValue)]) continue;
-            NSString *tabID = entry[@"id"];
-            BOOL enabled = [entry[@"enabled"] boolValue];
-            if (!enabled) continue;
+        NSString *pivotID = ymPivotIDForTabID(tabID);
+        if (!pivotID) continue;
 
-            NSString *pivotID = ymPivotIDForTabID(tabID);
-            if (!pivotID) continue;
-
-            YTIPivotBarSupportedRenderers *existing = lookup[pivotID];
-            if (existing) {
-                [ordered addObject:existing];
-            } else {
-                // Custom tab not in YouTube's default items — create it
-                NSInteger iconType = ymIconTypeForTabID(tabID);
-                NSString *title = ymTitleForTabID(tabID);
-                if (iconType > 0 && title) {
-                    YTIPivotBarSupportedRenderers *newTab = [%c(YTIPivotBarRenderer) pivotSupportedRenderersWithBrowseId:pivotID title:title iconType:iconType];
-                    if (newTab) [ordered addObject:newTab];
-                }
+        YTIPivotBarSupportedRenderers *existing = lookup[pivotID];
+        if (existing) {
+            [ordered addObject:existing];
+        } else {
+            // Custom tab not in YouTube's default items — create it
+            NSInteger iconType = ymIconTypeForTabID(tabID);
+            NSString *title = ymTitleForTabID(tabID);
+            if (iconType > 0 && title) {
+                YTIPivotBarSupportedRenderers *newTab = [%c(YTIPivotBarRenderer) pivotSupportedRenderersWithBrowseId:pivotID title:title iconType:iconType];
+                if (newTab) [ordered addObject:newTab];
             }
         }
-        // Replace items with ordered set
-        if (ordered.count) {
-            [items removeAllObjects];
-            [items addObjectsFromArray:ordered];
-        }
     }
-    return renderer;
+    if (ordered.count && ![items isEqualToArray:ordered]) [items setArray:ordered];
+    return items;
 }
-
-%hook YTPivotBarView
-- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
-    %orig(YMOrderedPivotRenderer(renderer));
-}
-%end
-
-// The scrolling glass bar is a separate view, not a YTPivotBarView subclass.
-%hook YTFloatingPivotBarView
-- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
-    %orig(YMOrderedPivotRenderer(renderer));
+- (NSUInteger)itemsArray_Count {
+    return self.itemsArray.count;
 }
 %end
 
@@ -376,3 +368,11 @@ static BOOL isTabSelected = NO;
     sbUpdateOverlayInsetForPivotBar();
 }
 %end
+
+%ctor {
+    // GPB creates these accessors on first use; resolve them before hooking.
+    YTIPivotBarRenderer *probe = [%c(YTIPivotBarRenderer) new];
+    [probe itemsArray];
+    (void)probe.itemsArray_Count;
+    %init;
+}

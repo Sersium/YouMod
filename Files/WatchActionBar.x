@@ -23,29 +23,41 @@ typedef struct {
 
 static ASDisplayNode *YMFindWatchNode(ASDisplayNode *node, NSString *identifier) {
     if ([node.accessibilityIdentifier isEqualToString:identifier]) return node;
-    for (ASDisplayNode *child in node.yogaChildren) {
+    if (node.isNodeLoaded && [node.view.accessibilityIdentifier isEqualToString:identifier]) return node;
+    for (ASDisplayNode *child in node.yogaChildren.count ? node.yogaChildren : node.subnodes) {
         ASDisplayNode *match = YMFindWatchNode(child, identifier);
         if (match) return match;
     }
     return nil;
 }
 
-%hook ELMContainerNode
-- (void)controllerDidApplyProperties {
-    %orig;
-    NSString *identifier = self.accessibilityIdentifier;
-    BOOL wrap = [identifier isEqualToString:@"id.video.non_scrollable_action_bar"];
-    if (!wrap && ![identifier isEqualToString:@"id.video.scrollable_action_bar"]) return;
-    if (!YMFindWatchNode(self, @"id.video.like.button")) return;
-    YMWatchDimension automatic = {0, 0}, zero = {1, 0};
-    // Configure the existing tree before measurement; never insert Yoga children.
-    if (wrap) {
-        self.style.flexWrap = 1;
-        self.style.justifyContent = 0;
-        self.style.height = automatic;
-        self.style.maxHeight = automatic;
+static BOOL YMConfigureWatchRow(ASDisplayNode *row, BOOL wrap) {
+    ASDisplayNode *layout = row;
+    while (layout.yogaChildren.count == 1) {
+        ASDisplayNode *child = layout.yogaChildren.firstObject;
+        if (!child.yogaChildren.count) break;
+        layout = child;
     }
-    for (ASDisplayNode *child in self.yogaChildren) {
+    ASDisplayNode *first = nil;
+    for (ASDisplayNode *child in layout.yogaChildren) {
+        if (YMFindWatchNode(child, @"id.video.like.button")) { first = child; break; }
+    }
+    if (!first) return NO;
+    YMWatchDimension prefix = first.style.margin.start;
+    if (objc_getAssociatedObject(row, "YMWatchViewsReserved") &&
+        (!wrap || layout.style.flexWrap == 1) && prefix.unit == 1 && prefix.value == 56) return NO;
+    YMWatchDimension automatic = {0, 0}, zero = {1, 0};
+    // Remeasure the existing row after its views have loaded; never insert children.
+    if (wrap) {
+        layout.style.flexWrap = 1;
+        layout.style.justifyContent = 0;
+        for (ASDisplayNode *wrapper = layout; wrapper; wrapper = wrapper.yogaParent) {
+            wrapper.style.height = automatic;
+            wrapper.style.maxHeight = automatic;
+            if (wrapper == row) break;
+        }
+    }
+    for (ASDisplayNode *child in layout.yogaChildren) {
         if (wrap) child.style.flexGrow = 0;
         if (YMFindWatchNode(child, @"id.ui.channel.subscribe")) {
             child.style.width = automatic;
@@ -55,11 +67,11 @@ static ASDisplayNode *YMFindWatchNode(ASDisplayNode *node, NSString *identifier)
             YMWatchInsets margin = child.style.margin;
             margin.start = (YMWatchDimension){1, 56};
             child.style.margin = margin;
-            objc_setAssociatedObject(self, "YMWatchViewsReserved", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            objc_setAssociatedObject(row, "YMWatchViewsReserved", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         }
     }
-    ASDisplayNode *join = YMFindWatchNode(self, @"id.sponsorship.sponsor.button");
-    while (join && join != self) {
+    ASDisplayNode *join = YMFindWatchNode(layout, @"id.sponsorship.sponsor.button");
+    while (join && join != layout) {
         join.hidden = YES;
         join.style.width = join.style.minWidth = join.style.maxWidth = zero;
         join.style.height = join.style.minHeight = join.style.maxHeight = zero;
@@ -69,8 +81,8 @@ static ASDisplayNode *YMFindWatchNode(ASDisplayNode *node, NSString *identifier)
         if (parent.yogaChildren.count != 1) break;
         join = parent;
     }
+    return YES;
 }
-%end
 
 static UIView *YMFindWatchControl(UIView *view, NSString *identifier) {
     if ([view.accessibilityIdentifier isEqualToString:identifier]) return view;
@@ -162,6 +174,21 @@ static void YMUpdateWatchBar(UIView *bar) {
     CGRect likeFrame = [like convertRect:like.bounds toView:bar];
     if (join) join.hidden = YES;
     ASDisplayNode *node = [bar isKindOfClass:%c(_ASDisplayView)] ? ((_ASDisplayView *)bar).keepalive_node : nil;
+    if (node && !objc_getAssociatedObject(bar, "YMWatchLayoutQueued")) {
+        BOOL wrap = ![bar.accessibilityIdentifier isEqualToString:@"id.video.scrollable_action_bar"] &&
+                    ![bar isKindOfClass:UIScrollView.class];
+        objc_setAssociatedObject(bar, "YMWatchLayoutQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        __weak UIView *weakBar = bar;
+        __weak ASDisplayNode *weakNode = node;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIView *currentBar = weakBar;
+            ASDisplayNode *currentNode = weakNode;
+            if (!currentBar) return;
+            objc_setAssociatedObject(currentBar, "YMWatchLayoutQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            if (!currentBar.window || currentNode != ((_ASDisplayView *)currentBar).keepalive_node) return;
+            if (YMConfigureWatchRow(currentNode, wrap)) [currentNode setNeedsLayout];
+        });
+    }
     CGRect frame;
     if (objc_getAssociatedObject(node, "YMWatchViewsReserved")) {
         BOOL rtl = bar.effectiveUserInterfaceLayoutDirection == UIUserInterfaceLayoutDirectionRightToLeft;

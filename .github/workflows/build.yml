@@ -39,6 +39,7 @@ jobs:
           python3 YouMod/Tests/check_feather.py
           python3 YouMod/Tests/check_ipa_source.py
           python3 YouMod/Tests/check_watch_bar.py
+          python3 YouMod/Tests/check_ui_compat.py
 
       - name: Install dependencies
         run: brew install make ldid

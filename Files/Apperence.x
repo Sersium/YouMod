@@ -1,4 +1,5 @@
 #import "Headers.h"
+#import <objc/message.h>
 
 %group OLEDTheme
 %hook YTColor
@@ -23,19 +24,75 @@
 - (UIColor *)backgroundColor:(NSInteger)pageStyle { return pageStyle == 1 ? [UIColor blackColor] : %orig; }
 %end
 
-%hook YTCollectionViewCell
-- (void)updateBackgroundImage {
+static BOOL YMSettingsIsLightSurface(CGFloat red, CGFloat green, CGFloat blue, CGFloat alpha) {
+    return red > 0.9 && green > 0.9 && blue > 0.9 && alpha > 0.9;
+}
+
+static BOOL YMSettingsUsesDarkPage(YTSettingsViewController *controller) {
+    Ivar ivar = class_getInstanceVariable(%c(YTSettingsViewController), "_pageStyleController");
+    id theme = ivar ? object_getIvar(controller, ivar) : nil;
+    if ([theme respondsToSelector:@selector(pageStyle)])
+        return ((NSInteger (*)(id, SEL))objc_msgSend)(theme, @selector(pageStyle)) == 1;
+    return isDarkMode(controller.view);
+}
+
+static void YMSettingsFixBackingImage(UIView *view, BOOL dark) {
+    if (![view isKindOfClass:UIImageView.class]) return;
+    UIImageView *imageView = (UIImageView *)view;
+    UIImage *original = objc_getAssociatedObject(view, "YMOLEDSettingsImage");
+    if (dark) {
+        if (!original && imageView.image)
+            objc_setAssociatedObject(view, "YMOLEDSettingsImage", imageView.image, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        imageView.image = nil;
+    } else if (original) {
+        imageView.image = original;
+        objc_setAssociatedObject(view, "YMOLEDSettingsImage", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+static void YMSettingsFixSurface(UIView *view, BOOL dark) {
+    if ([view isKindOfClass:UIControl.class] || [view isKindOfClass:UILabel.class]) return;
+    CALayer *layer = view.layer;
+    UIColor *original = objc_getAssociatedObject(layer, "YMOLEDSettingsColor");
+    if (dark && !original && layer.backgroundColor) {
+        UIColor *current = [UIColor colorWithCGColor:layer.backgroundColor];
+        CGFloat red, green, blue, alpha;
+        if ([current getRed:&red green:&green blue:&blue alpha:&alpha] && YMSettingsIsLightSurface(red, green, blue, alpha)) {
+            original = current;
+            objc_setAssociatedObject(layer, "YMOLEDSettingsColor", current, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+    }
+    if (original) {
+        layer.backgroundColor = (dark ? UIColor.blackColor : original).CGColor;
+        if (!dark) objc_setAssociatedObject(layer, "YMOLEDSettingsColor", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if ([view isKindOfClass:UICollectionViewCell.class]) {
+        UICollectionViewCell *cell = (UICollectionViewCell *)view;
+        YMSettingsFixBackingImage(cell.backgroundView, dark);
+        YMSettingsFixBackingImage(cell.selectedBackgroundView, dark);
+    }
+    for (UIView *child in view.subviews) YMSettingsFixSurface(child, dark);
+}
+
+%hook YTSettingsViewController
+- (void)viewDidAppear:(BOOL)animated {
     %orig;
-    if (![self isKindOfClass:%c(YTSettingsCell)] && ![self isKindOfClass:%c(YTSettingsLinkCell)]) return;
-    // Flat cells build white backing views independently of the color palette.
-    UIColor *background = self.backgroundView.backgroundColor ?: UIColor.clearColor;
-    UIColor *selectedBackground = self.selectedBackgroundView.backgroundColor ?: UIColor.clearColor;
-    self.backgroundView.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? [UIColor blackColor] : background;
-    }];
-    self.selectedBackgroundView.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? [UIColor colorWithWhite:0.12 alpha:1.0] : selectedBackground;
-    }];
+    YMSettingsFixSurface(self.view, YMSettingsUsesDarkPage(self));
+}
+- (void)viewDidLayoutSubviews {
+    %orig;
+    YMSettingsFixSurface(self.view, YMSettingsUsesDarkPage(self));
+}
+%end
+
+%hook UICollectionViewCell
+- (void)layoutSubviews {
+    %orig;
+    UIViewController *controller = self._viewControllerForAncestor;
+    while (controller && ![controller isKindOfClass:%c(YTSettingsViewController)])
+        controller = controller.parentViewController;
+    if ([controller isKindOfClass:%c(YTSettingsViewController)])
+        YMSettingsFixSurface(self, YMSettingsUsesDarkPage((YTSettingsViewController *)controller));
 }
 %end
 
