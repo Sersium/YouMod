@@ -7,19 +7,26 @@
   "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
   "apps": [
     {
-      "name": "YouTube (YouMod 3.1) \u00b7 Latest",
+      "name": "YouTube (YouMod 3.2) \u00b7 Latest",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "3.1",
-      "versionDate": "2026-10-31T18:35:35-04:00",
-      "versionDescription": "YouMod 3.1 \u00b7 YouTube 21.42.4\n\n- Support floating tabs and fix OLED settings and watch action layout (1355c05)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.0...1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\nSource: 1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\n",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.1/YouTube_YouMod.ipa",
-      "localizedDescription": "YouMod 3.1 \u00b7 YouTube 21.42.4\n\n- Support floating tabs and fix OLED settings and watch action layout (1355c05)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.0...1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\nSource: 1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\n",
+      "version": "3.2",
+      "versionDate": "2026-10-31T18:54:41-04:00",
+      "versionDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.2/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 130697717,
+      "size": 130698766,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "3.2",
+          "date": "2026-10-31T18:54:41-04:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.2/YouTube_YouMod.ipa",
+          "size": 130698766,
+          "localizedDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n"
+        },
         {
           "version": "3.1",
           "date": "2026-10-31T18:35:35-04:00",
@@ -68,6 +75,29 @@
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.2.0.41/YouTube_YouMod.ipa",
           "size": 129317180,
           "localizedDescription": "YouMod 2.2.0.41 \u00b7 YouTube 21.38.2\n\n- Add DeArrow, video stats, preview defaults and versioned IPA builds (4839f79)\n\nFull diff: https://github.com/Sersium/YouMod/compare/9fd5117f780f6a0b9cf08cec29c47d5106781a7d...4839f798d6f57efa1fe755ae7e6c9d8966c32c31\nSource: 4839f798d6f57efa1fe755ae7e6c9d8966c32c31\n"
+        }
+      ]
+    },
+    {
+      "name": "YouTube (YouMod 3.1)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "3.1",
+      "versionDate": "2026-10-31T18:35:35-04:00",
+      "versionDescription": "YouMod 3.1 \u00b7 YouTube 21.42.4\n\n- Support floating tabs and fix OLED settings and watch action layout (1355c05)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.0...1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\nSource: 1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.1/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.1 \u00b7 YouTube 21.42.4\n\n- Support floating tabs and fix OLED settings and watch action layout (1355c05)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.0...1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\nSource: 1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 130697717,
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "3.1",
+          "date": "2026-10-31T18:35:35-04:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.1/YouTube_YouMod.ipa",
+          "size": 130697717,
+          "localizedDescription": "YouMod 3.1 \u00b7 YouTube 21.42.4\n\n- Support floating tabs and fix OLED settings and watch action layout (1355c05)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.0...1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\nSource: 1355c05e0e17db0b506c4ba5a8c4cd8d955e1f11\n"
         }
       ]
     },
@@ -211,6 +241,14 @@
     }
   ],
   "news": [
+    {
+      "identifier": "youmod-3.2",
+      "title": "YouMod 3.2",
+      "caption": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n",
+      "date": "2026-10-31T18:54:41-04:00",
+      "url": "https://github.com/Sersium/YouMod/releases/tag/v3.2",
+      "notify": true
+    },
     {
       "identifier": "youmod-3.1",
       "title": "YouMod 3.1",
