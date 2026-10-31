@@ -119,11 +119,24 @@ tabs = (root / 'Files/Tabbar.x').read_text()
 settings = (root / 'Files/YouModSettings.x').read_text()
 assert 'YTIPivotBarRenderer *renderer = original;' in tabs, 'Preserve native tab renderer identity'
 assert '[original copy]' not in tabs
-assert tabs.count('%orig(YMOrderedPivotRenderer(renderer))') == 1, 'Order tabs once, in the shared view renderer'
+for bar_class in ('YTPivotBarView', 'YTFloatingPivotBarView'):
+    hook = tabs.split('%hook ' + bar_class + '\n', 1)[1].split('%end', 1)[0]
+    assert hook.count('%orig(YMOrderedPivotRenderer(renderer))') == 1, 'Both bar implementations must share the native ordered renderer'
+assert '%orig(IS_ENABLED(HideTabLabels) || hidden)' in tabs, 'Native floating-bar label updates must respect Hide Labels'
 assert 'if (!button.superview ||' in dearrow, 'Retry cards whose thumbnails arrive after initial layout'
 assert 'if (ordered.count)' in tabs, 'An invalid saved order must not blank navigation'
 assert '[self loadPivotBarWithOffline:NO triggeredByNotification:YES]' in settings
 assert 'performSelector:@selector(refreshPivotBarWithTriggedByNotification:)' not in settings
+
+appearance = (root / 'Files/Apperence.x').read_text()
+oled_cell = appearance.split('%hook YTCollectionViewCell\n', 1)[1].split('%end', 1)[0]
+assert '- (void)updateBackgroundImage' in oled_cell, 'Theme native backing views when they are rebuilt'
+assert '%c(YTSettingsCell)' in oled_cell and '%c(YTSettingsLinkCell)' in oled_cell, 'Include legacy settings links without repainting feed cells'
+assert 'self.backgroundView.backgroundColor' in oled_cell and 'self.selectedBackgroundView.backgroundColor' in oled_cell
+assert ': background;' in oled_cell and ': selectedBackground;' in oled_cell, 'Preserve both original light-mode backgrounds'
+assert oled_cell.count('?: UIColor.clearColor') == 2, 'Transparent native backgrounds must remain valid dynamic colors'
+assert oled_cell.count('traits.userInterfaceStyle == UIUserInterfaceStyleDark') == 2
+assert 'self' not in oled_cell.split('^UIColor *', 1)[1].split('}];', 1)[0], 'Dynamic colors must not retain the cell'
 
 # Exercise the actual ICU-pattern text from the implementation, translating the
 # Unicode-codepoint escape into Python's equivalent for this portable check.

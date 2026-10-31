@@ -23,6 +23,22 @@
 - (UIColor *)backgroundColor:(NSInteger)pageStyle { return pageStyle == 1 ? [UIColor blackColor] : %orig; }
 %end
 
+%hook YTCollectionViewCell
+- (void)updateBackgroundImage {
+    %orig;
+    if (![self isKindOfClass:%c(YTSettingsCell)] && ![self isKindOfClass:%c(YTSettingsLinkCell)]) return;
+    // Flat cells build white backing views independently of the color palette.
+    UIColor *background = self.backgroundView.backgroundColor ?: UIColor.clearColor;
+    UIColor *selectedBackground = self.selectedBackgroundView.backgroundColor ?: UIColor.clearColor;
+    self.backgroundView.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? [UIColor blackColor] : background;
+    }];
+    self.selectedBackgroundView.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? [UIColor colorWithWhite:0.12 alpha:1.0] : selectedBackground;
+    }];
+}
+%end
+
 void YouModApplyOLEDToDisplayView(_ASDisplayView *view, NSString *iden) {
     if (!IS_ENABLED(OLEDTheme)) return;
     UIViewController *controller = view._viewControllerForAncestor;

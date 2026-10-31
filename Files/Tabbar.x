@@ -155,6 +155,13 @@ static YTIPivotBarRenderer *YMOrderedPivotRenderer(YTIPivotBarRenderer *original
 }
 %end
 
+// The scrolling glass bar is a separate view, not a YTPivotBarView subclass.
+%hook YTFloatingPivotBarView
+- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
+    %orig(YMOrderedPivotRenderer(renderer));
+}
+%end
+
 // Hide Tab Bar Indicators
 %hook YTPivotBarIndicatorView
 - (void)setFillColor:(UIColor *)arg1 {
@@ -246,6 +253,9 @@ static void YMOpenLinkFromClipboard(UIViewController *presentingVC, BOOL isRunti
 static BOOL isGestureRegistered = NO;
 // Hide Tab Labels + long-press on the first tab to open Manage Tabs
 %hook YTPivotBarItemView
+- (void)setHideLabel:(BOOL)hidden {
+    %orig(IS_ENABLED(HideTabLabels) || hidden);
+}
 - (void)setRenderer:(YTIPivotBarRenderer *)renderer {
     %orig;
     if (IS_ENABLED(HideTabLabels)) {

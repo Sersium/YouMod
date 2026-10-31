@@ -4,9 +4,9 @@ import subprocess
 import tempfile
 root = Path(__file__).resolve().parents[1]
 source = (root / 'Files/WatchActionBar.x').read_text()
-start = source.index('static CGRect YMWatchViewCountFrame(')
+start = source.index('static CGRect YMWatchJoinViewsFrame(')
 helper = source[start:source.index('\n}\n', start) + 3]
-for name, file in [('YMWatchPrefixFrame', source), ('YMVoteLabelFrame', (root / 'Files/ReturnYouTubeDislike.x').read_text())]:
+for name, file in [('YMWatchPrefixFrame', source), ('YMWatchReservedViewsFrame', source), ('YMVoteLabelFrame', (root / 'Files/ReturnYouTubeDislike.x').read_text())]:
     start = file.index('static CGRect ' + name + '(')
     helper += file[start:file.index('\n}\n', start) + 3]
 stubs = '''
@@ -30,12 +30,16 @@ typedef struct { CGPoint origin; CGSize size; } CGRect;
 '''
 cases = '''
 int main(void) {
-    // Screenshot: membership and subscription before the like control.
-    CGRect a=YMWatchViewCountFrame(CGRectMake(114,0,56,44),CGRectMake(52,0,56,44),CGRectMake(192,0,40,44),1);
-    assert(a.origin.x==100 && a.size.width==88 && CGRectGetMaxX(a)<192);
-    // Channel without a Join button, including a narrower screen.
-    CGRect b=YMWatchViewCountFrame(CGRectMake(44,0,96,44),CGRectZero,CGRectMake(150,0,40,44),1);
-    assert(b.size.width>=44 && b.origin.x>=88 && CGRectGetMaxX(b)<150);
+    // A wide native slot must not center the count far away from Subscribe.
+    CGRect a=YMWatchJoinViewsFrame(CGRectMake(100,0,150,44));
+    assert(a.origin.x==100 && a.size.width==52);
+    CGRect b=YMWatchReservedViewsFrame(CGRectMake(156,0,40,44),0);
+    assert(b.origin.x==100 && b.size.width==52 && CGRectGetMaxX(b)+4==156);
+    // If Like starts a second line, its reserved counter slot moves with it.
+    CGRect wrapped=YMWatchReservedViewsFrame(CGRectMake(68,56,40,44),0);
+    assert(wrapped.origin.x==12 && wrapped.origin.y==56 && CGRectGetMaxX(wrapped)+4==68);
+    CGRect rtl=YMWatchReservedViewsFrame(CGRectMake(252,56,40,44),1);
+    assert(rtl.origin.x==296 && rtl.origin.y==56 && rtl.size.width==52);
     // Tablet action row without Subscribe: a 52pt prefix and a 4pt gap.
     CGRect tabletLike=CGRectMake(12,0,107,32);
     CGRect prefix=YMWatchPrefixFrame(tabletLike);
@@ -46,9 +50,16 @@ int main(void) {
     CGRect dislike=YMVoteLabelFrame(CGRectMake(79,4,24,24),host);
     assert(CGRectGetMaxX(like)<dislike.origin.x);
     assert(CGRectGetMidX(like)==20 && CGRectGetMidX(dislike)==91);
-    // Missing native subscription target: preserve its existing hit target.
-    CGRect c=YMWatchViewCountFrame(CGRectMake(114,0,56,44),CGRectMake(52,0,56,44),CGRectMake(192,0,40,44),0);
+    // A wrapped shared host must keep each vote label on its icon's line.
+    CGRect tallHost=CGRectMake(0,0,360,100);
+    CGRect topVote=YMVoteLabelFrame(CGRectMake(8,4,24,24),tallHost);
+    CGRect bottomVote=YMVoteLabelFrame(CGRectMake(8,60,24,24),tallHost);
+    assert(topVote.origin.y==28 && CGRectGetMaxY(topVote)<56);
+    assert(bottomVote.origin.y==84 && CGRectGetMaxY(bottomVote)<=100);
+    // Legacy bars can use only the hidden Join slot; never cover Subscribe.
+    CGRect c=YMWatchJoinViewsFrame(CGRectMake(52,0,56,44));
     assert(c.origin.x==52 && CGRectGetMaxX(c)<=114);
+    assert(YMWatchJoinViewsFrame(CGRectZero).size.width==0);
 }
 '''
 with tempfile.TemporaryDirectory() as tmp:
@@ -57,9 +68,18 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(['cc', '-Wall', '-Werror', str(c), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
 assert 'addYogaChild:' not in source and 'addSubnode:' not in source
-assert 'addTarget:target action:@selector(handleTap)' in source
+assert 'YMCompactSubscribe' not in source and 'YMGeminiOverflow' not in source, 'Keep original Subscribe, Gemini and More hit targets'
 assert 'id.sponsorship.sponsor.button' in source
 assert 'YMWatchRowForControl(self)' in source
 assert 'if (!like || !subscribe)' not in source, 'Tablet actions do not contain Subscribe'
-assert 'if (!subscribe && CGRectIsEmpty(frame))' in source
-print('PASS: phone/tablet view placement, separate vote labels, native actions and no Yoga mutation')
+assert 'frame = YMPrependWatchViews(bar, like)' in source
+configure = source.split('- (void)controllerDidApplyProperties {', 1)[1].split('%end', 1)[0]
+assert configure.index('%orig;') < configure.index('self.style.flexWrap = 1;')
+assert '@"id.video.non_scrollable_action_bar"' in configure
+assert 'self.style.height = automatic;' in configure and 'self.style.maxHeight = automatic;' in configure
+assert 'margin.start = (YMWatchDimension){1, 56}' in configure, 'The counter needs measured space when actions wrap'
+assert 'child.style.flexGrow = 0' in configure, 'Do not stretch the gap after Subscribe'
+layout = source.split('%hook _ASDisplayView', 1)[1]
+assert '.style.' not in layout, 'Do not change native measurement from UIKit layout callbacks'
+assert 'parent.yogaChildren.count != 1' in configure, 'Do not collapse a Join ancestor shared with other buttons'
+print('PASS: tight counter placement, wrapped/RTL rows, tablet fallback, native actions and no added Yoga children')

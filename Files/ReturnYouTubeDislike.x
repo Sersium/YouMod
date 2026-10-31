@@ -301,7 +301,7 @@ static ASTextNode *YMNativeVoteText(ASDisplayNode *node, ASDisplayNode *button, 
 static CGRect YMVoteLabelFrame(CGRect button, CGRect host) {
     CGFloat width = MIN(42, button.size.width);
     return CGRectMake(CGRectGetMidX(button) - width / 2,
-                      MAX(CGRectGetMinY(button), CGRectGetMaxY(host) - 12), width, 12);
+                      MAX(CGRectGetMinY(button), MIN(CGRectGetMaxY(host) - 12, CGRectGetMaxY(button))), width, 12);
 }
 
 // Never add Yoga children to a native measured/automatically managed node.
