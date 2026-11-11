@@ -7,19 +7,26 @@
   "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
   "apps": [
     {
-      "name": "YouTube (YouMod 3.9) \u00b7 Latest",
+      "name": "YouTube (YouMod 4.1) \u00b7 Latest",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "3.9",
-      "versionDate": "2026-11-11T06:20:22-05:00",
-      "versionDescription": "YouMod 3.9 \u00b7 YouTube 21.42.4\n\n- Use the active watch row to bind titles and stop changing feed text geometry (bc589f4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.8...bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\nSource: bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\n",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.9/YouTube_YouMod.ipa",
-      "localizedDescription": "YouMod 3.9 \u00b7 YouTube 21.42.4\n\n- Use the active watch row to bind titles and stop changing feed text geometry (bc589f4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.8...bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\nSource: bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\n",
+      "version": "4.1",
+      "versionDate": "2026-11-11T07:52:22-05:00",
+      "versionDescription": "YouMod 4.1 \u00b7 YouTube 21.42.4\n\n- Declare the native panel identifier before Logos emits hook signatures (9b58965)\n- Keep expanded titles in sync and route feed DeArrow finger targets correctly (57a1f36)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.9...9b589659417859db3a8b8d4637736648e5d29ab3\nSource: 9b589659417859db3a8b8d4637736648e5d29ab3\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v4.1/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 4.1 \u00b7 YouTube 21.42.4\n\n- Declare the native panel identifier before Logos emits hook signatures (9b58965)\n- Keep expanded titles in sync and route feed DeArrow finger targets correctly (57a1f36)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.9...9b589659417859db3a8b8d4637736648e5d29ab3\nSource: 9b589659417859db3a8b8d4637736648e5d29ab3\n",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 130707108,
+      "size": 130711187,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "4.1",
+          "date": "2026-11-11T07:52:22-05:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v4.1/YouTube_YouMod.ipa",
+          "size": 130711187,
+          "localizedDescription": "YouMod 4.1 \u00b7 YouTube 21.42.4\n\n- Declare the native panel identifier before Logos emits hook signatures (9b58965)\n- Keep expanded titles in sync and route feed DeArrow finger targets correctly (57a1f36)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.9...9b589659417859db3a8b8d4637736648e5d29ab3\nSource: 9b589659417859db3a8b8d4637736648e5d29ab3\n"
+        },
         {
           "version": "3.9",
           "date": "2026-11-11T06:20:22-05:00",
@@ -110,6 +117,29 @@
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.2.0.41/YouTube_YouMod.ipa",
           "size": 129317180,
           "localizedDescription": "YouMod 2.2.0.41 \u00b7 YouTube 21.38.2\n\n- Add DeArrow, video stats, preview defaults and versioned IPA builds (4839f79)\n\nFull diff: https://github.com/Sersium/YouMod/compare/9fd5117f780f6a0b9cf08cec29c47d5106781a7d...4839f798d6f57efa1fe755ae7e6c9d8966c32c31\nSource: 4839f798d6f57efa1fe755ae7e6c9d8966c32c31\n"
+        }
+      ]
+    },
+    {
+      "name": "YouTube (YouMod 3.9)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "3.9",
+      "versionDate": "2026-11-11T06:20:22-05:00",
+      "versionDescription": "YouMod 3.9 \u00b7 YouTube 21.42.4\n\n- Use the active watch row to bind titles and stop changing feed text geometry (bc589f4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.8...bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\nSource: bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.9/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.9 \u00b7 YouTube 21.42.4\n\n- Use the active watch row to bind titles and stop changing feed text geometry (bc589f4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.8...bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\nSource: bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 130707108,
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "3.9",
+          "date": "2026-11-11T06:20:22-05:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.9/YouTube_YouMod.ipa",
+          "size": 130707108,
+          "localizedDescription": "YouMod 3.9 \u00b7 YouTube 21.42.4\n\n- Use the active watch row to bind titles and stop changing feed text geometry (bc589f4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.8...bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\nSource: bc589f4b3901cc6f22cfb12c12b0f5ccb2a1c276\n"
         }
       ]
     },
@@ -391,6 +421,14 @@
     }
   ],
   "news": [
+    {
+      "identifier": "youmod-4.1",
+      "title": "YouMod 4.1",
+      "caption": "YouMod 4.1 \u00b7 YouTube 21.42.4\n\n- Declare the native panel identifier before Logos emits hook signatures (9b58965)\n- Keep expanded titles in sync and route feed DeArrow finger targets correctly (57a1f36)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.9...9b589659417859db3a8b8d4637736648e5d29ab3\nSource: 9b589659417859db3a8b8d4637736648e5d29ab3\n",
+      "date": "2026-11-11T07:52:22-05:00",
+      "url": "https://github.com/Sersium/YouMod/releases/tag/v4.1",
+      "notify": true
+    },
     {
       "identifier": "youmod-3.9",
       "title": "YouMod 3.9",
