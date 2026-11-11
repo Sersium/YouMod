@@ -16,25 +16,50 @@ static NSString * const kYMReturnDislikeNotification = @"YouModReturnDislikeNoti
 static NSString *currentWatchID, *detailsID, *detailsTitle;
 static NSString *YouModCurrentWatchVideoID(void);
 static NSString *YouModCurrentWatchTitle(void);
+@class YTEngagementPanelView;
+static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel);
 /* TEXT_HELPERS */
 
 @class ASDisplayNode;
 @interface UIView : NSObject
 @property BOOL window;
+@property BOOL hidden;
+@property BOOL userInteractionEnabled;
+@property CGFloat alpha;
+@property NSUInteger layoutRequests;
 @property CGRect frame;
 @property(readonly) CGRect bounds;
 @property(weak) UIView *superview;
 @property(copy) NSArray *subviews;
 @property(strong) ASDisplayNode *keepalive_node;
 - (CGRect)convertRect:(CGRect)rect toView:(UIView *)view;
+- (CGPoint)convertPoint:(CGPoint)point fromView:(UIView *)view;
+- (void)setNeedsLayout;
 @end
 @implementation UIView
+- (instancetype)init { if ((self = [super init])) { _userInteractionEnabled = YES; _alpha = 1; } return self; }
 - (CGRect)bounds { return CGRectMake(0,0,self.frame.size.width,self.frame.size.height); }
 - (void)setSubviews:(NSArray *)views { _subviews = [views copy]; for (UIView *v in views) v.superview = self; }
 - (CGRect)convertRect:(CGRect)rect toView:(UIView *)view {
     for (UIView *p=self; p && p != view; p=p.superview) rect = CGRectOffset(rect,p.frame.origin.x,p.frame.origin.y);
     return rect;
 }
+- (CGPoint)convertPoint:(CGPoint)point fromView:(UIView *)view { assert(view == self.superview); return CGPointMake(point.x-self.frame.origin.x,point.y-self.frame.origin.y); }
+- (void)setNeedsLayout { self.layoutRequests++; }
+@end
+@class UIEvent;
+@interface UIButton : UIView
+@property BOOL enabled;
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;
+@end
+@implementation UIButton
+- (instancetype)init { if ((self = [super init])) _enabled = YES; return self; }
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event { return CGRectContainsPoint(self.bounds,point); }
+@end
+@interface YouModDeArrowButton : UIButton
+@end
+@implementation YouModDeArrowButton
+/* BUTTON_HIT_AREA */
 @end
 @interface UILabel : UIView
 @property(copy) NSAttributedString *rawAttributedText;
@@ -47,16 +72,21 @@ static NSString *YouModCurrentWatchTitle(void);
 @interface ASDisplayNode : NSObject
 @property BOOL isNodeLoaded;
 @property BOOL layerBacked;
-@property(strong) ASDisplayNode *supernode;
+@property(weak) ASDisplayNode *supernode;
 @property(strong) UIView *view;
 @property CGRect bounds;
+@property CGRect frame;
+@property BOOL hidden;
 @property(copy) NSArray *subnodes;
 @property(copy) NSArray *yogaChildren;
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node;
 @end
 @implementation ASDisplayNode
 - (UIView *)view { assert(!self.layerBacked); return _view; }
-- (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node { return rect; }
+- (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node {
+    for (ASDisplayNode *p=self; p && p != node; p=p.supernode) rect = CGRectOffset(rect,p.frame.origin.x,p.frame.origin.y);
+    return rect;
+}
 @end
 @interface ASTextNode : ASDisplayNode
 @property(copy) NSAttributedString *attributedText;
@@ -162,17 +192,33 @@ static NSString *lastWatchVideoID;
 
 
 @interface UICollectionViewCell : UIView
+@property(strong) NSIndexPath *sourceIndexPath;
 @end
 @implementation UICollectionViewCell
 @end
 @interface _ASCollectionViewCell : UICollectionViewCell
 @property(strong) ASDisplayNode *node;
+@property(strong) UIView *nativeHitView;
+@property BOOL nativeAnimating;
+- (BOOL)isAnimating;
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;
 @end
 @implementation _ASCollectionViewCell
+- (BOOL)isAnimating { return self.nativeAnimating; }
+/* CELL_HIT_TEST */
+@end
+@interface NSIndexPath (CollectionPosition)
+@property(readonly) NSUInteger section;
+@property(readonly) NSUInteger item;
+@end
+@implementation NSIndexPath (CollectionPosition)
+- (NSUInteger)section { return [self indexAtPosition:0]; }
+- (NSUInteger)item { return [self indexAtPosition:1]; }
 @end
 @interface UICollectionView : UIView
 @property(copy) NSArray *visibleCells;
 - (void)layoutSubviews;
+- (NSIndexPath *)indexPathForCell:(UICollectionViewCell *)cell;
 @end
 @interface YTPlayerView : UIView
 @end
@@ -186,7 +232,31 @@ static NSString *YouModCurrentWatchVideoID(void) { return currentWatchID; }
 static NSString *YouModCurrentWatchTitle(void) { return [detailsID isEqual:currentWatchID] ? detailsTitle : nil; }
 /* SCANNER_HELPERS */
 @implementation UICollectionView
+- (NSIndexPath *)indexPathForCell:(UICollectionViewCell *)cell { return cell.sourceIndexPath; }
 /* COLLECTION_HOOK */
+@end
+
+@interface YTEngagementPanelIdentifier : NSObject
+@property(copy) NSString *identifierString;
+@property(copy) NSString *tag;
+- (BOOL)equalToIdentifierString:(NSString *)identifier;
+@end
+@implementation YTEngagementPanelIdentifier
+- (BOOL)equalToIdentifierString:(NSString *)identifier { return [self.identifierString isEqual:identifier]; }
+@end
+@interface YTEngagementPanelView : UIView
+@property(strong) YTEngagementPanelIdentifier *rawIdentifier;
+@property(readonly) YTEngagementPanelIdentifier *panelIdentifier;
+@property(strong) UIView *currentHeaderView;
+@property(strong) UIView *contentView;
+- (void)didMoveToWindow;
+- (void)layoutSubviews;
+- (void)setPanelIdentifier:(YTEngagementPanelIdentifier *)identifier;
+@end
+/* DESCRIPTION_HELPERS */
+@implementation YTEngagementPanelView
+- (YTEngagementPanelIdentifier *)panelIdentifier { return self.rawIdentifier; }
+/* DESCRIPTION_HOOKS */
 @end
 
 @interface TestLikeControl : UIView
@@ -201,6 +271,7 @@ static void YMUpdateWatchBar(UIView *row) { YouModUpdateWatchTitlesForRow(row); 
 static void drainUpdates(UIView *row) {
     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
     assert(!objc_getAssociatedObject(row,"YMWatchTitleQueued"));
+    assert(!objc_getAssociatedObject(row,"YMDescriptionTitleQueued"));
 }
 static FeedTextHook *titleNode(NSString *title) {
     FeedTextHook *node = [FeedTextHook new];
@@ -215,6 +286,7 @@ static _ASCollectionViewCell *nodeCell(CGFloat y, NSArray *nodes) {
     cell.node = [ASDisplayNode new];
     cell.node.layerBacked = YES;
     cell.node.subnodes = nodes;
+    cell.sourceIndexPath = [NSIndexPath indexPathWithIndexes:(NSUInteger[]){0,0} length:2];
     return cell;
 }
 int main(void) { @autoreleasepool {
@@ -326,6 +398,110 @@ int main(void) { @autoreleasepool {
     [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
     assert([heading.attributedText.string isEqual:detached]);
 
+    // Opening the expanded description must preserve the selected title, including reopen.
+    row.window = NO;
+    [manager.toggled removeObject:currentWatchID];
+    YTEngagementPanelView *panel = [YTEngagementPanelView new];
+    panel.window = YES;
+    panel.frame = CGRectMake(0,0,393,700);
+    YTEngagementPanelIdentifier *descriptionID = [YTEngagementPanelIdentifier new];
+    descriptionID.identifierString = @"engagement-panel-structured-description";
+    UILabel *expanded = [UILabel new], *body = [UILabel new];
+    expanded.frame = CGRectMake(16,12,340,90);
+    body.frame = CGRectMake(16,240,340,90);
+    expanded.text = body.text = detailsTitle;
+    UIView *headerView = [UIView new], *bodyView = [UIView new];
+    headerView.subviews = @[expanded];
+    bodyView.subviews = @[body];
+    panel.currentHeaderView = headerView;
+    panel.contentView = bodyView;
+    panel.subviews = @[headerView,bodyView];
+    [panel setPanelIdentifier:descriptionID];
+    [panel didMoveToWindow]; drainUpdates(panel);
+    assert([expanded.text isEqual:manager.titles[currentWatchID]]);
+    assert([body.text isEqual:detailsTitle]); // A repeated title in the description is content.
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
+    assert([expanded.text isEqual:detailsTitle]);
+    panel.window = NO;
+    [panel didMoveToWindow]; drainUpdates(panel);
+    assert(!objc_getAssociatedObject(expanded,"YMDeArrowWatchLabelVideoID"));
+    panel.window = YES;
+    [panel didMoveToWindow]; drainUpdates(panel);
+    assert([manager isOriginalToggledForVideoID:currentWatchID] && [expanded.text isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
+    assert([expanded.text isEqual:manager.titles[currentWatchID]]);
+    expanded.text = detailsTitle;
+    assert([expanded.text isEqual:manager.titles[currentWatchID]]); // Native header refresh keeps the choice.
+
+    // Seamless Elements panels can put the header and body in one flattened node.
+    UIView *elementsView = [UIView new];
+    elementsView.keepalive_node = [ASDisplayNode new];
+    elementsView.keepalive_node.layerBacked = YES;
+    FeedTextHook *expandedNode = titleNode(detailsTitle), *bodyNode = titleNode(detailsTitle);
+    expandedNode.forbidParentAccess = bodyNode.forbidParentAccess = NO;
+    expandedNode.frame = CGRectMake(0,20,340,90); expandedNode.bounds = CGRectMake(0,0,340,90);
+    bodyNode.frame = CGRectMake(0,240,340,90); bodyNode.bounds = CGRectMake(0,0,340,90);
+    expandedNode.supernode = bodyNode.supernode = elementsView.keepalive_node;
+    elementsView.keepalive_node.subnodes = @[expandedNode,bodyNode];
+    panel.currentHeaderView = nil;
+    panel.contentView = elementsView;
+    panel.subviews = @[elementsView];
+    descriptionID.identifierString = nil;
+    descriptionID.tag = @"structured-description";
+    [panel layoutSubviews]; drainUpdates(panel);
+    assert([expandedNode.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    assert([bodyNode.attributedText.string isEqual:detailsTitle]);
+
+    // A collection description must never bind a body cell when its header is offscreen.
+    _ASCollectionViewCell *expandedCell = nodeCell(0,@[expandedNode]);
+    expandedNode.supernode = expandedCell.node;
+    _ASCollectionViewCell *bodyCell = nodeCell(200,@[bodyNode]);
+    bodyNode.supernode = bodyCell.node;
+    bodyCell.sourceIndexPath = [NSIndexPath indexPathWithIndexes:(NSUInteger[]){0,1} length:2];
+    UICollectionView *descriptionCollection = [UICollectionView new];
+    descriptionCollection.subviews = descriptionCollection.visibleCells = @[expandedCell,bodyCell];
+    panel.contentView = descriptionCollection;
+    panel.subviews = @[descriptionCollection];
+    [panel layoutSubviews]; drainUpdates(panel);
+    assert([expandedNode.attributedText.string isEqual:manager.titles[currentWatchID]] && [bodyNode.attributedText.string isEqual:detailsTitle]);
+    descriptionCollection.visibleCells = @[bodyCell];
+    [panel layoutSubviews]; drainUpdates(panel);
+    assert(!objc_getAssociatedObject(bodyNode,"YMDeArrowWatchLabelVideoID"));
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
+    descriptionCollection.visibleCells = @[expandedCell,bodyCell];
+    [descriptionCollection layoutSubviews]; drainUpdates(panel);
+    assert([expandedNode.attributedText.string isEqual:detailsTitle]);
+
+    // Switching an existing panel to Comments clears bindings and subscriptions.
+    YTEngagementPanelIdentifier *commentsID = [YTEngagementPanelIdentifier new];
+    commentsID.identifierString = @"engagement-panel-comments-section";
+    [panel setPanelIdentifier:commentsID];
+    assert(!objc_getAssociatedObject(panel,"YMDescriptionObserved"));
+    assert(!objc_getAssociatedObject(expandedNode,"YMDeArrowWatchLabelVideoID"));
+    expandedNode.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
+    assert([expandedNode.attributedText.string isEqual:detailsTitle]);
+
+    // Branding arriving while the description is open updates the expanded title.
+    currentWatchID = detailsID = @"PANEL000001";
+    detailsTitle = @"An original full title";
+    manager.originals[currentWatchID] = detailsTitle;
+    expanded.text = detailsTitle;
+    panel.currentHeaderView = headerView;
+    panel.contentView = bodyView;
+    panel.subviews = @[headerView,bodyView];
+    [panel setPanelIdentifier:descriptionID]; drainUpdates(panel);
+    assert([expanded.text isEqual:detailsTitle]);
+    manager.titles[currentWatchID] = @"A later DeArrow full title";
+    [[NSNotificationCenter defaultCenter] postNotificationName:kYMDeArrowUpdatedNotification object:nil userInfo:@{@"videoID":currentWatchID}]; drainUpdates(panel);
+    assert([expanded.text isEqual:@"A later DeArrow full title"]);
+    preferences[DeArrowReplaceTitles] = NO;
+    [panel layoutSubviews]; drainUpdates(panel);
+    assert([expanded.text isEqual:detailsTitle]);
+    preferences[DeArrowReplaceTitles] = YES;
+    panel.window = NO;
+    [panel didMoveToWindow]; drainUpdates(panel);
+
     // The legacy UIKit cell also handles an absent renderer video ID.
     currentWatchID = detailsID = @"LEGACY00001";
     detailsTitle = @"(Privacy Not Included)";
@@ -339,6 +515,42 @@ int main(void) { @autoreleasepool {
     assert([legacy.titleLabel.attributedText.string isEqual:manager.titles[currentWatchID]]);
     [manager toggleDeArrowForVideoID:currentWatchID];
     assert([legacy.titleLabel.attributedText.string isEqual:detailsTitle]);
+
+    // Texture's native cell hit-test forwards into its node and ignores our sibling.
+    // The production hook must return the accessory across its real 44pt target.
+    _ASCollectionViewCell *feedTarget = nodeCell(0,@[]);
+    feedTarget.frame = CGRectMake(0,0,393,310);
+    feedTarget.nativeHitView = [UIView new];
+    UIView *menu = [UIView new];
+    YouModDeArrowButton *toggle = [YouModDeArrowButton new];
+    toggle.frame = CGRectMake(342,262,44,44);
+    toggle.window = YES;
+    feedTarget.subviews = @[menu,toggle];
+    NSHashTable *menus = [NSHashTable weakObjectsHashTable];
+    [menus addObject:menu];
+    objc_setAssociatedObject(feedTarget,"YMDeArrowFeedMenus",menus,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(menu,"kYMDeArrowButton",toggle,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    assert([feedTarget hitTest:CGPointMake(343,263) withEvent:nil] == toggle);
+    assert([feedTarget hitTest:CGPointMake(385,305) withEvent:nil] == toggle);
+    assert([feedTarget hitTest:CGPointMake(350,240) withEvent:nil] == feedTarget.nativeHitView); // More stays native.
+    assert([feedTarget hitTest:CGPointMake(100,100) withEvent:nil] == feedTarget.nativeHitView); // Video stays native.
+    toggle.enabled = NO;
+    assert([feedTarget hitTest:CGPointMake(360,280) withEvent:nil] == feedTarget.nativeHitView);
+    toggle.enabled = YES; toggle.hidden = YES;
+    assert([feedTarget hitTest:CGPointMake(360,280) withEvent:nil] == feedTarget.nativeHitView);
+    toggle.hidden = NO;
+    feedTarget.nativeAnimating = YES;
+    assert([feedTarget hitTest:CGPointMake(360,280) withEvent:nil] == feedTarget.nativeHitView);
+    feedTarget.nativeAnimating = NO;
+    // Compact notification layout uses the same cell hit path.
+    feedTarget.frame = CGRectMake(0,0,393,98);
+    toggle.frame = CGRectMake(347,36,44,44);
+    assert([feedTarget hitTest:CGPointMake(348,37) withEvent:nil] == toggle);
+    assert([feedTarget hitTest:CGPointMake(390,79) withEvent:nil] == toggle);
+    assert([feedTarget hitTest:CGPointMake(370,20) withEvent:nil] == feedTarget.nativeHitView);
+    preferences[DeArrowEnabled] = NO;
+    assert([feedTarget hitTest:CGPointMake(370,60) withEvent:nil] == feedTarget.nativeHitView);
+    preferences[DeArrowEnabled] = YES;
 
     FeedTextHook *fullscreen = titleNode(@"Unrelated fullscreen title");
     NSAttributedString *overlay = fullscreen.attributedText;

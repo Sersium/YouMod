@@ -8,6 +8,7 @@
 static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNotification";
 static NSAttributedString *YouModBoundWatchTitle(id label, NSAttributedString *native);
 static void YouModClearWatchTitle(id label);
+static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel);
 
 
 @interface ELMImageNode : ASNetworkImageNode
@@ -25,12 +26,18 @@ static void YouModClearWatchTitle(id label);
 
 @interface YouModDeArrowButton : UIButton
 @property (nonatomic, weak) UIView *overflowView;
+@property (nonatomic, strong) UIView *indicatorBackdrop;
+@property (nonatomic) CGRect indicatorFrame;
 @end
 
 @implementation YouModDeArrowButton
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
-    CGRect hitBounds = CGRectInset(self.bounds, -9.0, -9.0);
+    CGRect hitBounds = CGRectInset(self.bounds, -MAX(0, (44 - self.bounds.size.width) / 2), -MAX(0, (44 - self.bounds.size.height) / 2));
     return CGRectContainsPoint(hitBounds, point);
+}
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    if (self.indicatorBackdrop) self.imageView.center = CGPointMake(CGRectGetMidX(self.indicatorFrame), CGRectGetMidY(self.indicatorFrame));
 }
 @end
 
@@ -948,13 +955,17 @@ static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
     indBtn.accessibilityValue = isOriginal ? @"Original" : @"DeArrow";
     BOOL hasBranding = [[YouModDeArrowManager sharedInstance] hasDeArrowBrandingForVideoID:videoID];
 
-    static UIImage *image;
+    BOOL feed = [indBtn.accessibilityIdentifier isEqualToString:@"youmod.feed.dearrow"];
+    static UIImage *image, *feedImage;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIImageSymbolWeightSemibold];
         image = [UIImage systemImageNamed:@"arrow.triangle.2.circlepath" withConfiguration:cfg];
+        feedImage = [UIImage systemImageNamed:@"arrow.triangle.2.circlepath" withConfiguration:
+            [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightSemibold]];
     });
-    if ([indBtn imageForState:UIControlStateNormal] != image) [indBtn setImage:image forState:UIControlStateNormal];
+    UIImage *symbol = feed ? feedImage : image;
+    if ([indBtn imageForState:UIControlStateNormal] != symbol) [indBtn setImage:symbol forState:UIControlStateNormal];
 
     if (isOriginal || !hasBranding) {
         indBtn.tintColor = [UIColor colorWithWhite:0.6 alpha:0.7];
@@ -963,7 +974,18 @@ static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
         indBtn.tintColor = [UIColor colorWithRed:0.0 green:0.72 blue:1.0 alpha:1.0]; // DeArrow cyan
         indBtn.backgroundColor = [UIColor colorWithRed:0.0 green:0.72 blue:1.0 alpha:0.15];
     }
-
+    if (feed) {
+        YouModDeArrowButton *button = (YouModDeArrowButton *)indBtn;
+        if (!button.indicatorBackdrop) {
+            button.indicatorBackdrop = [[UIView alloc] init];
+            button.indicatorBackdrop.userInteractionEnabled = NO;
+            [button insertSubview:button.indicatorBackdrop atIndex:0];
+        }
+        button.indicatorBackdrop.frame = button.indicatorFrame;
+        button.indicatorBackdrop.layer.cornerRadius = button.indicatorFrame.size.width / 2;
+        button.indicatorBackdrop.backgroundColor = button.backgroundColor;
+        button.backgroundColor = UIColor.clearColor;
+    }
 }
 
 static void YouModCollectCardNodes(ASDisplayNode *node, NSMutableArray *textNodes, NSMutableArray *imageNodes) {
@@ -1085,8 +1107,15 @@ static ASNetworkImageNode *YouModFindThumbnailNode(NSArray *imageNodes, NSString
 
 // Use the native More column without changing any text measurement.
 static CGRect YouModDeArrowButtonFrame(CGRect bounds, CGRect menu) {
-    CGRect frame = CGRectMake(CGRectGetMidX(menu) - 13, CGRectGetMaxY(menu) + 10, 26, 26);
+    CGFloat x = MAX(CGRectGetMinX(bounds) + 2, MIN(CGRectGetMidX(menu) - 22, CGRectGetMaxX(bounds) - 46));
+    CGRect frame = CGRectMake(x, CGRectGetMaxY(menu) + 12, 44, 44);
     return CGRectContainsRect(bounds, frame) ? frame : CGRectZero;
+}
+
+static CGRect YouModDeArrowIndicatorFrame(CGRect bounds, CGRect menu, CGRect target) {
+    CGFloat size = MIN(32, MAX(26, menu.size.width - 4));
+    CGFloat center = MAX(CGRectGetMinX(bounds) + size / 2 + 2, MIN(CGRectGetMidX(menu), CGRectGetMaxX(bounds) - size / 2 - 2));
+    return CGRectMake(center - size / 2 - target.origin.x, (44 - size) / 2, size, size);
 }
 
 extern NSString *YouModCurrentWatchVideoID(void);
@@ -1365,6 +1394,143 @@ void YouModUpdateWatchTitlesForRow(UIView *row) {
     %orig;
     NSHashTable *rows = objc_getAssociatedObject(self, "YMWatchTitleRows");
     for (UIView *row in rows.allObjects) YouModUpdateWatchTitlesForRow(row);
+    NSHashTable *panels = objc_getAssociatedObject(self, "YMDescriptionPanels");
+    for (YTEngagementPanelView *panel in panels.allObjects) YouModUpdateDescriptionTitle(panel);
+}
+%end
+
+@interface YTEngagementPanelIdentifier : NSObject
+- (BOOL)equalToIdentifierString:(NSString *)identifier;
+- (NSString *)tag;
+@end
+@interface YTEngagementPanelView (YouModDeArrowDescription)
+@property (nonatomic, readonly) YTEngagementPanelIdentifier *panelIdentifier;
+@property (nonatomic, readonly) UIView *currentHeaderView;
+@property (nonatomic, readonly) UIView *contentView;
+@end
+
+static BOOL YouModIsDescriptionPanel(YTEngagementPanelView *panel) {
+    YTEngagementPanelIdentifier *identifier = panel.panelIdentifier;
+    return [identifier equalToIdentifierString:@"engagement-panel-structured-description"] ||
+        [identifier.tag isEqualToString:@"structured-description"] || [identifier.tag isEqualToString:@"description"];
+}
+
+static void YouModDescriptionTitleRoots(UIView *view, YTEngagementPanelView *panel, NSMutableArray *roots) {
+    if (!view || view.hidden || view.alpha <= 0.01) return;
+    if ([view isKindOfClass:UICollectionView.class]) {
+        UICollectionView *collection = (UICollectionView *)view;
+        NSHashTable *panels = objc_getAssociatedObject(collection, "YMDescriptionPanels");
+        if (!panels) {
+            panels = [NSHashTable weakObjectsHashTable];
+            objc_setAssociatedObject(collection, "YMDescriptionPanels", panels, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        [panels addObject:panel];
+        for (UICollectionViewCell *cell in collection.visibleCells) {
+            NSIndexPath *path = [collection indexPathForCell:cell];
+            if (path && path.section == 0 && path.item == 0) [roots addObject:cell];
+        }
+        return;
+    }
+    if (([view respondsToSelector:@selector(keepalive_node)] && [(id)view keepalive_node]) ||
+        ([view respondsToSelector:@selector(attributedText)] && [view respondsToSelector:@selector(setAttributedText:)])) {
+        [roots addObject:view];
+        return;
+    }
+    for (UIView *child in view.subviews) YouModDescriptionTitleRoots(child, panel, roots);
+}
+
+static void YouModApplyDescriptionTitle(YTEngagementPanelView *panel, NSString *videoID) {
+    NSMutableArray *roots = [NSMutableArray array], *labels = [NSMutableArray array], *positions = [NSMutableArray array];
+    YouModDescriptionTitleRoots(panel.currentHeaderView, panel, roots);
+    YouModDescriptionTitleRoots(panel.contentView, panel, roots);
+    CGFloat top = CGFLOAT_MAX;
+    for (UIView *root in roots) {
+        ASDisplayNode *node = [root isKindOfClass:%c(_ASCollectionViewCell)] ? ((_ASCollectionViewCell *)root).node :
+            ([root respondsToSelector:@selector(keepalive_node)] ? [(id)root keepalive_node] : nil);
+        NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
+        YouModCollectCardNodes(node, texts, images);
+        for (ASTextNode *text in texts) {
+            if (text.hidden || CGRectIsEmpty(text.bounds)) continue;
+            if (!YouModWatchTitleMatches(text, text.attributedText, videoID)) continue;
+            CGRect rect = [text convertRect:text.bounds toNode:node];
+            CGFloat y = CGRectGetMinY([root convertRect:rect toView:panel]);
+            [labels addObject:text]; [positions addObject:@(y)]; top = MIN(top, y);
+        }
+        NSMutableArray *views = [NSMutableArray array];
+        YouModCollectWatchLabels(root, views);
+        for (UIView *label in views) {
+            if (label.hidden || label.alpha <= 0.01 || CGRectIsEmpty(label.bounds)) continue;
+            if (!YouModWatchTitleMatches(label, YouModReadTitleText(label), videoID)) continue;
+            CGFloat y = CGRectGetMinY([label convertRect:label.bounds toView:panel]);
+            [labels addObject:label]; [positions addObject:@(y)]; top = MIN(top, y);
+        }
+    }
+    NSHashTable *bound = objc_getAssociatedObject(panel, "YMDescriptionTitles");
+    if (!bound) {
+        bound = [NSHashTable weakObjectsHashTable];
+        objc_setAssociatedObject(panel, "YMDescriptionTitles", bound, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    BOOL changed = NO;
+    for (NSUInteger i = 0; i < labels.count; i++) {
+        // A description can repeat the video's title in its body; keep that text native.
+        if ([positions[i] doubleValue] > top + 2) continue;
+        id label = labels[i];
+        NSAttributedString *before = YouModReadTitleText(label);
+        YouModUpdateWatchTitleLabel(label, videoID);
+        [bound addObject:label];
+        changed |= ![before isEqualToAttributedString:YouModReadTitleText(label)];
+    }
+    if (changed) { [panel.currentHeaderView setNeedsLayout]; [panel setNeedsLayout]; }
+}
+
+static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel) {
+    if (!panel.window || !YouModIsDescriptionPanel(panel)) {
+        if (objc_getAssociatedObject(panel, "YMDescriptionObserved")) {
+            [[NSNotificationCenter defaultCenter] removeObserver:panel name:kYMDeArrowUpdatedNotification object:nil];
+            [[NSNotificationCenter defaultCenter] removeObserver:panel name:@"YouModWatchStatsChanged" object:nil];
+            objc_setAssociatedObject(panel, "YMDescriptionObserved", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        NSHashTable *bound = objc_getAssociatedObject(panel, "YMDescriptionTitles");
+        for (id label in bound.allObjects) YouModClearWatchTitle(label);
+        objc_setAssociatedObject(panel, "YMDescriptionTitles", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        return;
+    }
+    if (!objc_getAssociatedObject(panel, "YMDescriptionObserved")) {
+        [[NSNotificationCenter defaultCenter] addObserver:panel selector:@selector(youmod_descriptionTitleChanged:) name:kYMDeArrowUpdatedNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:panel selector:@selector(youmod_descriptionTitleChanged:) name:@"YouModWatchStatsChanged" object:nil];
+        objc_setAssociatedObject(panel, "YMDescriptionObserved", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (objc_getAssociatedObject(panel, "YMDescriptionTitleQueued")) return;
+    objc_setAssociatedObject(panel, "YMDescriptionTitleQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak YTEngagementPanelView *weakPanel = panel;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        YTEngagementPanelView *current = weakPanel;
+        if (!current) return;
+        objc_setAssociatedObject(current, "YMDescriptionTitleQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        NSString *videoID = YouModCurrentWatchVideoID();
+        if (!current.window || !YouModIsDescriptionPanel(current) || videoID.length != 11) return;
+        YouModApplyDescriptionTitle(current, videoID);
+        if (IS_ENABLED(DeArrowEnabled)) [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
+    });
+}
+
+%hook YTEngagementPanelView
+- (void)didMoveToWindow {
+    %orig;
+    YouModUpdateDescriptionTitle(self);
+}
+- (void)setPanelIdentifier:(YTEngagementPanelIdentifier *)identifier {
+    %orig;
+    YouModUpdateDescriptionTitle(self);
+}
+- (void)layoutSubviews {
+    %orig;
+    YouModUpdateDescriptionTitle(self);
+}
+%new
+- (void)youmod_descriptionTitleChanged:(NSNotification *)note {
+    if ([note.name isEqualToString:@"YouModWatchStatsChanged"] || [note.userInfo[@"videoID"] isEqualToString:YouModCurrentWatchVideoID()])
+        YouModUpdateDescriptionTitle(self);
 }
 %end
 
@@ -1388,7 +1554,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
         [images removeAllObjects];
         YouModCollectNodesFromView(card, texts, images);
         for (ASTextNode *text in texts) {
-            if ([[text description] containsString:@"id.comment."]) return nil;
+            if ([[text description] containsString:@"id.comment."] || YouModIsGroupedUploadText(text.attributedText.string)) return nil;
         }
         YouModFindThumbnailNode(images, videoID);
         if (*videoID) return card;
@@ -1447,7 +1613,8 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     }
     if (!button) {
         button = [YouModDeArrowButton buttonWithType:UIButtonTypeCustom];
-        button.layer.cornerRadius = 13;
+        button.layer.cornerRadius = 22;
+        button.accessibilityIdentifier = @"youmod.feed.dearrow";
         button.accessibilityLabel = @"Toggle DeArrow original title and thumbnail";
         [button addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         objc_setAssociatedObject(self, "kYMDeArrowButton", button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -1457,6 +1624,11 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     button.overflowView = self;
     if (button.superview != card) [card addSubview:button];
     if (!CGRectEqualToRect(button.frame, frame)) button.frame = frame;
+    CGRect indicator = YouModDeArrowIndicatorFrame(card.bounds, menu, frame);
+    if (!CGRectEqualToRect(button.indicatorFrame, indicator)) {
+        button.indicatorFrame = indicator;
+        [button setNeedsLayout];
+    }
     [card bringSubviewToFront:button];
     YouModUpdateOverflowIndicator(button, videoID);
 
@@ -1490,6 +1662,24 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
         // Retry cards whose thumbnail identity was not ready on first layout.
         [self setNeedsLayout];
     }
+}
+%end
+
+@interface _ASCollectionViewCell (YouModDeArrowHitTesting)
+- (BOOL)isAnimating;
+@end
+
+%hook _ASCollectionViewCell
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    if (IS_ENABLED(DeArrowEnabled) && self.userInteractionEnabled && !self.hidden && self.alpha > 0.01 && ![self isAnimating]) {
+        NSHashTable *menus = objc_getAssociatedObject(self, "YMDeArrowFeedMenus");
+        for (UIView *menu in menus.allObjects) {
+            UIButton *button = objc_getAssociatedObject(menu, "kYMDeArrowButton");
+            if (button.superview == self && button.window && button.enabled && !button.hidden && button.alpha > 0.01 &&
+                [button pointInside:[button convertPoint:point fromView:self] withEvent:event]) return button;
+        }
+    }
+    return %orig;
 }
 %end
 

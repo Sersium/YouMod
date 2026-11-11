@@ -52,6 +52,15 @@ scanner = ''.join(function(s) for s in ('static void YouModCollectWatchLabels(',
 for name in ('YTPlayerView', 'YTMainAppPlayerOverlayView', '_ASCollectionViewCell'):
     scanner = scanner.replace('%c(' + name + ')', name + '.class')
 program = program.replace('/* SCANNER_HELPERS */', scanner)
+description = ''.join(function(s) for s in ('static BOOL YouModIsDescriptionPanel(', 'static void YouModDescriptionTitleRoots(',
+    'static void YouModApplyDescriptionTitle(', 'static void YouModUpdateDescriptionTitle(')).replace('%c(_ASCollectionViewCell)', '_ASCollectionViewCell.class')
+program = program.replace('/* DESCRIPTION_HELPERS */', description)
+panel_hooks = hook('YTEngagementPanelView')
+setter = function('- (void)setPanelIdentifier:', panel_hooks)
+panel_hooks = panel_hooks.replace(setter, setter.replace('%orig;', 'self.rawIdentifier = identifier;'))
+program = program.replace('/* DESCRIPTION_HOOKS */', panel_hooks.replace('%orig;', ''))
+program = program.replace('/* BUTTON_HIT_AREA */', function('- (BOOL)pointInside:'))
+program = program.replace('/* CELL_HIT_TEST */', hook('_ASCollectionViewCell').replace('%orig', 'self.nativeHitView'))
 program = program.replace('/* COLLECTION_HOOK */', hook('UICollectionView').replace('%orig;', ''))
 program = program.replace('/* WATCH_ROW_NOTIFICATION */', function('- (void)youmod_refreshWatchBar:', watch))
 program = program.replace('/* LEGACY_HOOKS */', hook('YTSlimVideoInformationCell').replace('%orig;', ''))
@@ -72,4 +81,4 @@ with tempfile.TemporaryDirectory() as tmp:
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
-print('PASS: production watch-row title discovery, plain UIKit and flattened text, native resets, toggles, recycling, stale playback metadata and 10000 unrelated text updates')
+print('PASS: watch and expanded titles, preserved selection, late branding, description-body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')

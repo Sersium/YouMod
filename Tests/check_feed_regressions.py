@@ -16,6 +16,8 @@ ryd = (root / 'Files/ReturnYouTubeDislike.x').read_text()
 start = dearrow.index('static CGRect YouModDeArrowButtonFrame(')
 end = dearrow.index('\n}\n', start) + 3
 helper = dearrow[start:end]
+start = dearrow.index('static CGRect YouModDeArrowIndicatorFrame(')
+helper += dearrow[start:dearrow.index('\n}\n', start) + 3]
 stubs = r'''
 #include <assert.h>
 typedef double CGFloat; typedef int BOOL;
@@ -28,6 +30,7 @@ typedef struct { CGPoint origin; CGSize size; } CGRect;
 #define CGRectGetMidY(r) ((r).origin.y + (r).size.height / 2)
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define MIN(a,b) ((a)<(b)?(a):(b))
+#define CGRectGetMinX(r) ((r).origin.x)
 #define CGRectGetMidX(r) ((r).origin.x + (r).size.width / 2)
 #define CGRectGetMaxX(r) ((r).origin.x + (r).size.width)
 #define CGRectGetMaxY(r) ((r).origin.y + (r).size.height)
@@ -54,18 +57,21 @@ int main(void) {
     };
     for (unsigned i = 0; i < sizeof(cases)/sizeof(cases[0]); i++) {
         CGRect frame = YouModDeArrowButtonFrame(cases[i][0], cases[i][1]);
-        assert(frame.size.width == 26 && frame.size.height == 26);
+        assert(frame.size.width == 44 && frame.size.height == 44);
         assert(CGRectContainsRect(cases[i][0], frame));
-        for (int j = 1; j < 4; j++) assert(!intersects(frame, cases[i][j]));
-        // The expanded 44pt hit target must not steal overflow menu taps.
-        CGRect hit = CGRectMake(frame.origin.x-9, frame.origin.y-9,44,44);
-        assert(!intersects(hit, cases[i][1]));
+        CGRect badge = YouModDeArrowIndicatorFrame(cases[i][0],cases[i][1],frame);
+        badge.origin.x += frame.origin.x; badge.origin.y += frame.origin.y;
+        assert(CGRectContainsRect(cases[i][0],badge));
+        for (int j = 1; j < 4; j++) assert(!intersects(badge, cases[i][j]));
+        // The real finger target leaves twelve points before native More.
+        assert(!intersects(frame,cases[i][1]));
+        assert(frame.origin.y == CGRectGetMaxY(cases[i][1])+12);
     }
     // Until the full cell finishes measuring, do not borrow the title's space.
     CGRect menu = CGRectMake(348,226,44,24);
     assert(YouModDeArrowButtonFrame(CGRectMake(0,0,400,260),menu).size.width == 0);
     CGRect settled = YouModDeArrowButtonFrame(CGRectMake(0,0,400,310),menu);
-    assert(settled.origin.x == 357 && settled.origin.y == 260 && settled.size.width == 26);
+    assert(settled.origin.x == 348 && settled.origin.y == 262 && settled.size.width == 44);
     // Different title heights keep the accessory in the same native More column.
     for (int i=0; i<1000; i++) {
         CGRect stable = YouModDeArrowButtonFrame(CGRectMake(0,0,400,i%2?310:350),menu);
