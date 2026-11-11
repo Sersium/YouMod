@@ -76,6 +76,12 @@ int main(void) {
     // After final Texture measurement, return to the normal menu column.
     CGRect settled = YouModDeArrowButtonFrame(CGRectMake(0,0,400,310), menu, 0);
     assert(settled.origin.y == 260);
+    // Once wrapping needs the side slot, repeated short/tall measurements must
+    // retain that slot instead of alternately adding/removing text exclusions.
+    for (int i=0; i<1000; i++) {
+        CGRect stable = YouModDeArrowButtonFrame(CGRectMake(0,0,400,i%2?260:310),menu,1);
+        assert(stable.origin.x == fallback.origin.x && stable.origin.y == fallback.origin.y);
+    }
     // Watch More: always aligned beside the native menu, including RTL.
     CGRect watch = YouModDeArrowButtonFrame(CGRectMake(0,0,393,88),CGRectMake(170,44,44,44),1);
     assert(watch.origin.x==135 && CGRectGetMidY(watch)==66);
@@ -101,6 +107,7 @@ assert 'keepalive_node' in dearrow and 'node.subnodes' in dearrow, 'Include laye
 image_hook = dearrow.split('%hook ASNetworkImageNode', 1)[1].split('%end', 1)[0]
 assert '@selector(view)' not in image_hook, 'Never force a view for a layer-backed image node'
 assert 'titleView.frame =' not in dearrow, 'Do not fight native title layout'
+assert 'sameVideo && [objc_getAssociatedObject(self, "YMDeArrowBesideMenu") boolValue]' in layout
 assert '- (BOOL)inlinePlaybackUnmutedAtStart {' not in player, 'Leave audio getter live after taps'
 assert 'setInlinePlaybackUnmutedAtStart:!IS_ENABLED(AutoFeedMute)' in player and 'if (newVideo' in player
 assert 'addYogaChild:' not in ryd and 'addSubnode:' not in ryd and 'setMinWidth:' not in ryd, 'Do not mutate native vote layout trees'

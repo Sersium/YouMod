@@ -5,6 +5,8 @@
 
 static NSString * const kYMReturnDislikeNotification = @"YouModReturnDislikeNotification";
 static __weak YTPlayerViewController *currentWatchPlayer = nil;
+static NSString *lastWatchVideoID = nil;
+extern void YouModDeArrowBeginWatchVideo(NSString *videoID);
 
 static NSString *YouModFormatVoteCount(NSInteger count) {
     if (count < 0) return @"0";
@@ -179,6 +181,10 @@ static void YouModWatchVideoChanged(YTPlayerViewController *player) {
     NSString *videoID = player.contentVideoID;
     if (!videoID.length) return;
     currentWatchPlayer = player;
+    if (![lastWatchVideoID isEqualToString:videoID]) {
+        lastWatchVideoID = [videoID copy];
+        YouModDeArrowBeginWatchVideo(videoID);
+    }
     if (IS_ENABLED(ReturnYouTubeDislike)) [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
     dispatch_async(dispatch_get_main_queue(), ^{
         [[NSNotificationCenter defaultCenter] postNotificationName:@"YouModWatchStatsChanged" object:nil];

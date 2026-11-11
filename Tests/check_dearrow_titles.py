@@ -8,9 +8,9 @@ root = Path(__file__).resolve().parents[1]
 source = (root / 'Files/DeArrow.x').read_text()
 
 
-def function(signature):
-    start = source.index(signature)
-    return source[start:source.index('\n}\n', start) + 3]
+def function(signature, file_source=source):
+    start = file_source.index(signature)
+    return file_source[start:file_source.index('\n}\n', start) + 3]
 
 
 assert 'mod.mutableString setString:' not in source
@@ -34,7 +34,7 @@ if platform.system() != 'Darwin':
 program = (root / 'Tests/fixtures/dearrow_titles.m').read_text()
 program = program.replace('/* TEXT_HELPERS */', function('static NSAttributedString *YouModDeArrowTitleText(') +
                           function('static NSString *YouModCleanDeArrowTitle('))
-program = program.replace('/* WATCH_BINDING */', function('static NSAttributedString *YouModOriginalTitleText(') +
+program = program.replace('/* WATCH_BINDING */', function('void YouModDeArrowBeginWatchVideo(') + function('static NSAttributedString *YouModOriginalTitleText(') +
                           function('static void YouModUpdateWatchTitleLabel(') + function('static void YouModUpdateWatchTitle('))
 program = program.replace('/* EXCLUSION_HELPER */', function('static void YouModReserveToggleText('))
 elements = function('static void YouModCollectCardNodes(') + function('static BOOL YouModIsWatchMetadataNode(') + function('static void YouModUpdateElementsWatchTitle(')
@@ -43,9 +43,14 @@ for name in ('ASTextNode', 'ASNetworkImageNode', '_ASCollectionViewCell'):
 program = program.replace('/* ELEMENTS_HELPERS */', elements)
 hooks = source.split('%hook YTWatchNextResultsViewController\n', 1)[1].split('%end', 1)[0]
 program = program.replace('/* ELEMENTS_HOOKS */', hooks.replace('%orig;', '').replace('%new', ''))
+legacy_hooks = source.split('%hook YTSlimVideoInformationCell\n', 1)[1].split('%end', 1)[0]
+program = program.replace('/* LEGACY_HOOKS */', legacy_hooks.replace('%orig;', '').replace('%new', ''))
+ryd = (root / 'Files/ReturnYouTubeDislike.x').read_text()
+playback = function('static void YouModWatchVideoChanged(', ryd).replace('%c(YTInlineMutedPlaybackPlayerOverlayViewController)', 'YTInlineMutedPlaybackPlayerOverlayViewController.class')
+program = program.replace('/* WATCH_PLAYBACK */', playback)
 with tempfile.TemporaryDirectory() as tmp:
     src, binary = Path(tmp) / 'titles.m', Path(tmp) / 'titles'
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
-    subprocess.run([str(binary)], check=True)
-print('PASS: clean title glyphs, legacy and Elements watch headers, cached/late branding, defaults, live toggles and recycled-cell isolation')
+    subprocess.run([str(binary)], check=True, timeout=20)
+print('PASS: title cells without renderer IDs, real window/playback callbacks, live toggles, 200 navigation transitions and cyclic ownership guards')

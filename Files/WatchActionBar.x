@@ -23,7 +23,7 @@ typedef struct {
 
 static ASDisplayNode *YMFindWatchNode(ASDisplayNode *node, NSString *identifier) {
     if ([node.accessibilityIdentifier isEqualToString:identifier]) return node;
-    if (node.isNodeLoaded && [node.view.accessibilityIdentifier isEqualToString:identifier]) return node;
+    if (node.isNodeLoaded && !node.layerBacked && [node.view.accessibilityIdentifier isEqualToString:identifier]) return node;
     for (ASDisplayNode *child in node.yogaChildren.count ? node.yogaChildren : node.subnodes) {
         ASDisplayNode *match = YMFindWatchNode(child, identifier);
         if (match) return match;

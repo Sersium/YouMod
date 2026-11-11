@@ -68,4 +68,4 @@ with tempfile.TemporaryDirectory() as tmp:
     source.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', str(source), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
-print('PASS: actual tab getter/count, preference changes, restored native items, live row styling and remeasurement guards')
+print('PASS: actual tab getter/count, preference changes, restored native items, live row styling, layer-backed traversal and remeasurement guards')

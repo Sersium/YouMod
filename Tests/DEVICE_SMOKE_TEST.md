@@ -83,3 +83,13 @@ The user confirmed v3.4 positions the watch toggle correctly but leaves the orig
 - Change videos while a branding request is pending. An old video's response must not replace the new title. Comments and recommendations with matching title text must remain untouched, including recycled text nodes. Repeat on iPad, with title replacement disabled, and after light/dark or text-size changes.
 
 The macOS fixture now exercises the actual Elements binding and controller notification/display callbacks with no legacy title cell. Device confirmation of this follow-up remains pending.
+
+November 11 second follow-up:
+
+The user confirmed the watch title still stayed original in v3.5, and reported a freeze/crash after opening a video and immediately tapping its channel. The previous fixtures always pre-seeded the native title-cell video ID. The native `YTSlimVideoInformationCellController` initializer does not populate that field; the window/notification path now also handles an absent renderer ID using the active playback ID and matching cached/native title. A playback identity change resets the default once, independently of cell layout and player reparenting.
+
+Source hazards repaired in the same patch: watch-row searches no longer request UIViews from loaded layer-backed nodes; component ownership traversal detects cycles; feed toggle placement retains a chosen side slot so added text wrapping cannot alternate side/below placement indefinitely. These are code-level findings, not a symbolicated diagnosis of the reported device crash.
+
+- Recheck the supplied Reject Convenience video: the watch title should match the feed's “Criticisms of services that sponsor YouTubers…” title, and both toggle directions must work. Repeat with cached branding and direct links, then rotate and minimize/restore the player.
+- Open a video and immediately tap its channel, repeat with another video/channel, then use Back, close the miniplayer, and switch tabs. Test while branding loads and with a short feed card becoming taller after title replacement. Navigation and controls must remain responsive.
+- Automated checks cover missing renderer IDs through real window/notification hook bodies, repeated attach/detach, same-video player replacement, cyclic ownership and loaded layer-backed traversal. They do not reproduce UIKit transitions on physical hardware. A matching YouTube `.ips` report is still required to identify the exact crash stack if crashes continue.

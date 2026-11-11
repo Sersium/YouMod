@@ -1,15 +1,21 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <objc/runtime.h>
+#import <dispatch/dispatch.h>
 #include <assert.h>
 #define NSFontAttributeName @"NSFont"
 #define NSForegroundColorAttributeName @"NSColor"
 #define NSParagraphStyleAttributeName @"NSParagraphStyle"
 #define DeArrowEnabled 0
 #define DeArrowReplaceTitles 1
-static BOOL preferences[] = {YES, YES};
+#define ReturnYouTubeDislike 2
+static BOOL preferences[] = {YES, YES, NO};
 #define IS_ENABLED(key) preferences[key]
 static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNotification";
+static NSString * const kYMReturnDislikeNotification = @"YouModReturnDislikeNotification";
+static NSString *currentWatchID, *detailsID, *detailsTitle;
+static NSString *YouModCurrentWatchVideoID(void);
+static NSString *YouModCurrentWatchTitle(void);
 /* TEXT_HELPERS */
 
 @interface NSValue (Geometry)
@@ -73,8 +79,13 @@ static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNo
 @property BOOL window;
 @property(strong) TestLabel *titleLabel;
 @property(strong) id experimentalTitleLabel;
+- (void)didMoveToWindow;
+- (void)layoutSubviews;
+- (void)prepareForReuse;
 @end
+static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell);
 @implementation YTSlimVideoInformationCell
+/* LEGACY_HOOKS */
 @end
 @interface YouModDeArrowManager : NSObject
 @property(strong) NSMutableDictionary *originals;
@@ -116,6 +127,28 @@ static void YouModCollectNodesFromView(NSArray *labels, NSMutableArray *texts, N
 }
 /* WATCH_BINDING */
 
+@interface YTPlayerViewController : NSObject
+@property BOOL isInlinePlaybackActive;
+@property(strong) id activeVideoPlayerOverlay;
+@property(copy) NSString *contentVideoID;
+@end
+@implementation YTPlayerViewController
+@end
+@interface YTInlineMutedPlaybackPlayerOverlayViewController : NSObject
+@end
+@implementation YTInlineMutedPlaybackPlayerOverlayViewController
+@end
+@compatibility_alias YouModRYDManager YouModDeArrowManager;
+@interface YouModDeArrowManager (RYDStub)
+- (void)fetchVotesForVideoID:(NSString *)videoID completion:(id)completion;
+@end
+@implementation YouModDeArrowManager (RYDStub)
+- (void)fetchVotesForVideoID:(NSString *)videoID completion:(id)completion {}
+@end
+static __weak YTPlayerViewController *currentWatchPlayer;
+static NSString *lastWatchVideoID;
+/* WATCH_PLAYBACK */
+
 @interface ELMComponent : NSObject
 @property(copy) NSString *templateURI;
 @property(strong) ELMComponent *owningComponent;
@@ -148,7 +181,6 @@ static void YouModCollectNodesFromView(NSArray *labels, NSMutableArray *texts, N
 - (void)viewDidLayoutSubviews;
 - (void)collectionView:(UICollectionView *)view willDisplayCell:(UICollectionViewCell *)cell forItemAtIndexPath:(NSIndexPath *)path;
 @end
-static NSString *currentWatchID, *detailsID, *detailsTitle;
 static NSString *YouModCurrentWatchVideoID(void) { return currentWatchID; }
 static NSString *YouModCurrentWatchTitle(void) {
     if (![detailsID isEqual:currentWatchID]) return nil;
@@ -284,6 +316,9 @@ int main(void) { @autoreleasepool {
     watch.collectionView = [UICollectionView new];
     watch.collectionView.visibleCells = @[commentCell, feedCell];
     [watch viewDidLoad];
+    YTPlayerViewController *player = [YTPlayerViewController new];
+    player.contentVideoID = currentWatchID;
+    YouModWatchVideoChanged(player);
     [watch collectionView:watch.collectionView willDisplayCell:header forItemAtIndexPath:nil];
     assert([heading.attributedText.string isEqual:manager.titles[currentWatchID]]);
     assert([comment.attributedText.string isEqual:detailsTitle] && [recommendation.attributedText.string isEqual:detailsTitle]);
@@ -291,6 +326,10 @@ int main(void) { @autoreleasepool {
     watch.collectionView.visibleCells = @[header, commentCell, feedCell];
     [manager toggleDeArrowForVideoID:currentWatchID];
     assert([heading.attributedText.string isEqual:detailsTitle]);
+    YTPlayerViewController *replacementPlayer = [YTPlayerViewController new];
+    replacementPlayer.contentVideoID = currentWatchID;
+    YouModWatchVideoChanged(replacementPlayer); // Reparenting the player must retain the selected title.
+    assert([manager isOriginalToggledForVideoID:currentWatchID]);
     [watch viewDidLayoutSubviews]; // A layout pass must not undo the user's toggle.
     assert([heading.attributedText.string isEqual:detailsTitle]);
     [manager toggleDeArrowForVideoID:currentWatchID];
@@ -303,6 +342,8 @@ int main(void) { @autoreleasepool {
     assert([[heading.attributedText attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL] isEqual:@"new-theme"]);
 
     currentWatchID = @"WATCH000002";
+    player.contentVideoID = currentWatchID;
+    YouModWatchVideoChanged(player);
     heading.attributedText = [[NSAttributedString alloc] initWithString:@"Next native title"];
     [watch viewDidLayoutSubviews]; // Player details still belong to the old video.
     assert([heading.attributedText.string isEqual:@"Next native title"]);
@@ -327,4 +368,57 @@ int main(void) { @autoreleasepool {
     header.node.nodeController.owningComponent.templateURI = @"comment.eml|recycled";
     [watch viewDidLayoutSubviews];
     assert([heading.attributedText.string isEqual:detailsTitle]); // Reused nodes cannot brand comments.
+
+    ELMComponent *cycle = header.node.nodeController.owningComponent;
+    cycle.owningComponent = cycle;
+    assert(!YouModIsWatchMetadataNode(header.node)); // Cyclic private ownership cannot freeze navigation.
+    ELMComponent *second = [ELMComponent new];
+    second.templateURI = @"video_with_context.eml|test";
+    cycle.owningComponent = second;
+    second.owningComponent = cycle;
+    assert(!YouModIsWatchMetadataNode(header.node));
+    cycle.owningComponent = nil;
+    second.owningComponent = nil;
+
+    // Native setCell:/setVideoID: are optional. Exercise actual window and
+    // notification callbacks without pre-seeding a title-cell video ID.
+    currentWatchID = detailsID = @"LEGACY00001";
+    detailsTitle = @"(Privacy Not Included)";
+    watch.viewIfLoaded.window = NO;
+    manager.titles[currentWatchID] = @"Criticisms of services that sponsor YouTubers";
+    [manager.toggled addObject:currentWatchID];
+    player.contentVideoID = currentWatchID;
+    YouModWatchVideoChanged(player);
+    YTSlimVideoInformationCell *unbound = [YTSlimVideoInformationCell new];
+    unbound.window = YES;
+    unbound.titleLabel = [TestLabel new];
+    unbound.titleLabel.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
+    [unbound didMoveToWindow];
+    assert(objc_getAssociatedObject(unbound, "YMWatchTitleVideoID") == nil);
+    assert([unbound.titleLabel.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    [manager toggleDeArrowForVideoID:currentWatchID];
+    assert([unbound.titleLabel.attributedText.string isEqual:detailsTitle]);
+    [unbound layoutSubviews];
+    assert([unbound.titleLabel.attributedText.string isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID];
+    assert([unbound.titleLabel.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    for (int i=0; i<200; i++) {
+        unbound.window = NO;
+        [unbound didMoveToWindow];
+        NSString *detached = unbound.titleLabel.attributedText.string;
+        [manager toggleDeArrowForVideoID:currentWatchID];
+        assert([unbound.titleLabel.attributedText.string isEqual:detached]);
+        unbound.window = YES;
+        [unbound didMoveToWindow];
+        NSString *expected = [manager isOriginalToggledForVideoID:currentWatchID] ? detailsTitle : manager.titles[currentWatchID];
+        assert([unbound.titleLabel.attributedText.string isEqual:expected]);
+    }
+    // Elements also must not require player details when a feed cached the original.
+    detailsID = @"PENDING0001";
+    watch.viewIfLoaded.window = YES;
+    header.node.nodeController.owningComponent.templateURI = @"video_metadata.eml|3035ad7f9a19183f";
+    heading.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
+    [watch viewDidLayoutSubviews];
+    NSString *expected = [manager isOriginalToggledForVideoID:currentWatchID] ? detailsTitle : manager.titles[currentWatchID];
+    assert([heading.attributedText.string isEqual:expected]);
 } return 0; }

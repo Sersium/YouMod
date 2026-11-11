@@ -57,10 +57,12 @@ static NSUserDefaults *preferences;
 @property(copy) NSArray *subnodes;
 @property(weak) ASDisplayNode *yogaParent;
 @property BOOL isNodeLoaded;
+@property BOOL layerBacked;
 @property BOOL hidden;
 @property(strong) UIView *view;
 @end
 @implementation ASDisplayNode
+- (UIView *)view { assert(!self.layerBacked); return _view; }
 - (instancetype)init {
     if ((self = [super init])) self.style = [ASLayoutElementStyleYoga new];
     return self;
@@ -153,4 +155,9 @@ int main(void) { @autoreleasepool {
     deArrowEnabled = NO;
     assert(YMConfigureWatchRow(actions,YES));
     assert(more.style.margin.start.unit == 0 && more.style.margin.start.value == 0);
+    ASDisplayNode *flattened = node(nil,@[node(@"id.video.like.button",nil)]);
+    flattened.layerBacked = YES;
+    flattened.isNodeLoaded = YES;
+    assert(YMFindWatchNode(flattened,@"id.video.like.button") == flattened.yogaChildren.firstObject);
+    assert(YMFindWatchNode(flattened,@"missing") == nil);
 } return 0; }
