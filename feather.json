@@ -7,19 +7,26 @@
   "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
   "apps": [
     {
-      "name": "YouTube (YouMod 3.2) \u00b7 Latest",
+      "name": "YouTube (YouMod 3.4) \u00b7 Latest",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "3.2",
-      "versionDate": "2026-10-31T18:54:41-04:00",
-      "versionDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.2/YouTube_YouMod.ipa",
-      "localizedDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n",
+      "version": "3.4",
+      "versionDate": "2026-11-10T23:38:36-05:00",
+      "versionDescription": "YouMod 3.4 \u00b7 YouTube 21.42.4\n\n- Reuse the existing fullscreen gate and preserve prebound original titles (c60683f)\n- Fix DeArrow watch titles and placement, bound player layouts, and repair applicable upstream regressions (148810f)\n- Fix build errors (fb6a9f6)\n- Fix build erroras (af38f0b)\n- Update link (2a57a93)\n- Update README.md (2a5d280)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.2...c60683ff098cd0a4497c67a366b061e998f1a8e5\nSource: c60683ff098cd0a4497c67a366b061e998f1a8e5\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.4/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.4 \u00b7 YouTube 21.42.4\n\n- Reuse the existing fullscreen gate and preserve prebound original titles (c60683f)\n- Fix DeArrow watch titles and placement, bound player layouts, and repair applicable upstream regressions (148810f)\n- Fix build errors (fb6a9f6)\n- Fix build erroras (af38f0b)\n- Update link (2a57a93)\n- Update README.md (2a5d280)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.2...c60683ff098cd0a4497c67a366b061e998f1a8e5\nSource: c60683ff098cd0a4497c67a366b061e998f1a8e5\n",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 130698766,
+      "size": 130702879,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "3.4",
+          "date": "2026-11-10T23:38:36-05:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.4/YouTube_YouMod.ipa",
+          "size": 130702879,
+          "localizedDescription": "YouMod 3.4 \u00b7 YouTube 21.42.4\n\n- Reuse the existing fullscreen gate and preserve prebound original titles (c60683f)\n- Fix DeArrow watch titles and placement, bound player layouts, and repair applicable upstream regressions (148810f)\n- Fix build errors (fb6a9f6)\n- Fix build erroras (af38f0b)\n- Update link (2a57a93)\n- Update README.md (2a5d280)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.2...c60683ff098cd0a4497c67a366b061e998f1a8e5\nSource: c60683ff098cd0a4497c67a366b061e998f1a8e5\n"
+        },
         {
           "version": "3.2",
           "date": "2026-10-31T18:54:41-04:00",
@@ -75,6 +82,29 @@
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.2.0.41/YouTube_YouMod.ipa",
           "size": 129317180,
           "localizedDescription": "YouMod 2.2.0.41 \u00b7 YouTube 21.38.2\n\n- Add DeArrow, video stats, preview defaults and versioned IPA builds (4839f79)\n\nFull diff: https://github.com/Sersium/YouMod/compare/9fd5117f780f6a0b9cf08cec29c47d5106781a7d...4839f798d6f57efa1fe755ae7e6c9d8966c32c31\nSource: 4839f798d6f57efa1fe755ae7e6c9d8966c32c31\n"
+        }
+      ]
+    },
+    {
+      "name": "YouTube (YouMod 3.2)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "3.2",
+      "versionDate": "2026-10-31T18:54:41-04:00",
+      "versionDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.2/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 130698766,
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "3.2",
+          "date": "2026-10-31T18:54:41-04:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.2/YouTube_YouMod.ipa",
+          "size": 130698766,
+          "localizedDescription": "YouMod 3.2 \u00b7 YouTube 21.42.4\n\n- Apply tab preferences at the data source and repair live settings and watch layouts (2075e5a)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.1...2075e5ae361849cc208f2a7eee5a763aa4706bcd\nSource: 2075e5ae361849cc208f2a7eee5a763aa4706bcd\n"
         }
       ]
     },
@@ -241,6 +271,14 @@
     }
   ],
   "news": [
+    {
+      "identifier": "youmod-3.4",
+      "title": "YouMod 3.4",
+      "caption": "YouMod 3.4 \u00b7 YouTube 21.42.4\n\n- Reuse the existing fullscreen gate and preserve prebound original titles (c60683f)\n- Fix DeArrow watch titles and placement, bound player layouts, and repair applicable upstream regressions (148810f)\n- Fix build errors (fb6a9f6)\n- Fix build erroras (af38f0b)\n- Update link (2a57a93)\n- Update README.md (2a5d280)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.2...c60683ff098cd0a4497c67a366b061e998f1a8e5\nSource: c60683ff098cd0a4497c67a366b061e998f1a8e5\n",
+      "date": "2026-11-10T23:38:36-05:00",
+      "url": "https://github.com/Sersium/YouMod/releases/tag/v3.4",
+      "notify": true
+    },
     {
       "identifier": "youmod-3.2",
       "title": "YouMod 3.2",
