@@ -18,29 +18,32 @@ static NSString *YouModCurrentWatchVideoID(void);
 static NSString *YouModCurrentWatchTitle(void);
 /* TEXT_HELPERS */
 
-@interface NSValue (Geometry)
-@property(readonly) CGRect CGRectValue;
-+ (instancetype)valueWithCGRect:(CGRect)rect;
-@end
-@implementation NSValue (Geometry)
-+ (instancetype)valueWithCGRect:(CGRect)rect { return [self valueWithBytes:&rect objCType:@encode(CGRect)]; }
-- (CGRect)CGRectValue { CGRect rect; [self getValue:&rect size:sizeof(rect)]; return rect; }
-@end
-@interface UIBezierPath : NSObject
-@property CGRect rect;
-+ (instancetype)bezierPathWithRect:(CGRect)rect;
-@end
-@implementation UIBezierPath
-+ (instancetype)bezierPathWithRect:(CGRect)rect { UIBezierPath *p = [self new]; p.rect = rect; return p; }
-@end
+@class ASDisplayNode;
 @interface UIView : NSObject
 @property BOOL window;
-- (CGRect)convertRect:(CGRect)rect fromView:(UIView *)view;
+@property CGRect frame;
+@property(readonly) CGRect bounds;
+@property(weak) UIView *superview;
+@property(copy) NSArray *subviews;
+@property(strong) ASDisplayNode *keepalive_node;
+- (CGRect)convertRect:(CGRect)rect toView:(UIView *)view;
 @end
 @implementation UIView
-- (CGRect)convertRect:(CGRect)rect fromView:(UIView *)view { return rect; }
+- (CGRect)bounds { return CGRectMake(0,0,self.frame.size.width,self.frame.size.height); }
+- (void)setSubviews:(NSArray *)views { _subviews = [views copy]; for (UIView *v in views) v.superview = self; }
+- (CGRect)convertRect:(CGRect)rect toView:(UIView *)view {
+    for (UIView *p=self; p && p != view; p=p.superview) rect = CGRectOffset(rect,p.frame.origin.x,p.frame.origin.y);
+    return rect;
+}
 @end
-@class ELMNodeController;
+@interface UILabel : UIView
+@property(copy) NSAttributedString *rawAttributedText;
+@property(copy) NSString *rawText;
+@property(copy) NSAttributedString *attributedText;
+@property(copy) NSString *text;
+@property(strong) id font;
+@property(strong) id textColor;
+@end
 @interface ASDisplayNode : NSObject
 @property BOOL isNodeLoaded;
 @property BOOL layerBacked;
@@ -49,7 +52,6 @@ static NSString *YouModCurrentWatchTitle(void);
 @property CGRect bounds;
 @property(copy) NSArray *subnodes;
 @property(copy) NSArray *yogaChildren;
-@property(strong) ELMNodeController *nodeController;
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node;
 @end
 @implementation ASDisplayNode
@@ -58,18 +60,13 @@ static NSString *YouModCurrentWatchTitle(void);
 @end
 @interface ASTextNode : ASDisplayNode
 @property(copy) NSAttributedString *attributedText;
-@property(copy) NSArray *exclusionPaths;
-@property NSUInteger assignments;
 @end
 @interface ASNetworkImageNode : ASDisplayNode
 @end
 @implementation ASNetworkImageNode
 @end
 @implementation ASTextNode
-- (void)setExclusionPaths:(NSArray *)paths { _exclusionPaths = [paths copy]; self.assignments++; }
 @end
-/* EXCLUSION_HELPER */
-
 @interface TestLabel : NSObject
 @property(copy) NSAttributedString *attributedText;
 @end
@@ -123,11 +120,13 @@ static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell);
     return [self.toggled containsObject:videoID];
 }
 @end
-static void YouModCollectNodesFromView(NSArray *labels, NSMutableArray *texts, NSMutableArray *images) {
-    [texts addObjectsFromArray:labels];
-}
+/* NODE_COLLECTORS */
 /* WATCH_BINDING */
-
+@implementation UILabel
+- (NSAttributedString *)attributedText { return self.rawAttributedText; }
+- (NSString *)text { return self.rawText ?: self.rawAttributedText.string; }
+/* LABEL_HOOKS */
+@end
 @interface FeedTextHook : ASTextNode
 @property BOOL forbidParentAccess;
 @property NSUInteger parentReads;
@@ -161,284 +160,196 @@ static __weak YTPlayerViewController *currentWatchPlayer;
 static NSString *lastWatchVideoID;
 /* WATCH_PLAYBACK */
 
-@interface ELMComponent : NSObject
-@property(copy) NSString *templateURI;
-@property(strong) ELMComponent *owningComponent;
+
+@interface UICollectionViewCell : UIView
 @end
-@implementation ELMComponent
+@implementation UICollectionViewCell
 @end
-@interface ELMNodeController : NSObject
-@property(strong) ELMComponent *owningComponent;
+@interface _ASCollectionViewCell : UICollectionViewCell
+@property(strong) ASDisplayNode *node;
 @end
-@implementation ELMNodeController
+@implementation _ASCollectionViewCell
 @end
-@interface ELMTextNode : ASTextNode
-@property BOOL visible;
-@property NSUInteger feedUpdates;
-- (BOOL)isVisible;
-- (void)didEnterVisibleState;
-- (void)didExitVisibleState;
-- (void)updateAttributedText;
+@interface UICollectionView : UIView
+@property(copy) NSArray *visibleCells;
+- (void)layoutSubviews;
+@end
+@interface YTPlayerView : UIView
+@end
+@implementation YTPlayerView
+@end
+@interface YTMainAppPlayerOverlayView : UIView
+@end
+@implementation YTMainAppPlayerOverlayView
 @end
 static NSString *YouModCurrentWatchVideoID(void) { return currentWatchID; }
-static NSString *YouModCurrentWatchTitle(void) {
-    if (![detailsID isEqual:currentWatchID]) return nil;
-    return detailsTitle;
-}
-/* ELEMENTS_HELPERS */
-@implementation ELMTextNode
-- (BOOL)isVisible { return self.visible; }
-- (void)feedTitleUpdated:(NSNotification *)note { self.feedUpdates++; }
-/* ELEMENTS_HOOKS */
+static NSString *YouModCurrentWatchTitle(void) { return [detailsID isEqual:currentWatchID] ? detailsTitle : nil; }
+/* SCANNER_HELPERS */
+@implementation UICollectionView
+/* COLLECTION_HOOK */
 @end
-static ELMTextNode *titleNode(NSString *title, NSString *uri) {
-    ELMTextNode *node = [ELMTextNode new];
-    node.attributedText = [[NSAttributedString alloc] initWithString:title];
+
+@interface TestLikeControl : UIView
+@property(strong) UIView *watchRow;
+- (void)youmod_refreshWatchBar:(NSNotification *)note;
+@end
+static UIView *YouModWatchRowForControl(TestLikeControl *like) { return like.watchRow; }
+static void YMUpdateWatchBar(UIView *row) { YouModUpdateWatchTitlesForRow(row); }
+@implementation TestLikeControl
+/* WATCH_ROW_NOTIFICATION */
+@end
+static void drainUpdates(UIView *row) {
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+    assert(!objc_getAssociatedObject(row,"YMWatchTitleQueued"));
+}
+static FeedTextHook *titleNode(NSString *title) {
+    FeedTextHook *node = [FeedTextHook new];
     node.layerBacked = YES;
-    node.visible = YES;
-    node.nodeController = [ELMNodeController new];
-    node.nodeController.owningComponent = [ELMComponent new];
-    node.nodeController.owningComponent.templateURI = uri;
+    node.forbidParentAccess = YES;
+    node.attributedText = [[NSAttributedString alloc] initWithString:title];
     return node;
 }
-
-static void drainTextUpdate(ELMTextNode *node) {
-    NSDate *limit = [NSDate dateWithTimeIntervalSinceNow:1];
-    while (objc_getAssociatedObject(node,"YMWatchTitleQueued") && limit.timeIntervalSinceNow > 0)
-        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.001]];
-    assert(!objc_getAssociatedObject(node,"YMWatchTitleQueued"));
+static _ASCollectionViewCell *nodeCell(CGFloat y, NSArray *nodes) {
+    _ASCollectionViewCell *cell = [_ASCollectionViewCell new];
+    cell.frame = CGRectMake(0,y,393,80);
+    cell.node = [ASDisplayNode new];
+    cell.node.layerBacked = YES;
+    cell.node.subnodes = nodes;
+    return cell;
 }
-
 int main(void) { @autoreleasepool {
-    NSAttributedString *native = [[NSAttributedString alloc] initWithString:@"ORIGINAL\uFFFC TITLE" attributes:@{
-        NSFontAttributeName: @"native-font", NSForegroundColorAttributeName: @"native-color",
-        @"NSAttachment": @"image", @"CTRunDelegate": @"glyph", @"NSGlyphInfo": @"arrow"
-    }];
-    NSAttributedString *clean = YouModDeArrowTitleText(native, @"A > B? Yes!");
-    assert([clean.string isEqual:@"A > B? Yes!"]);
-    assert([[clean attributesAtIndex:0 effectiveRange:NULL] count] == 2);
-    assert([[clean attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL] isEqual:@"native-font"]);
+    NSAttributedString *native = [[NSAttributedString alloc] initWithString:@"ORIGINAL TITLE" attributes:@{
+        NSFontAttributeName:@"native-font", NSForegroundColorAttributeName:@"native-color",
+        @"NSAttachment":@"image", @"CTRunDelegate":@"glyph", @"NSGlyphInfo":@"arrow"}];
+    NSAttributedString *clean = YouModDeArrowTitleText(native,@"A > B? Yes!");
+    assert([clean.string isEqual:@"A > B? Yes!"] && [clean attributesAtIndex:0 effectiveRange:NULL].count == 2);
     assert([YouModCleanDeArrowTitle(@"  café\u00A0\uFFFC\u200Btest\n\t動画 👨‍👩‍👧‍👦 > 2! ") isEqual:@"café test 動画 👨‍👩‍👧‍👦 > 2!"]);
     assert(YouModCleanDeArrowTitle((id)NSNull.null) == nil);
-    YTSlimVideoInformationCell *cell = [YTSlimVideoInformationCell new];
-    cell.window = YES;
-    cell.titleLabel = [TestLabel new];
-    cell.titleLabel.attributedText = native;
-    TestLabel *experimental = [TestLabel new];
-    experimental.attributedText = native;
-    cell.experimentalTitleLabel = @[experimental];
-    NSString *firstID = @"abcdefghijk", *nextID = @"12345678901";
-    objc_setAssociatedObject(cell, "YMWatchTitleVideoID", firstID, OBJC_ASSOCIATION_COPY_NONATOMIC);
     YouModDeArrowManager *manager = [YouModDeArrowManager sharedInstance];
-    // Legacy cell labels still support late completion and the original toggle.
-    YouModUpdateWatchTitle(cell);
-    assert(cell.titleLabel.attributedText == native);
-    manager.titles[firstID] = @"DeArrow title";
-    YouModUpdateWatchTitle(cell);
-    assert([cell.titleLabel.attributedText.string isEqual:@"DeArrow title"]);
-    assert([experimental.attributedText.string isEqual:@"DeArrow title"]);
-    cell.experimentalTitleLabel = experimental; // The legacy experiment uses YTLabel.
-    YouModUpdateWatchTitle(cell);
-    assert([experimental.attributedText.string isEqual:@"DeArrow title"]);
-    [manager.toggled addObject:firstID];
-    YouModUpdateWatchTitle(cell);
-    assert(cell.titleLabel.attributedText == native && experimental.attributedText == native);
-    [manager.toggled removeObject:firstID];
-    YouModUpdateWatchTitle(cell);
-    preferences[DeArrowReplaceTitles] = NO;
-    YouModUpdateWatchTitle(cell);
-    assert(cell.titleLabel.attributedText == native);
-    preferences[DeArrowReplaceTitles] = YES;
-    cell.window = NO;
-    manager.titles[firstID] = @"Late result on a detached cell";
-    YouModUpdateWatchTitle(cell);
-    assert(cell.titleLabel.attributedText == native);
-    cell.window = YES;
-    NSAttributedString *next = [[NSAttributedString alloc] initWithString:@"NEXT VIDEO"];
-    cell.titleLabel.attributedText = next;
-    experimental.attributedText = next;
-    objc_setAssociatedObject(cell, "YMWatchTitleVideoID", nextID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-    YouModUpdateWatchTitle(cell);
-    assert([manager.originals[nextID] isEqual:@"NEXT VIDEO"]);
-    assert(cell.titleLabel.attributedText == next);
-    manager.titles[nextID] = @"Second replacement";
-    YouModUpdateWatchTitle(cell);
-    assert([cell.titleLabel.attributedText.string isEqual:@"Second replacement"]);
-    assert([manager.originals[firstID] isEqual:native.string]);
-    // A renderer may have replaced the string before its label is first bound.
-    NSString *prefetchedID = @"ABCDEFGHIJK";
-    manager.originals[prefetchedID] = @"RAW ORIGINAL TITLE";
-    manager.titles[prefetchedID] = @"Prefetched DeArrow";
-    cell.titleLabel.attributedText = [[NSAttributedString alloc] initWithString:manager.titles[prefetchedID]];
-    cell.experimentalTitleLabel = nil;
-    objc_setAssociatedObject(cell, "YMWatchTitleVideoID", prefetchedID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-    YouModUpdateWatchTitle(cell);
-    [manager.toggled addObject:prefetchedID];
-    YouModUpdateWatchTitle(cell);
-    assert([cell.titleLabel.attributedText.string isEqual:@"RAW ORIGINAL TITLE"]);
-    ASTextNode *text = [ASTextNode new];
-    text.bounds = CGRectMake(0,0,300,60);
-    text.layerBacked = YES;
-    text.isNodeLoaded = YES;
-    ASDisplayNode *anchor = [ASDisplayNode new];
-    anchor.isNodeLoaded = YES;
-    anchor.view = [UIView new];
-    anchor.view.window = YES;
-    text.supernode = anchor;
-    UIBezierPath *nativePath = [UIBezierPath new];
-    text.exclusionPaths = @[nativePath];
-    text.assignments = 0;
-    CGRect hit = CGRectMake(270,0,44,44);
-    YouModReserveToggleText(@[text], anchor.view, hit, YES);
-    assert(text.assignments == 1 && text.exclusionPaths.count == 2);
-    YouModReserveToggleText(@[text], anchor.view, hit, YES);
-    assert(text.assignments == 1); // Stable layout must not invalidate text again.
-    anchor.view.window = NO;
-    YouModReserveToggleText(@[text], nil, CGRectZero, NO);
-    assert(text.assignments == 2 && text.exclusionPaths.count == 1);
-    assert(text.exclusionPaths.firstObject == nativePath); // Restore even after detach/disable.
 
-    // Modern header: the leaf owns the component; no collection-cell owner exists.
     currentWatchID = detailsID = @"WATCH000001";
-    detailsTitle = @"Original watch title";
-    manager.titles[currentWatchID] = @"Overview and criticisms of the NYT vs. Brave case";
+    detailsTitle = @"Why Isn’t Heart Cancer a Thing?";
+    manager.titles[currentWatchID] = @"Why is heart cancer so rare?";
     [manager.toggled addObject:currentWatchID];
-    ELMTextNode *heading = titleNode(detailsTitle, @"video_metadata.eml|3035ad7f9a19183f");
-    ELMTextNode *comment = titleNode(detailsTitle, @"comment.eml|test");
-    ELMTextNode *recommendation = titleNode(detailsTitle, @"video_with_context.eml|test");
-    ASDisplayNode *outer = [ASDisplayNode new];
-    heading.supernode = comment.supernode = recommendation.supernode = outer;
-    assert(!YouModIsWatchMetadataNode(outer));
-    [heading didEnterVisibleState];
-    [comment didEnterVisibleState];
-    [recommendation didEnterVisibleState];
-    [[NSNotificationCenter defaultCenter] addObserver:recommendation selector:@selector(feedTitleUpdated:) name:kYMDeArrowUpdatedNotification object:nil];
-    [recommendation didExitVisibleState]; // Watch cleanup must preserve a feed observer.
+    FeedTextHook *heading = titleNode(detailsTitle), *comment = titleNode(detailsTitle), *recommendation = titleNode(detailsTitle);
+    UILabel *plain = [UILabel new];
+    plain.text = detailsTitle; // Plain UIKit text has no attributedText yet.
+    plain.font = @"native-font";
+    _ASCollectionViewCell *header = nodeCell(0,@[heading]);
+    UIView *row = [UIView new];
+    row.window = YES;
+    row.frame = CGRectMake(0,100,393,88);
+    header.subviews = @[plain,row];
+    UICollectionViewCell *commentCell = nodeCell(200,@[comment]), *feedCell = nodeCell(400,@[recommendation]);
+    UICollectionView *collection = [UICollectionView new];
+    collection.subviews = collection.visibleCells = @[header,commentCell,feedCell];
+    TestLikeControl *like = [TestLikeControl new];
+    like.watchRow = row;
+    [[NSNotificationCenter defaultCenter] addObserver:like selector:@selector(youmod_refreshWatchBar:) name:kYMDeArrowUpdatedNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:like selector:@selector(youmod_refreshWatchBar:) name:@"YouModWatchStatsChanged" object:nil];
     YTPlayerViewController *player = [YTPlayerViewController new];
     player.contentVideoID = currentWatchID;
     YouModWatchVideoChanged(player);
-    assert([heading.attributedText.string isEqual:manager.titles[currentWatchID]]);
-    assert([comment.attributedText.string isEqual:detailsTitle] && [recommendation.attributedText.string isEqual:detailsTitle]);
+    drainUpdates(row);
     assert(![manager isOriginalToggledForVideoID:currentWatchID]);
-    assert(recommendation.feedUpdates == 1);
-    [[NSNotificationCenter defaultCenter] removeObserver:recommendation name:kYMDeArrowUpdatedNotification object:nil];
-    [manager toggleDeArrowForVideoID:currentWatchID];
+    assert([heading.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    assert([plain.text isEqual:manager.titles[currentWatchID]]);
+    assert([comment.attributedText.string isEqual:detailsTitle] && [recommendation.attributedText.string isEqual:detailsTitle]);
+    assert(heading.parentReads == 0);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
+    assert([heading.attributedText.string isEqual:detailsTitle] && [plain.text isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
+    assert([heading.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    // Native text/CSS refreshes after binding must not silently restore the original.
+    heading.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle attributes:@{NSForegroundColorAttributeName:@"new-theme"}];
+    plain.text = detailsTitle;
+    assert([heading.attributedText.string isEqual:manager.titles[currentWatchID]] && [plain.text isEqual:manager.titles[currentWatchID]]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
     assert([heading.attributedText.string isEqual:detailsTitle]);
+    assert([[heading.attributedText attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL] isEqual:@"new-theme"]);
     YTPlayerViewController *replacementPlayer = [YTPlayerViewController new];
     replacementPlayer.contentVideoID = currentWatchID;
-    YouModWatchVideoChanged(replacementPlayer);
+    YouModWatchVideoChanged(replacementPlayer); drainUpdates(row);
     assert([manager isOriginalToggledForVideoID:currentWatchID]);
-    [heading updateAttributedText]; drainTextUpdate(heading);
-    assert([heading.attributedText.string isEqual:detailsTitle]);
-    [manager toggleDeArrowForVideoID:currentWatchID];
-    assert([heading.attributedText.string isEqual:manager.titles[currentWatchID]]);
-    heading.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle attributes:@{NSForegroundColorAttributeName:@"new-theme"}];
-    [heading updateAttributedText]; drainTextUpdate(heading);
-    assert([[heading.attributedText attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL] isEqual:@"new-theme"]);
-    [manager toggleDeArrowForVideoID:currentWatchID];
-    assert([heading.attributedText.string isEqual:detailsTitle]);
 
+    // Title and controls may be separate cells, with no component owners or visible-state flags.
+    FeedTextHook *separate = titleNode(detailsTitle);
+    UICollectionViewCell *titleCell = nodeCell(0,@[separate]);
+    header.frame = CGRectMake(0,80,393,188);
+    collection.subviews = collection.visibleCells = @[titleCell,header,commentCell,feedCell];
+    [collection layoutSubviews]; drainUpdates(row);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
+    assert([separate.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    // Replacing a native title node while the action row survives must rebind it.
+    FeedTextHook *newHeading = titleNode(detailsTitle);
+    header.node.subnodes = @[newHeading];
+    [collection layoutSubviews]; drainUpdates(row);
+    assert([newHeading.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    [newHeading didExitHierarchy];
+    newHeading.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
+    assert([newHeading.attributedText.string isEqual:detailsTitle]);
+    [collection layoutSubviews]; drainUpdates(row);
+    assert([newHeading.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    // A bound node reused as a comment must drop the watch binding before doing parent work.
+    newHeading.attributedText = [[NSAttributedString alloc] initWithString:@"An unrelated comment"];
+    assert(!objc_getAssociatedObject(newHeading,"YMDeArrowWatchLabelVideoID"));
+    assert([newHeading.attributedText.string isEqual:@"An unrelated comment"] && newHeading.parentReads == 0);
+    header.node.subnodes = @[heading];
+
+    YouModUpdateWatchTitlesForRow(row); // A pending pass must not swallow a new video's update.
     currentWatchID = @"WATCH000002";
     player.contentVideoID = currentWatchID;
-    YouModWatchVideoChanged(player);
     heading.attributedText = [[NSAttributedString alloc] initWithString:@"Next native title"];
-    [heading updateAttributedText]; drainTextUpdate(heading); // Player details still belong to the old video.
+    plain.text = @"Next native title";
+    detailsID = @"WATCH000001"; // Previous playback's metadata must not brand the new title.
+    YouModWatchVideoChanged(player); drainUpdates(row);
     assert([heading.attributedText.string isEqual:@"Next native title"]);
     detailsID = currentWatchID;
     detailsTitle = @"Next native title";
-    heading.nodeController.owningComponent.templateURI = @"yt://video_metadata_inner.eml-js|test";
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"YouModWatchStatsChanged" object:nil];
-    assert([heading.attributedText.string isEqual:detailsTitle]);
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"YouModWatchStatsChanged" object:nil]; drainUpdates(row);
     manager.titles[currentWatchID] = @"Late DeArrow title";
-    [[NSNotificationCenter defaultCenter] postNotificationName:kYMDeArrowUpdatedNotification object:nil userInfo:@{@"videoID":@"WATCH000001"}];
-    assert([heading.attributedText.string isEqual:detailsTitle]);
-    [[NSNotificationCenter defaultCenter] postNotificationName:kYMDeArrowUpdatedNotification object:nil userInfo:@{@"videoID":currentWatchID}];
-    assert([heading.attributedText.string isEqual:@"Late DeArrow title"]);
+    [[NSNotificationCenter defaultCenter] postNotificationName:kYMDeArrowUpdatedNotification object:nil userInfo:@{@"videoID":currentWatchID}]; drainUpdates(row);
+    assert([heading.attributedText.string isEqual:@"Late DeArrow title"] && [plain.text isEqual:@"Late DeArrow title"]);
+    NSString *status = objc_getAssociatedObject(row,"YMWatchTitleStatus");
+    assert([status containsString:currentWatchID] && [status containsString:@"matched titles=2"]);
     preferences[DeArrowReplaceTitles] = NO;
-    [heading updateAttributedText]; drainTextUpdate(heading);
+    [collection layoutSubviews]; drainUpdates(row);
     assert([heading.attributedText.string isEqual:detailsTitle]);
     preferences[DeArrowReplaceTitles] = YES;
-    heading.visible = NO;
-    [heading didExitVisibleState];
-    [manager toggleDeArrowForVideoID:currentWatchID];
-    assert([heading.attributedText.string isEqual:detailsTitle]);
-    assert(!objc_getAssociatedObject(heading,"YMWatchTitleObserved"));
-    heading.visible = YES;
-    heading.nodeController.owningComponent.templateURI = @"comment.eml|recycled";
-    [heading didEnterVisibleState];
-    assert(!objc_getAssociatedObject(heading,"YMWatchTitleObserved"));
-    assert([heading.attributedText.string isEqual:detailsTitle]);
+    for (int i=0; i<200; i++) {
+        [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
+        NSString *expected = [manager isOriginalToggledForVideoID:currentWatchID] ? detailsTitle : manager.titles[currentWatchID];
+        assert([heading.attributedText.string isEqual:expected]);
+    }
+    row.window = NO;
+    NSString *detached = heading.attributedText.string;
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
+    assert([heading.attributedText.string isEqual:detached]);
 
-    ELMComponent *cycle = heading.nodeController.owningComponent;
-    cycle.owningComponent = cycle;
-    assert(!YouModIsWatchMetadataNode(heading));
-    ELMComponent *second = [ELMComponent new];
-    second.templateURI = @"video_with_context.eml|test";
-    cycle.owningComponent = second;
-    second.owningComponent = cycle;
-    assert(!YouModIsWatchMetadataNode(heading));
-    cycle.owningComponent = nil;
-    second.owningComponent = nil;
-
-    // Native setCell:/setVideoID: are optional. Exercise actual window and
-    // notification callbacks without pre-seeding a title-cell video ID.
+    // The legacy UIKit cell also handles an absent renderer video ID.
     currentWatchID = detailsID = @"LEGACY00001";
     detailsTitle = @"(Privacy Not Included)";
-    heading.visible = NO;
-    [heading didExitVisibleState];
     manager.titles[currentWatchID] = @"Criticisms of services that sponsor YouTubers";
-    [manager.toggled addObject:currentWatchID];
-    player.contentVideoID = currentWatchID;
-    YouModWatchVideoChanged(player);
-    YTSlimVideoInformationCell *unbound = [YTSlimVideoInformationCell new];
-    unbound.window = YES;
-    unbound.titleLabel = [TestLabel new];
-    unbound.titleLabel.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
-    [unbound didMoveToWindow];
-    assert(objc_getAssociatedObject(unbound, "YMWatchTitleVideoID") == nil);
-    assert([unbound.titleLabel.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    YouModDeArrowBeginWatchVideo(currentWatchID);
+    YTSlimVideoInformationCell *legacy = [YTSlimVideoInformationCell new];
+    legacy.window = YES;
+    legacy.titleLabel = [TestLabel new];
+    legacy.titleLabel.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
+    [legacy didMoveToWindow];
+    assert([legacy.titleLabel.attributedText.string isEqual:manager.titles[currentWatchID]]);
     [manager toggleDeArrowForVideoID:currentWatchID];
-    assert([unbound.titleLabel.attributedText.string isEqual:detailsTitle]);
-    [unbound layoutSubviews];
-    assert([unbound.titleLabel.attributedText.string isEqual:detailsTitle]);
-    [manager toggleDeArrowForVideoID:currentWatchID];
-    assert([unbound.titleLabel.attributedText.string isEqual:manager.titles[currentWatchID]]);
-    for (int i=0; i<200; i++) {
-        unbound.window = NO;
-        [unbound didMoveToWindow];
-        NSString *detached = unbound.titleLabel.attributedText.string;
-        [manager toggleDeArrowForVideoID:currentWatchID];
-        assert([unbound.titleLabel.attributedText.string isEqual:detached]);
-        unbound.window = YES;
-        [unbound didMoveToWindow];
-        NSString *expected = [manager isOriginalToggledForVideoID:currentWatchID] ? detailsTitle : manager.titles[currentWatchID];
-        assert([unbound.titleLabel.attributedText.string isEqual:expected]);
-    }
-    // Elements also must not require player details when a feed cached the original.
-    detailsID = @"PENDING0001";
-    heading.visible = YES;
-    heading.nodeController.owningComponent.templateURI = @"video_metadata.eml|3035ad7f9a19183f";
-    heading.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
-    [heading updateAttributedText]; drainTextUpdate(heading);
-    NSString *expected = [manager isOriginalToggledForVideoID:currentWatchID] ? detailsTitle : manager.titles[currentWatchID];
-    assert([heading.attributedText.string isEqual:expected]);
-    FeedTextHook *fullscreen = [FeedTextHook new];
-    fullscreen.forbidParentAccess = YES;
-    NSAttributedString *overlayTitle = [[NSAttributedString alloc] initWithString:@"Unrelated fullscreen title"];
+    assert([legacy.titleLabel.attributedText.string isEqual:detailsTitle]);
+
+    FeedTextHook *fullscreen = titleNode(@"Unrelated fullscreen title");
+    NSAttributedString *overlay = fullscreen.attributedText;
     manager.titleQueries = 0;
-    for (int i=0; i<10000; i++) fullscreen.attributedText = overlayTitle;
+    for (int i=0; i<10000; i++) fullscreen.attributedText = overlay;
     assert(fullscreen.parentReads == 0 && manager.titleQueries == 0);
-    assert(fullscreen.attributedText == overlayTitle);
-    objc_setAssociatedObject(fullscreen, "kYMDeArrowVideoIDKey", @"FEEDHOOK001", OBJC_ASSOCIATION_COPY_NONATOMIC);
-    objc_setAssociatedObject(fullscreen, "kYMDeArrowOrigAttrKey", [[NSAttributedString alloc] initWithString:@"Old feed title"], OBJC_ASSOCIATION_COPY_NONATOMIC);
-    fullscreen.attributedText = overlayTitle;
-    assert(fullscreen.parentReads == 0 && objc_getAssociatedObject(fullscreen, "kYMDeArrowVideoIDKey") == nil);
-    fullscreen.forbidParentAccess = NO;
-    NSAttributedString *feedTitle = [[NSAttributedString alloc] initWithString:@"Original feed title"];
-    manager.originals[@"FEEDHOOK001"] = feedTitle.string;
+    manager.originals[@"FEEDHOOK001"] = @"Original feed title";
     manager.titles[@"FEEDHOOK001"] = @"Replacement feed title";
-    objc_setAssociatedObject(fullscreen, "kYMDeArrowVideoIDKey", @"FEEDHOOK001", OBJC_ASSOCIATION_COPY_NONATOMIC);
-    objc_setAssociatedObject(fullscreen, "kYMDeArrowOrigAttrKey", feedTitle, OBJC_ASSOCIATION_COPY_NONATOMIC);
-    fullscreen.attributedText = feedTitle;
-    assert([fullscreen.attributedText.string isEqual:@"Replacement feed title"] && fullscreen.parentReads == 1);
+    fullscreen.forbidParentAccess = NO;
+    objc_setAssociatedObject(fullscreen,"kYMDeArrowVideoIDKey",@"FEEDHOOK001",OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(fullscreen,"kYMDeArrowOrigAttrKey",[[NSAttributedString alloc] initWithString:@"Original feed title"],OBJC_ASSOCIATION_COPY_NONATOMIC);
+    fullscreen.attributedText = [[NSAttributedString alloc] initWithString:@"Original feed title"];
+    assert([fullscreen.attributedText.string isEqual:@"Replacement feed title"]);
 } return 0; }

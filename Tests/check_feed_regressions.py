@@ -53,7 +53,7 @@ int main(void) {
         {{{0,0},{393,114}}, {{0,0},{30,24}}, {{30,0},{112,64}}, {{150,0},{181,94}}},
     };
     for (unsigned i = 0; i < sizeof(cases)/sizeof(cases[0]); i++) {
-        CGRect frame = YouModDeArrowButtonFrame(cases[i][0], cases[i][1], 0);
+        CGRect frame = YouModDeArrowButtonFrame(cases[i][0], cases[i][1]);
         assert(frame.size.width == 26 && frame.size.height == 26);
         assert(CGRectContainsRect(cases[i][0], frame));
         for (int j = 1; j < 4; j++) assert(!intersects(frame, cases[i][j]));
@@ -61,34 +61,18 @@ int main(void) {
         CGRect hit = CGRectMake(frame.origin.x-9, frame.origin.y-9,44,44);
         assert(!intersects(hit, cases[i][1]));
     }
-    // A one-line tablet card has no space below its menu. The fallback must
-    // align beside More, outside the thumbnail; native text excludes its hit target.
-    CGRect shortCard = CGRectMake(0,0,400,260), menu = CGRectMake(348,226,44,24);
-    CGRect fallback = YouModDeArrowButtonFrame(shortCard, menu, 0);
-    assert(fallback.size.width==26 && fallback.origin.y==225 && fallback.origin.x==313);
-    assert(CGRectContainsRect(shortCard, CGRectInset(fallback,-9,-9)));
-    assert(!intersects(CGRectInset(fallback,-9,-9),menu));
-    assert(CGRectGetMidY(fallback)==CGRectGetMidY(menu));
-    assert(CGRectGetMaxX(CGRectInset(fallback,-9,-9))==menu.origin.x);
-    // A temporarily short wrapper must never move the toggle to the top.
-    CGRect transient = YouModDeArrowButtonFrame(CGRectMake(0,0,400,250), menu, 0);
-    assert(transient.origin.y == 224 && transient.origin.x == fallback.origin.x);
-    // After final Texture measurement, return to the normal menu column.
-    CGRect settled = YouModDeArrowButtonFrame(CGRectMake(0,0,400,310), menu, 0);
-    assert(settled.origin.y == 260);
-    // Once wrapping needs the side slot, repeated short/tall measurements must
-    // retain that slot instead of alternately adding/removing text exclusions.
+    // Until the full cell finishes measuring, do not borrow the title's space.
+    CGRect menu = CGRectMake(348,226,44,24);
+    assert(YouModDeArrowButtonFrame(CGRectMake(0,0,400,260),menu).size.width == 0);
+    CGRect settled = YouModDeArrowButtonFrame(CGRectMake(0,0,400,310),menu);
+    assert(settled.origin.x == 357 && settled.origin.y == 260 && settled.size.width == 26);
+    // Different title heights keep the accessory in the same native More column.
     for (int i=0; i<1000; i++) {
-        CGRect stable = YouModDeArrowButtonFrame(CGRectMake(0,0,400,i%2?260:310),menu,1);
-        assert(stable.origin.x == fallback.origin.x && stable.origin.y == fallback.origin.y);
+        CGRect stable = YouModDeArrowButtonFrame(CGRectMake(0,0,400,i%2?310:350),menu);
+        assert(stable.origin.x == settled.origin.x && stable.origin.y == settled.origin.y);
     }
-    // Watch More: always aligned beside the native menu, including RTL.
-    CGRect watch = YouModDeArrowButtonFrame(CGRectMake(0,0,393,88),CGRectMake(170,44,44,44),1);
-    assert(watch.origin.x==135 && CGRectGetMidY(watch)==66);
-    CGRect rtl = YouModDeArrowButtonFrame(CGRectMake(0,0,393,88),CGRectMake(0,44,44,44),1);
-    assert(rtl.origin.x==53 && CGRectGetMidY(rtl)==66);
-    CGRect frame = YouModDeArrowButtonFrame(CGRectMake(0,0,30,24), CGRectMake(0,0,30,24), 0);
-    assert(frame.size.width == 0); // Clipped wrapper: caller must ascend to the card.
+    assert(YouModDeArrowButtonFrame(CGRectMake(0,0,30,24),CGRectMake(0,0,30,24)).size.width == 0);
+
 }
 '''
 with tempfile.TemporaryDirectory() as tmp:
@@ -107,7 +91,8 @@ assert 'keepalive_node' in dearrow and 'node.subnodes' in dearrow, 'Include laye
 image_hook = dearrow.split('%hook ASNetworkImageNode', 1)[1].split('%end', 1)[0]
 assert '@selector(view)' not in image_hook, 'Never force a view for a layer-backed image node'
 assert 'titleView.frame =' not in dearrow, 'Do not fight native title layout'
-assert 'sameVideo && [objc_getAssociatedObject(self, "YMDeArrowBesideMenu") boolValue]' in layout
+assert 'exclusionPaths' not in dearrow and 'YMDeArrowBesideMenu' not in dearrow, 'Do not reflow or clip title/channel text to place an accessory'
+assert 'YMDeArrowFeedMenus' in dearrow and '%hook UICollectionViewCell' in dearrow, 'Retry the native More column after final cell measurement'
 assert '- (BOOL)inlinePlaybackUnmutedAtStart {' not in player, 'Leave audio getter live after taps'
 assert 'setInlinePlaybackUnmutedAtStart:!IS_ENABLED(AutoFeedMute)' in player and 'if (newVideo' in player
 assert 'addYogaChild:' not in ryd and 'addSubnode:' not in ryd and 'setMinWidth:' not in ryd, 'Do not mutate native vote layout trees'
@@ -227,7 +212,7 @@ assert 'containsString:@"id.comment."' in card_lookup and 'containsString:@"comm
 thumbnail = dearrow.split('static ASNetworkImageNode *YouModFindThumbnailNode(', 1)[1].split('@interface', 1)[0]
 assert 'size.width < size.height * 1.2' in thumbnail, 'Avatars and emoji are not video thumbnails'
 assert 'knownID' not in thumbnail, 'Recycled thumbnails must use their current URL'
-assert 'cardButton.overflowView setNeedsLayout' in layout, 'Reposition after the parent card finishes layout'
+assert 'if (menu.window) [menu setNeedsLayout]' in dearrow, 'Reposition after the full cell finishes layout, including initially unmeasured cards'
 text_hook = dearrow.split('%hook ASTextNode', 1)[1].split('%end', 1)[0]
 assert text_hook.index('videoID = nil;') < text_hook.index('YouModIsLikelyBadgeOrMetadata(curStr)')
 print('PASS: grouped upload labels, comment exclusion, thumbnail identity and delayed card layout guards')

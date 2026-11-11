@@ -4,6 +4,7 @@ extern NSString *YouModCurrentViewCount(void);
 extern BOOL YouModIsOverflowButtonView(UIView *view);
 extern BOOL YouModIsOverflowButtonIdentifier(NSString *identifier);
 extern void YouModUpdateWatchDeArrowButton(UIView *row, CGRect frame);
+extern void YouModUpdateWatchTitlesForRow(UIView *row);
 
 // Match Texture's dimension/edge ABI without importing its full framework.
 typedef struct { NSInteger unit; CGFloat value; } YMWatchDimension;
@@ -310,6 +311,7 @@ static void YMUpdateWatchBar(UIView *bar) {
     if (!CGRectEqualToRect(count.frame, frame)) count.frame = frame;
     count.hidden = frame.size.width < 24;
     YMUpdateWatchToggle(bar);
+    YouModUpdateWatchTitlesForRow(bar);
 }
 
 static void YMMarkWatchRow(UIView *row) {
