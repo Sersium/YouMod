@@ -7,19 +7,26 @@
   "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
   "apps": [
     {
-      "name": "YouTube (YouMod 3.7) \u00b7 Latest",
+      "name": "YouTube (YouMod 3.8) \u00b7 Latest",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "3.7",
-      "versionDate": "2026-11-11T04:37:02-05:00",
-      "versionDescription": "YouMod 3.7 \u00b7 YouTube 21.42.4\n\n- Keep unrelated player text out of feed hierarchy and branding work (65cda54)\n- Handle watch titles without renderer IDs and guard navigation layout hazards (6144b78)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.5...65cda541f0612f16d24387ae5c1b10b7f729ec63\nSource: 65cda541f0612f16d24387ae5c1b10b7f729ec63\n",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.7/YouTube_YouMod.ipa",
-      "localizedDescription": "YouMod 3.7 \u00b7 YouTube 21.42.4\n\n- Keep unrelated player text out of feed hierarchy and branding work (65cda54)\n- Handle watch titles without renderer IDs and guard navigation layout hazards (6144b78)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.5...65cda541f0612f16d24387ae5c1b10b7f729ec63\nSource: 65cda541f0612f16d24387ae5c1b10b7f729ec63\n",
+      "version": "3.8",
+      "versionDate": "2026-11-11T05:07:48-05:00",
+      "versionDescription": "YouMod 3.8 \u00b7 YouTube 21.42.4\n\n- Bind watch titles to visible Elements text and reserve the native More item (2082080)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.7...20820808c86f1ed28588e8c1adc4c1e0c943278c\nSource: 20820808c86f1ed28588e8c1adc4c1e0c943278c\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.8/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.8 \u00b7 YouTube 21.42.4\n\n- Bind watch titles to visible Elements text and reserve the native More item (2082080)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.7...20820808c86f1ed28588e8c1adc4c1e0c943278c\nSource: 20820808c86f1ed28588e8c1adc4c1e0c943278c\n",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 130705087,
+      "size": 130706555,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "3.8",
+          "date": "2026-11-11T05:07:48-05:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.8/YouTube_YouMod.ipa",
+          "size": 130706555,
+          "localizedDescription": "YouMod 3.8 \u00b7 YouTube 21.42.4\n\n- Bind watch titles to visible Elements text and reserve the native More item (2082080)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.7...20820808c86f1ed28588e8c1adc4c1e0c943278c\nSource: 20820808c86f1ed28588e8c1adc4c1e0c943278c\n"
+        },
         {
           "version": "3.7",
           "date": "2026-11-11T04:37:02-05:00",
@@ -96,6 +103,29 @@
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.2.0.41/YouTube_YouMod.ipa",
           "size": 129317180,
           "localizedDescription": "YouMod 2.2.0.41 \u00b7 YouTube 21.38.2\n\n- Add DeArrow, video stats, preview defaults and versioned IPA builds (4839f79)\n\nFull diff: https://github.com/Sersium/YouMod/compare/9fd5117f780f6a0b9cf08cec29c47d5106781a7d...4839f798d6f57efa1fe755ae7e6c9d8966c32c31\nSource: 4839f798d6f57efa1fe755ae7e6c9d8966c32c31\n"
+        }
+      ]
+    },
+    {
+      "name": "YouTube (YouMod 3.7)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "3.7",
+      "versionDate": "2026-11-11T04:37:02-05:00",
+      "versionDescription": "YouMod 3.7 \u00b7 YouTube 21.42.4\n\n- Keep unrelated player text out of feed hierarchy and branding work (65cda54)\n- Handle watch titles without renderer IDs and guard navigation layout hazards (6144b78)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.5...65cda541f0612f16d24387ae5c1b10b7f729ec63\nSource: 65cda541f0612f16d24387ae5c1b10b7f729ec63\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.7/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 3.7 \u00b7 YouTube 21.42.4\n\n- Keep unrelated player text out of feed hierarchy and branding work (65cda54)\n- Handle watch titles without renderer IDs and guard navigation layout hazards (6144b78)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.5...65cda541f0612f16d24387ae5c1b10b7f729ec63\nSource: 65cda541f0612f16d24387ae5c1b10b7f729ec63\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 130705087,
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "3.7",
+          "date": "2026-11-11T04:37:02-05:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v3.7/YouTube_YouMod.ipa",
+          "size": 130705087,
+          "localizedDescription": "YouMod 3.7 \u00b7 YouTube 21.42.4\n\n- Keep unrelated player text out of feed hierarchy and branding work (65cda54)\n- Handle watch titles without renderer IDs and guard navigation layout hazards (6144b78)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.5...65cda541f0612f16d24387ae5c1b10b7f729ec63\nSource: 65cda541f0612f16d24387ae5c1b10b7f729ec63\n"
         }
       ]
     },
@@ -331,6 +361,14 @@
     }
   ],
   "news": [
+    {
+      "identifier": "youmod-3.8",
+      "title": "YouMod 3.8",
+      "caption": "YouMod 3.8 \u00b7 YouTube 21.42.4\n\n- Bind watch titles to visible Elements text and reserve the native More item (2082080)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v3.7...20820808c86f1ed28588e8c1adc4c1e0c943278c\nSource: 20820808c86f1ed28588e8c1adc4c1e0c943278c\n",
+      "date": "2026-11-11T05:07:48-05:00",
+      "url": "https://github.com/Sersium/YouMod/releases/tag/v3.8",
+      "notify": true
+    },
     {
       "identifier": "youmod-3.7",
       "title": "YouMod 3.7",
