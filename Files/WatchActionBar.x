@@ -1,6 +1,9 @@
 #import "Headers.h"
 
 extern NSString *YouModCurrentViewCount(void);
+extern BOOL YouModIsOverflowButtonView(UIView *view);
+extern BOOL YouModIsOverflowButtonIdentifier(NSString *identifier);
+extern void YouModUpdateWatchDeArrowButton(UIView *row, CGRect frame);
 
 // Match Texture's dimension/edge ABI without importing its full framework.
 typedef struct { NSInteger unit; CGFloat value; } YMWatchDimension;
@@ -31,6 +34,31 @@ static ASDisplayNode *YMFindWatchNode(ASDisplayNode *node, NSString *identifier)
     return nil;
 }
 
+static ASDisplayNode *YMFindWatchMenuNode(ASDisplayNode *node) {
+    if (YouModIsOverflowButtonIdentifier(node.accessibilityIdentifier)) return node;
+    if (node.isNodeLoaded && !node.layerBacked && YouModIsOverflowButtonView(node.view)) return node;
+    for (ASDisplayNode *child in node.yogaChildren.count ? node.yogaChildren : node.subnodes) {
+        ASDisplayNode *match = YMFindWatchMenuNode(child);
+        if (match) return match;
+    }
+    return nil;
+}
+
+static ASDisplayNode *YMWatchMoreItem(ASDisplayNode *node, ASDisplayNode **parent) {
+    for (ASDisplayNode *child in node.yogaChildren) {
+        if (!YMFindWatchMenuNode(child)) continue;
+        ASDisplayNode *nested = YMWatchMoreItem(child, parent);
+        if (nested) return nested;
+        for (ASDisplayNode *sibling in node.yogaChildren) {
+            if (sibling != child && (YMFindWatchNode(sibling, @"id.video.share.button") || YMFindWatchNode(sibling, @"id.video.like.button"))) {
+                *parent = node;
+                return child;
+            }
+        }
+    }
+    return nil;
+}
+
 static BOOL YMConfigureWatchRow(ASDisplayNode *row, BOOL wrap) {
     ASDisplayNode *layout = row;
     NSMutableArray *wrappers = [NSMutableArray arrayWithObject:row];
@@ -45,14 +73,14 @@ static BOOL YMConfigureWatchRow(ASDisplayNode *row, BOOL wrap) {
         if (YMFindWatchNode(child, @"id.video.like.button")) { first = child; break; }
     }
     if (!first) return NO;
-    ASDisplayNode *more = YMFindWatchNode(layout, @"id.ui.video.action.menu") ?: YMFindWatchNode(layout, @"id.video.action.menu") ?: YMFindWatchNode(layout, @"id.video.menu.button") ?:
-        YMFindWatchNode(layout, @"eml.overflow_button") ?: YMFindWatchNode(layout, @"overflow_button");
+    ASDisplayNode *moreParent = nil;
+    ASDisplayNode *more = YMWatchMoreItem(layout, &moreParent);
     BOOL showToggle = IS_ENABLED(DeArrowEnabled);
     NSValue *originalMargin = objc_getAssociatedObject(more, "YMDeArrowOriginalMargin");
-    BOOL moreReady = !more || (showToggle ? more.style.margin.start.value == 44 && originalMargin != nil : originalMargin == nil);
+    BOOL moreReady = !more || (showToggle ? more.style.margin.start.unit == 1 && more.style.margin.start.value == 44 && originalMargin != nil : originalMargin == nil);
     YMWatchDimension prefix = first.style.margin.start;
     if (objc_getAssociatedObject(row, "YMWatchViewsReserved") &&
-        moreReady && (!wrap || layout.style.flexWrap == 1) && prefix.unit == 1 && prefix.value == 56) return NO;
+        moreReady && (!wrap || (layout.style.flexWrap == 1 && (!moreParent || moreParent.style.flexWrap == 1))) && prefix.unit == 1 && prefix.value == 56) return NO;
     if (more) {
         YMWatchInsets margin = more.style.margin;
         if (showToggle) {
@@ -72,6 +100,10 @@ static BOOL YMConfigureWatchRow(ASDisplayNode *row, BOOL wrap) {
     if (wrap) {
         layout.style.flexWrap = 1;
         layout.style.justifyContent = 0;
+        moreParent.style.flexWrap = 1;
+        moreParent.style.justifyContent = 0;
+        moreParent.style.height = automatic;
+        moreParent.style.maxHeight = automatic;
         for (ASDisplayNode *wrapper in wrappers) {
             wrapper.style.height = automatic;
             wrapper.style.maxHeight = automatic;
@@ -111,6 +143,36 @@ static UIView *YMFindWatchControl(UIView *view, NSString *identifier) {
         if (match) return match;
     }
     return nil;
+}
+
+static UIView *YMFindWatchMenuView(UIView *view) {
+    if (YouModIsOverflowButtonView(view)) return view;
+    for (UIView *child in view.subviews) {
+        UIView *match = YMFindWatchMenuView(child);
+        if (match) return match;
+    }
+    return nil;
+}
+
+static CGRect YMWatchDeArrowFrame(CGRect bounds, CGRect menu, BOOL rtl) {
+    CGFloat x = rtl ? CGRectGetMaxX(menu) + 9 : CGRectGetMinX(menu) - 35;
+    CGRect frame = CGRectMake(x, CGRectGetMidY(menu) - 13, 26, 26);
+    return CGRectContainsRect(bounds, CGRectInset(frame, -9, 0)) ? frame : CGRectZero;
+}
+
+static void YMUpdateWatchToggle(UIView *bar) {
+    UIView *menu = YMFindWatchMenuView(bar);
+    CGRect frame = menu ? YMWatchDeArrowFrame(bar.bounds, [menu convertRect:menu.bounds toView:bar],
+        bar.effectiveUserInterfaceLayoutDirection == UIUserInterfaceLayoutDirectionRightToLeft) : CGRectZero;
+    // Native layout owns these slots; never cover Save while a new row is measuring.
+    for (NSString *identifier in @[@"id.video.add_to.button", @"id.video.share.button", @"id.video.like.button", @"id.video.dislike.button", @"id.ui.channel.subscribe"]) {
+        UIView *control = YMFindWatchControl(bar, identifier);
+        if (control && CGRectIntersectsRect(CGRectInset(frame, -9, -9), [control convertRect:control.bounds toView:bar])) {
+            frame = CGRectZero;
+            break;
+        }
+    }
+    YouModUpdateWatchDeArrowButton(bar, frame);
 }
 
 static CGRect YMWatchJoinViewsFrame(CGRect join) {
@@ -197,6 +259,7 @@ static void YMUpdateWatchBar(UIView *bar) {
     UILabel *count = objc_getAssociatedObject(bar, "YMViewCount");
     if (!like) {
         count.hidden = YES;
+        YouModUpdateWatchDeArrowButton(bar, CGRectZero);
         return;
     }
     CGRect joinFrame = join ? [join convertRect:join.bounds toView:bar] : CGRectZero;
@@ -246,6 +309,7 @@ static void YMUpdateWatchBar(UIView *bar) {
     count.textColor = UIColor.labelColor;
     if (!CGRectEqualToRect(count.frame, frame)) count.frame = frame;
     count.hidden = frame.size.width < 24;
+    YMUpdateWatchToggle(bar);
 }
 
 static void YMMarkWatchRow(UIView *row) {
@@ -259,8 +323,10 @@ static void YMMarkWatchRow(UIView *row) {
     if ([self.accessibilityIdentifier isEqualToString:@"id.sponsorship.sponsor.button"]) self.hidden = YES;
     if ([self.accessibilityIdentifier isEqualToString:@"id.video.like.button"]) {
         [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModWatchStatsChanged" object:nil];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModDeArrowUpdatedNotification" object:nil];
         if (!self.window) return;
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_refreshWatchBar:) name:@"YouModWatchStatsChanged" object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_refreshWatchBar:) name:@"YouModDeArrowUpdatedNotification" object:nil];
         // The row's other children may not be attached until this turn finishes.
         __weak UIView *weakControl = self;
         dispatch_async(dispatch_get_main_queue(), ^{

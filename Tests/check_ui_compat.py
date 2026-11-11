@@ -8,6 +8,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 tabs = (root / 'Files/Tabbar.x').read_text()
 watch = (root / 'Files/WatchActionBar.x').read_text()
+dearrow = (root / 'Files/DeArrow.x').read_text()
 appearance = (root / 'Files/Apperence.x').read_text()
 
 
@@ -57,7 +58,12 @@ browse_methods = '\n'.join('+ (NSString *)' + name + ' { return @"' + value + '"
 types = watch[watch.index('typedef struct'):watch.index('@interface ASLayoutElementStyleYoga')]
 style = watch[watch.index('@interface ASLayoutElementStyleYoga'):watch.index('static ASDisplayNode *YMFindWatchNode')]
 style = style.replace('@interface ASLayoutElementStyleYoga (YouModWatchRow)', '@interface ASLayoutElementStyleYoga : NSObject\n@property CGFloat flexGrow;')
-node_helpers = function(watch, 'static ASDisplayNode *YMFindWatchNode(') + function(watch, 'static BOOL YMConfigureWatchRow(')
+node_helpers = function(dearrow, 'BOOL YouModIsOverflowButtonIdentifier(') + function(dearrow, 'BOOL YouModIsOverflowButtonView(')
+node_helpers += ''.join(function(watch, signature) for signature in (
+    'static ASDisplayNode *YMFindWatchNode(', 'static ASDisplayNode *YMFindWatchMenuNode(',
+    'static ASDisplayNode *YMWatchMoreItem(', 'static BOOL YMConfigureWatchRow(',
+    'static UIView *YMFindWatchControl(', 'static UIView *YMFindWatchMenuView(',
+    'static CGRect YMWatchDeArrowFrame(', 'static void YMUpdateWatchToggle('))
 stubs = (root / 'Tests/fixtures/ui_compat.m').read_text()
 program = stubs.replace('/* BROWSE_DECLARATIONS */', browse_declarations).replace('/* BROWSE_METHODS */', browse_methods)
 program = program.replace('/* MAPPINGS */', mappings).replace('/* GETTERS */', getters)
@@ -66,6 +72,6 @@ with tempfile.TemporaryDirectory() as tmp:
     source = Path(tmp) / 'compat.m'
     binary = Path(tmp) / 'compat'
     source.write_text(program)
-    subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', str(source), '-o', str(binary)], check=True)
+    subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(source), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
 print('PASS: actual tab getter/count, preference changes, restored native items, live row styling, layer-backed traversal and remeasurement guards')

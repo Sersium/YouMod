@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <CoreGraphics/CoreGraphics.h>
 #import <objc/runtime.h>
 #include <assert.h>
 #define LOC(key) (key)
@@ -47,9 +48,20 @@ static NSUserDefaults *preferences;
 @end
 @interface UIView : NSObject
 @property(copy) NSString *accessibilityIdentifier;
+@property(copy) NSString *accessibilityLabel;
+@property CGRect frame;
+@property(readonly) CGRect bounds;
+@property NSInteger effectiveUserInterfaceLayoutDirection;
+@property(copy) NSArray *subviews;
+- (CGRect)convertRect:(CGRect)rect toView:(UIView *)view;
 @end
 @implementation UIView
+- (CGRect)bounds { return CGRectMake(0,0,self.frame.size.width,self.frame.size.height); }
+- (CGRect)convertRect:(CGRect)rect toView:(UIView *)view { return CGRectOffset(rect,self.frame.origin.x,self.frame.origin.y); }
 @end
+enum { UIUserInterfaceLayoutDirectionRightToLeft = 1 };
+static CGRect toggleFrame;
+static void YouModUpdateWatchDeArrowButton(UIView *row, CGRect frame) { toggleFrame = frame; }
 @interface ASDisplayNode : NSObject
 @property(copy) NSString *accessibilityIdentifier;
 @property(strong) ASLayoutElementStyleYoga *style;
@@ -152,6 +164,25 @@ int main(void) { @autoreleasepool {
     assert(YMConfigureWatchRow(actions,YES));
     assert(more.style.margin.start.unit == 1 && more.style.margin.start.value == 44);
     assert(!YMConfigureWatchRow(actions,YES));
+    // More's fixed leaf is nested inside the real Yoga item; its own margin
+    // cannot reserve a slot beside Save. Match the native generated menu ID.
+    ASDisplayNode *save = node(@"id.video.add_to.button",nil);
+    ASDisplayNode *menuLeaf = node(@"id.ui.video.watch.menu.button",nil);
+    ASDisplayNode *menuItem = node(nil,@[node(nil,@[menuLeaf])]);
+    ASDisplayNode *nestedActions = node(nil,@[node(@"id.video.like.button",nil),share,save,menuItem]);
+    ASDisplayNode *menuParent = nil;
+    assert(YMWatchMoreItem(nestedActions,&menuParent) == menuItem && menuParent == nestedActions);
+    assert(YMConfigureWatchRow(nestedActions,YES));
+    assert(menuItem.style.margin.start.value == 44 && menuLeaf.style.margin.start.value == 0);
+    assert(save.style.margin.start.value == 0 && !save.hidden);
+    assert(!YMConfigureWatchRow(nestedActions,YES));
+    menuItem.style.margin = (YMWatchInsets){0}; // Native style replacement during reuse.
+    assert(YMConfigureWatchRow(nestedActions,YES) && menuItem.style.margin.start.value == 44);
+    menuLeaf.accessibilityIdentifier = nil;
+    menuLeaf.isNodeLoaded = YES;
+    menuLeaf.view = [UIView new];
+    menuLeaf.view.accessibilityLabel = @"More actions";
+    assert(YMFindWatchMenuNode(nestedActions) == menuLeaf);
     deArrowEnabled = NO;
     assert(YMConfigureWatchRow(actions,YES));
     assert(more.style.margin.start.unit == 0 && more.style.margin.start.value == 0);
@@ -160,4 +191,27 @@ int main(void) { @autoreleasepool {
     flattened.isNodeLoaded = YES;
     assert(YMFindWatchNode(flattened,@"id.video.like.button") == flattened.yogaChildren.firstObject);
     assert(YMFindWatchNode(flattened,@"missing") == nil);
+    UIView *bar = [UIView new], *menuView = [UIView new], *saveView = [UIView new];
+    bar.frame = CGRectMake(0,0,393,100);
+    menuView.accessibilityIdentifier = @"id.ui.video.watch.menu.button";
+    menuView.frame = CGRectMake(340,0,44,44);
+    saveView.accessibilityIdentifier = @"id.video.add_to.button";
+    saveView.frame = CGRectMake(296,0,44,44);
+    bar.subviews = @[saveView,menuView];
+    YMUpdateWatchToggle(bar);
+    assert(CGRectIsEmpty(toggleFrame)); // The screenshot's Save overlap must never be drawn.
+    saveView.frame = CGRectMake(252,0,44,44); // Native remeasurement leaves the reserved slot.
+    YMUpdateWatchToggle(bar);
+    assert(toggleFrame.origin.x == 305 && toggleFrame.size.width == 26);
+    for (int i=0; i<200; i++) {
+        menuView = [UIView new]; // Native updates replace More without replacing its row.
+        menuView.accessibilityLabel = @"More actions";
+        menuView.frame = CGRectMake(340,0,44,44);
+        bar.subviews = @[saveView,menuView];
+        YMUpdateWatchToggle(bar);
+        assert(toggleFrame.origin.x == 305 && toggleFrame.size.width == 26);
+    }
+    bar.subviews = @[saveView];
+    YMUpdateWatchToggle(bar);
+    assert(CGRectIsEmpty(toggleFrame));
 } return 0; }

@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[1]
 source = (root / 'Files/WatchActionBar.x').read_text()
 start = source.index('static CGRect YMWatchJoinViewsFrame(')
 helper = source[start:source.index('\n}\n', start) + 3]
-for name, file in [('YMWatchPrefixFrame', source), ('YMWatchReservedViewsFrame', source), ('YMVoteLabelFrame', (root / 'Files/ReturnYouTubeDislike.x').read_text())]:
+for name, file in [('YMWatchPrefixFrame', source), ('YMWatchReservedViewsFrame', source), ('YMWatchDeArrowFrame', source), ('YMVoteLabelFrame', (root / 'Files/ReturnYouTubeDislike.x').read_text())]:
     start = file.index('static CGRect ' + name + '(')
     helper += file[start:file.index('\n}\n', start) + 3]
 stubs = '''
@@ -18,6 +18,8 @@ typedef struct { double width,height; } CGSize;
 typedef struct { CGPoint origin; CGSize size; } CGRect;
 #define CGRectMake(x,y,w,h) ((CGRect){{x,y},{w,h}})
 #define CGRectZero CGRectMake(0,0,0,0)
+#define CGRectInset(r,dx,dy) CGRectMake((r).origin.x+(dx),(r).origin.y+(dy),(r).size.width-2*(dx),(r).size.height-2*(dy))
+#define CGRectContainsRect(b,r) (CGRectGetMinX(r)>=CGRectGetMinX(b) && CGRectGetMinY(r)>=CGRectGetMinY(b) && CGRectGetMaxX(r)<=CGRectGetMaxX(b) && CGRectGetMaxY(r)<=CGRectGetMaxY(b))
 #define CGRectIsEmpty(r) ((r).size.width<=0 || (r).size.height<=0)
 #define CGRectGetMinY(r) ((r).origin.y)
 #define CGRectGetMaxY(r) ((r).origin.y+(r).size.height)
@@ -60,6 +62,19 @@ int main(void) {
     CGRect c=YMWatchJoinViewsFrame(CGRectMake(52,0,56,44));
     assert(c.origin.x==52 && CGRectGetMaxX(c)<=114);
     assert(YMWatchJoinViewsFrame(CGRectZero).size.width==0);
+    // More and its measured leading slot wrap together without taking the
+    // native More target, including RTL and the short tablet toolbar.
+    CGRect bounds=CGRectMake(0,0,393,100), menu=CGRectMake(340,0,44,44);
+    CGRect toggle=YMWatchDeArrowFrame(bounds,menu,0);
+    assert(toggle.origin.x==305 && toggle.origin.y==9);
+    assert(CGRectGetMaxX(CGRectInset(toggle,-9,-9))==menu.origin.x);
+    CGRect secondLine=YMWatchDeArrowFrame(bounds,CGRectMake(56,56,44,44),0);
+    assert(secondLine.origin.x==21 && secondLine.origin.y==65);
+    CGRect rtlToggle=YMWatchDeArrowFrame(bounds,CGRectMake(12,0,44,44),1);
+    assert(rtlToggle.origin.x==65 && rtlToggle.origin.y==9);
+    assert(CGRectIsEmpty(YMWatchDeArrowFrame(bounds,CGRectMake(12,0,44,44),0)));
+    CGRect shortBar=YMWatchDeArrowFrame(CGRectMake(0,0,800,32),CGRectMake(744,0,44,32),0);
+    assert(shortBar.origin.x==709 && shortBar.origin.y==3);
 }
 '''
 with tempfile.TemporaryDirectory() as tmp:

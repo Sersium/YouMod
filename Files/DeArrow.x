@@ -20,6 +20,7 @@ static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNo
 @interface ASDisplayNode (YouModDeArrowGeometry)
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node;
 - (ELMNodeController *)nodeController;
+- (BOOL)isVisible;
 @end
 
 @interface YouModDeArrowButton : UIButton
@@ -911,17 +912,19 @@ static void YouModRefreshThumbnailNode(ASNetworkImageNode *node) {
 
 #pragma mark - DeArrow Indicator (Web-Style) next to 3-dots Menu & Feed Quick Swap
 
-BOOL YouModIsOverflowButtonView(UIView *view) {
-    if (!view) return NO;
-    NSString *iden = view.accessibilityIdentifier;
-    if ([iden isEqualToString:@"eml.overflow_button"] ||
+BOOL YouModIsOverflowButtonIdentifier(NSString *iden) {
+    return [iden isEqualToString:@"eml.overflow_button"] ||
         [iden isEqualToString:@"id.ui.video.action.menu"] ||
         [iden isEqualToString:@"id.video.menu.button"] ||
+        ([iden hasPrefix:@"id.ui.video."] && [iden hasSuffix:@".menu.button"]) ||
         [iden isEqualToString:@"overflow_button"] ||
         ([iden containsString:@"overflow"] && [iden containsString:@"button"]) ||
-        [iden containsString:@"action.menu"]) {
-        return YES;
-    }
+        [iden containsString:@"action.menu"];
+}
+
+BOOL YouModIsOverflowButtonView(UIView *view) {
+    if (!view) return NO;
+    if (YouModIsOverflowButtonIdentifier(view.accessibilityIdentifier)) return YES;
     NSString *label = view.accessibilityLabel.lowercaseString;
     if (label.length > 0 && ([label isEqualToString:@"action menu"] || [label isEqualToString:@"more actions"])) {
         return YES;
@@ -1113,7 +1116,29 @@ static void YouModRemoveDeArrowButton(UIView *menu, UIButton *button) {
 
 extern NSString *YouModCurrentWatchVideoID(void);
 extern NSString *YouModCurrentWatchTitle(void);
-extern UIView *YouModWatchRowForControl(UIView *control);
+
+void YouModUpdateWatchDeArrowButton(UIView *row, CGRect frame) {
+    UIButton *button = objc_getAssociatedObject(row, "YMWatchDeArrowButton");
+    NSString *videoID = YouModCurrentWatchVideoID();
+    if (!row.window || !IS_ENABLED(DeArrowEnabled) || videoID.length != 11 || CGRectIsEmpty(frame)) {
+        [button removeFromSuperview];
+        return;
+    }
+    if (!button) {
+        button = [YouModDeArrowButton buttonWithType:UIButtonTypeCustom];
+        button.layer.cornerRadius = 13;
+        button.accessibilityIdentifier = @"youmod.watch.dearrow";
+        button.accessibilityLabel = @"Toggle DeArrow original title";
+        [button addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapButtonTap:) forControlEvents:UIControlEventTouchUpInside];
+        objc_setAssociatedObject(row, "YMWatchDeArrowButton", button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    objc_setAssociatedObject(button, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    if (button.superview != row) [row addSubview:button];
+    if (!CGRectEqualToRect(button.frame, frame)) button.frame = frame;
+    [row bringSubviewToFront:button];
+    YouModUpdateOverflowIndicator(button, videoID);
+    [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
+}
 
 @interface YTSlimVideoInformationCell : UICollectionViewCell
 @property (nonatomic, readonly) id titleLabel;
@@ -1215,26 +1240,34 @@ static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell) {
 }
 %end
 
-@interface YTWatchNextResultsViewController (YouModDeArrowTitle)
-- (UICollectionView *)collectionView;
-@end
-
 static BOOL YouModIsWatchMetadataNode(ASDisplayNode *node) {
-    ELMNodeController *controller = [node respondsToSelector:@selector(nodeController)] ? node.nodeController : nil;
-    id component = [controller respondsToSelector:@selector(owningComponent)] ? controller.owningComponent : nil;
+    id component = [node respondsToSelector:@selector(nodeController)] ? node.nodeController : nil;
     NSHashTable *visited = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
     while (component && ![visited containsObject:component]) {
         [visited addObject:component];
         NSString *uri = [component respondsToSelector:@selector(templateURI)] ? [component templateURI] : nil;
         NSString *name = [[uri componentsSeparatedByString:@"|"].firstObject lastPathComponent];
-        if ([name isEqualToString:@"video_metadata.eml"] || [name isEqualToString:@"video_metadata_inner.eml"]) return YES;
+        if (name.length && [@[@"video_metadata.eml", @"video_metadata_inner.eml", @"video_metadata.eml-js", @"video_metadata_inner.eml-js"] containsObject:name]) return YES;
         component = [component respondsToSelector:@selector(owningComponent)] ? [component owningComponent] : nil;
     }
     return NO;
 }
 
-static void YouModUpdateElementsWatchTitle(YTWatchNextResultsViewController *controller, UICollectionViewCell *appearingCell) {
-    if (!controller.viewIfLoaded.window) return;
+static void YouModUpdateElementsWatchTitle(ELMTextNode *title) {
+    if (!title.isVisible) return;
+    if (!NSThread.isMainThread) {
+        __weak ELMTextNode *weakTitle = title;
+        dispatch_async(dispatch_get_main_queue(), ^{ YouModUpdateElementsWatchTitle(weakTitle); });
+        return;
+    }
+    BOOL metadata = YouModIsWatchMetadataNode(title);
+    if (!metadata) return;
+    // Text ownership is available on the leaf even when the outer cell has no component.
+    if (!objc_getAssociatedObject(title, "YMWatchTitleObserved")) {
+        objc_setAssociatedObject(title, "YMWatchTitleObserved", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [[NSNotificationCenter defaultCenter] addObserver:title selector:@selector(youmod_watchElementsTitleChanged:) name:kYMDeArrowUpdatedNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:title selector:@selector(youmod_watchElementsTitleChanged:) name:@"YouModWatchStatsChanged" object:nil];
+    }
     NSString *videoID = YouModCurrentWatchVideoID();
     if (videoID.length != 11) return;
     YouModDeArrowManager *manager = [YouModDeArrowManager sharedInstance];
@@ -1246,43 +1279,45 @@ static void YouModUpdateElementsWatchTitle(YTWatchNextResultsViewController *con
         original = [manager originalTitleForVideoID:videoID];
     }
     NSString *replacement = [manager titleForVideoID:videoID];
-    NSMutableArray *cells = [controller.collectionView.visibleCells mutableCopy] ?: [NSMutableArray array];
-    if (appearingCell && ![cells containsObject:appearingCell]) [cells addObject:appearingCell];
-    for (UICollectionViewCell *cell in cells) {
-        if (![cell isKindOfClass:%c(_ASCollectionViewCell)]) continue;
-        ASDisplayNode *node = ((_ASCollectionViewCell *)cell).node;
-        if (!YouModIsWatchMetadataNode(node)) continue;
-        NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
-        YouModCollectCardNodes(node, texts, images);
-        for (ASTextNode *title in texts) {
-            BOOL bound = [objc_getAssociatedObject(title, "YMDeArrowWatchLabelVideoID") isEqualToString:videoID];
-            NSString *text = title.attributedText.string;
-            if (!bound && ![text isEqualToString:original] && ![text isEqualToString:replacement]) continue;
-            YouModUpdateWatchTitleLabel(title, videoID);
-            break;
-        }
-    }
+    NSString *text = YouModCleanDeArrowTitle(title.attributedText.string);
+    BOOL bound = [objc_getAssociatedObject(title, "YMDeArrowWatchLabelVideoID") isEqualToString:videoID] &&
+        [title.attributedText isEqualToAttributedString:objc_getAssociatedObject(title, "YMDeArrowRenderedWatchTitle")];
+    if (!bound && ![text isEqualToString:YouModCleanDeArrowTitle(original)] &&
+        ![text isEqualToString:YouModCleanDeArrowTitle(replacement)]) return;
+    YouModUpdateWatchTitleLabel(title, videoID);
     if (IS_ENABLED(DeArrowEnabled)) [manager prefetchBrandingForVideoID:videoID];
 }
 
-%hook YTWatchNextResultsViewController
-- (void)viewDidLoad {
+%hook ELMTextNode
+- (void)didEnterVisibleState {
     %orig;
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_watchElementsTitleChanged:) name:kYMDeArrowUpdatedNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_watchElementsTitleChanged:) name:@"YouModWatchStatsChanged" object:nil];
+    YouModUpdateElementsWatchTitle(self);
 }
-- (void)viewDidLayoutSubviews {
+- (void)updateAttributedText {
     %orig;
-    YouModUpdateElementsWatchTitle(self, nil);
+    if (!self.isVisible || objc_getAssociatedObject(self, "YMWatchTitleQueued")) return;
+    // Finish native materialization before changing text or invalidating its layout.
+    objc_setAssociatedObject(self, "YMWatchTitleQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak ELMTextNode *weakTitle = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        ELMTextNode *title = weakTitle;
+        if (!title) return;
+        objc_setAssociatedObject(title, "YMWatchTitleQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        YouModUpdateElementsWatchTitle(title);
+    });
 }
-- (void)collectionView:(UICollectionView *)collectionView willDisplayCell:(UICollectionViewCell *)cell forItemAtIndexPath:(NSIndexPath *)indexPath {
+- (void)didExitVisibleState {
+    if (objc_getAssociatedObject(self, "YMWatchTitleObserved")) {
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:kYMDeArrowUpdatedNotification object:nil];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModWatchStatsChanged" object:nil];
+        objc_setAssociatedObject(self, "YMWatchTitleObserved", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     %orig;
-    YouModUpdateElementsWatchTitle(self, cell);
 }
 %new
 - (void)youmod_watchElementsTitleChanged:(NSNotification *)note {
     if ([note.name isEqualToString:@"YouModWatchStatsChanged"] || [note.userInfo[@"videoID"] isEqualToString:YouModCurrentWatchVideoID()])
-        YouModUpdateElementsWatchTitle(self, nil);
+        YouModUpdateElementsWatchTitle(self);
 }
 %end
 
@@ -1347,12 +1382,6 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     NSMutableArray *images = [NSMutableArray array];
     NSString *videoID = nil;
     UIView *card = YouModVideoCard(self, texts, images, &videoID);
-    BOOL watch = NO;
-    if (!card) {
-        card = YouModWatchRowForControl(self);
-        videoID = card ? YouModCurrentWatchVideoID() : nil;
-        watch = videoID.length == 11;
-    }
     if (!card || videoID.length != 11) {
         YouModRemoveDeArrowButton(self, button);
         return;
@@ -1361,9 +1390,9 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     CGRect menu = [self convertRect:self.bounds toView:card];
     BOOL sameVideo = [objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey") isEqualToString:videoID];
     // Keep a chosen side slot: wrapping text must not alternate side/below layouts.
-    BOOL besideMenu = watch || (sameVideo && [objc_getAssociatedObject(self, "YMDeArrowBesideMenu") boolValue]);
+    BOOL besideMenu = sameVideo && [objc_getAssociatedObject(self, "YMDeArrowBesideMenu") boolValue];
     CGRect frame = YouModDeArrowButtonFrame(card.bounds, menu, besideMenu);
-    while (!watch && CGRectIsEmpty(frame) && card.superview && ![card isKindOfClass:[UICollectionViewCell class]] &&
+    while (CGRectIsEmpty(frame) && card.superview && ![card isKindOfClass:[UICollectionViewCell class]] &&
            ![card.superview isKindOfClass:[UIScrollView class]]) {
         card = card.superview;
         menu = [self convertRect:self.bounds toView:card];
@@ -1400,7 +1429,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     YouModReserveToggleText(texts, card, CGRectInset(frame, -9, -9), CGRectGetMinY(frame) < CGRectGetMaxY(menu));
     YouModUpdateOverflowIndicator(button, videoID);
 
-    ASTextNode *title = watch ? nil : YouModFindTitleNode(texts);
+    ASTextNode *title = YouModFindTitleNode(texts);
     if (title) {
         NSString *oldID = objc_getAssociatedObject(title, "kYMDeArrowVideoIDKey");
         if (![oldID isEqualToString:videoID]) {
