@@ -91,6 +91,7 @@ static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell);
 @property(strong) NSMutableDictionary *originals;
 @property(strong) NSMutableDictionary *titles;
 @property(strong) NSMutableSet *toggled;
+@property NSUInteger titleQueries;
 + (instancetype)sharedInstance;
 - (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID;
 - (BOOL)isOriginalToggledForVideoID:(NSString *)videoID;
@@ -112,7 +113,7 @@ static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell);
 }
 - (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID { if (!self.originals[videoID]) self.originals[videoID] = title; }
 - (BOOL)isOriginalToggledForVideoID:(NSString *)videoID { return [self.toggled containsObject:videoID]; }
-- (NSString *)titleForVideoID:(NSString *)videoID { return [self.toggled containsObject:videoID] ? self.originals[videoID] : self.titles[videoID]; }
+- (NSString *)titleForVideoID:(NSString *)videoID { self.titleQueries++; return [self.toggled containsObject:videoID] ? self.originals[videoID] : self.titles[videoID]; }
 - (NSString *)originalTitleForVideoID:(NSString *)videoID { return self.originals[videoID]; }
 - (void)prefetchBrandingForVideoID:(NSString *)videoID {}
 - (BOOL)toggleDeArrowForVideoID:(NSString *)videoID {
@@ -126,6 +127,17 @@ static void YouModCollectNodesFromView(NSArray *labels, NSMutableArray *texts, N
     [texts addObjectsFromArray:labels];
 }
 /* WATCH_BINDING */
+
+@interface FeedTextHook : ASTextNode
+@property BOOL forbidParentAccess;
+@property NSUInteger parentReads;
+@property(copy) NSAttributedString *rawAttributedText;
+@end
+@implementation FeedTextHook
+- (ASDisplayNode *)supernode { self.parentReads++; assert(!self.forbidParentAccess); return [super supernode]; }
+- (NSAttributedString *)attributedText { return self.rawAttributedText; }
+/* FEED_TEXT_HOOK */
+@end
 
 @interface YTPlayerViewController : NSObject
 @property BOOL isInlinePlaybackActive;
@@ -421,4 +433,23 @@ int main(void) { @autoreleasepool {
     [watch viewDidLayoutSubviews];
     NSString *expected = [manager isOriginalToggledForVideoID:currentWatchID] ? detailsTitle : manager.titles[currentWatchID];
     assert([heading.attributedText.string isEqual:expected]);
+    FeedTextHook *fullscreen = [FeedTextHook new];
+    fullscreen.forbidParentAccess = YES;
+    NSAttributedString *overlayTitle = [[NSAttributedString alloc] initWithString:@"Unrelated fullscreen title"];
+    manager.titleQueries = 0;
+    for (int i=0; i<10000; i++) fullscreen.attributedText = overlayTitle;
+    assert(fullscreen.parentReads == 0 && manager.titleQueries == 0);
+    assert(fullscreen.attributedText == overlayTitle);
+    objc_setAssociatedObject(fullscreen, "kYMDeArrowVideoIDKey", @"FEEDHOOK001", OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(fullscreen, "kYMDeArrowOrigAttrKey", [[NSAttributedString alloc] initWithString:@"Old feed title"], OBJC_ASSOCIATION_COPY_NONATOMIC);
+    fullscreen.attributedText = overlayTitle;
+    assert(fullscreen.parentReads == 0 && objc_getAssociatedObject(fullscreen, "kYMDeArrowVideoIDKey") == nil);
+    fullscreen.forbidParentAccess = NO;
+    NSAttributedString *feedTitle = [[NSAttributedString alloc] initWithString:@"Original feed title"];
+    manager.originals[@"FEEDHOOK001"] = feedTitle.string;
+    manager.titles[@"FEEDHOOK001"] = @"Replacement feed title";
+    objc_setAssociatedObject(fullscreen, "kYMDeArrowVideoIDKey", @"FEEDHOOK001", OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(fullscreen, "kYMDeArrowOrigAttrKey", feedTitle, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    fullscreen.attributedText = feedTitle;
+    assert([fullscreen.attributedText.string isEqual:@"Replacement feed title"] && fullscreen.parentReads == 1);
 } return 0; }

@@ -33,7 +33,8 @@ if platform.system() != 'Darwin':
 
 program = (root / 'Tests/fixtures/dearrow_titles.m').read_text()
 program = program.replace('/* TEXT_HELPERS */', function('static NSAttributedString *YouModDeArrowTitleText(') +
-                          function('static NSString *YouModCleanDeArrowTitle('))
+                          function('static NSString *YouModCleanDeArrowTitle(') +
+                          function('static BOOL YouModIsGroupedUploadText(') + function('static BOOL YouModIsLikelyBadgeOrMetadata('))
 program = program.replace('/* WATCH_BINDING */', function('void YouModDeArrowBeginWatchVideo(') + function('static NSAttributedString *YouModOriginalTitleText(') +
                           function('static void YouModUpdateWatchTitleLabel(') + function('static void YouModUpdateWatchTitle('))
 program = program.replace('/* EXCLUSION_HELPER */', function('static void YouModReserveToggleText('))
@@ -48,6 +49,12 @@ program = program.replace('/* LEGACY_HOOKS */', legacy_hooks.replace('%orig;', '
 ryd = (root / 'Files/ReturnYouTubeDislike.x').read_text()
 playback = function('static void YouModWatchVideoChanged(', ryd).replace('%c(YTInlineMutedPlaybackPlayerOverlayViewController)', 'YTInlineMutedPlaybackPlayerOverlayViewController.class')
 program = program.replace('/* WATCH_PLAYBACK */', playback)
+text_hook = source.split('%hook ASTextNode\n', 1)[1].split('%end', 1)[0]
+assert '- (void)didLoad' not in text_hook, 'Do not subscribe every player/comment text node to branding updates'
+assert 'addObserver:title selector:@selector(youmod_onDeArrowTextNotification:)' in source
+setter = function('- (void)setAttributedText:', text_hook)
+setter = setter.replace('%orig(attributedString)', 'self.rawAttributedText = attributedString').replace('%orig(mod)', 'self.rawAttributedText = mod').replace('%orig', 'self.rawAttributedText = attributedString')
+program = program.replace('/* FEED_TEXT_HOOK */', setter.replace('%c(ASNetworkImageNode)', 'ASNetworkImageNode.class'))
 with tempfile.TemporaryDirectory() as tmp:
     src, binary = Path(tmp) / 'titles.m', Path(tmp) / 'titles'
     src.write_text(program)

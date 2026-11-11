@@ -839,12 +839,20 @@ static void YouModRefreshThumbnailNode(ASNetworkImageNode *node) {
 
     NSString *curStr = attributedString.string;
     NSString *videoID = objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey");
+    if (videoID.length != 11) {
+        %orig;
+        return;
+    }
     NSAttributedString *previous = objc_getAssociatedObject(self, "kYMDeArrowOrigAttrKey");
     NSString *replacement = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];
     if (videoID && ![curStr isEqualToString:previous.string] && ![curStr isEqualToString:replacement]) {
         videoID = nil;
         objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         objc_setAssociatedObject(self, "kYMDeArrowOrigAttrKey", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (!videoID) {
+        %orig;
+        return;
     }
     if (YouModIsLikelyBadgeOrMetadata(curStr)) {
         %orig(attributedString);
@@ -879,11 +887,6 @@ static void YouModRefreshThumbnailNode(ASNetworkImageNode *node) {
         }
     }
     %orig(attributedString);
-}
-
-- (void)didLoad {
-    %orig;
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowTextNotification:) name:kYMDeArrowUpdatedNotification object:nil];
 }
 
 %new
@@ -1404,6 +1407,8 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
             NSAttributedString *original = YouModOriginalTitleText(title.attributedText, videoID);
             objc_setAssociatedObject(title, "kYMDeArrowOrigAttrKey", original, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             objc_setAssociatedObject(title, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
+            [[NSNotificationCenter defaultCenter] removeObserver:title name:kYMDeArrowUpdatedNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:title selector:@selector(youmod_onDeArrowTextNotification:) name:kYMDeArrowUpdatedNotification object:nil];
             [[YouModDeArrowManager sharedInstance] registerOriginalTitle:original.string forVideoID:videoID];
         }
         if (IS_ENABLED(DeArrowReplaceTitles)) {
