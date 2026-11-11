@@ -73,3 +73,13 @@ November 10 acceptance checks (pending on iPhone 17 and iPad Pro M2 11-inch):
 - Preview audio: enable Auto mute with Preview sound on; each new preview must start muted and remain manually switchable. Disable Auto mute and confirm new previews start with sound again.
 - Hold-speed indicator: test portrait vertical videos and landscape; the capsule must remain below the Dynamic Island/notch and inside the safe horizontal area.
 - OLED keyboard: type in Search and comments, open emoji search, rotate, then switch dark/light appearance. Native keys, suggestions and dock buttons must stay visible.
+
+November 11 watch-title follow-up:
+
+The user confirmed v3.4 positions the watch toggle correctly but leaves the original title visible, including when the feed already shows the cached replacement. The legacy `YTSlimVideoInformationCell` hook alone does not cover the Elements watch header. YouTube 21.42.4 bundles `video_metadata.eml|3035ad7f9a19183f`, which references `video_metadata_inner.eml|fcece9abf78ae91c`; both are now recognized through their owning component's template URI.
+
+- Open the Louis Rossmann video from the supplied screenshots. The watch title should show the same DeArrow title as the feed: “Overview and criticisms of the NYT vs. Brave case”. Toggle original/replacement repeatedly, rotate, and scroll the title out of view and back. The chosen state must survive layout changes.
+- Repeat with an empty branding cache and slow connectivity. The native title should remain until branding arrives, then update automatically. Repeat with a cached title and a previously toggled feed card; a newly watched video defaults to DeArrow.
+- Change videos while a branding request is pending. An old video's response must not replace the new title. Comments and recommendations with matching title text must remain untouched, including recycled text nodes. Repeat on iPad, with title replacement disabled, and after light/dark or text-size changes.
+
+The macOS fixture now exercises the actual Elements binding and controller notification/display callbacks with no legacy title cell. Device confirmation of this follow-up remains pending.

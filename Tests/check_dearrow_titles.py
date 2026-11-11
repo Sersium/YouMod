@@ -20,6 +20,12 @@ assert '%hook YTSlimVideoInformationCellController' in source
 assert 'self.videoID' in source and 'YMWatchTitleVideoID' in source
 assert 'YouModWatchRowForControl(self)' in source
 assert 'YouModCurrentWatchVideoID()' in source
+assert '%hook YTWatchNextResultsViewController' in source
+assert 'video_metadata_inner.eml' in source and 'video_metadata.eml' in source
+binding = function('static void YouModUpdateWatchTitleLabel(')
+assert 'kYMDeArrowVideoIDKey' not in binding, 'Watch bindings must not activate global feed text observers'
+native = (root / 'Files/ReturnYouTubeDislike.x').read_text().split('NSString *YouModCurrentWatchTitle(void)', 1)[1].split('\n}', 1)[0]
+assert 'details.videoId isEqualToString:YouModCurrentWatchVideoID()' in native
 
 if platform.system() != 'Darwin':
     print('SKIP: DeArrow attributed-text and watch-binding runtime checks require macOS')
@@ -28,11 +34,18 @@ if platform.system() != 'Darwin':
 program = (root / 'Tests/fixtures/dearrow_titles.m').read_text()
 program = program.replace('/* TEXT_HELPERS */', function('static NSAttributedString *YouModDeArrowTitleText(') +
                           function('static NSString *YouModCleanDeArrowTitle('))
-program = program.replace('/* WATCH_BINDING */', function('static NSAttributedString *YouModOriginalTitleText(') + function('static void YouModUpdateWatchTitle('))
+program = program.replace('/* WATCH_BINDING */', function('static NSAttributedString *YouModOriginalTitleText(') +
+                          function('static void YouModUpdateWatchTitleLabel(') + function('static void YouModUpdateWatchTitle('))
 program = program.replace('/* EXCLUSION_HELPER */', function('static void YouModReserveToggleText('))
+elements = function('static void YouModCollectCardNodes(') + function('static BOOL YouModIsWatchMetadataNode(') + function('static void YouModUpdateElementsWatchTitle(')
+for name in ('ASTextNode', 'ASNetworkImageNode', '_ASCollectionViewCell'):
+    elements = elements.replace('%c(' + name + ')', name + '.class')
+program = program.replace('/* ELEMENTS_HELPERS */', elements)
+hooks = source.split('%hook YTWatchNextResultsViewController\n', 1)[1].split('%end', 1)[0]
+program = program.replace('/* ELEMENTS_HOOKS */', hooks.replace('%orig;', '').replace('%new', ''))
 with tempfile.TemporaryDirectory() as tmp:
     src, binary = Path(tmp) / 'titles.m', Path(tmp) / 'titles'
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
-print('PASS: clean title glyphs, Unicode spacing, native styling, watch defaults, toggles and reused cells')
+print('PASS: clean title glyphs, legacy and Elements watch headers, cached/late branding, defaults, live toggles and recycled-cell isolation')

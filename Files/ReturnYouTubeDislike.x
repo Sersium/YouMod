@@ -154,6 +154,11 @@ NSString *YouModCurrentWatchVideoID(void) {
     return currentWatchPlayer.contentVideoID;
 }
 
+NSString *YouModCurrentWatchTitle(void) {
+    YTIVideoDetails *details = currentWatchPlayer.activeVideo.singleVideo.playbackData.playerResponse.playerData.videoDetails;
+    return [details.videoId isEqualToString:YouModCurrentWatchVideoID()] ? details.title : nil;
+}
+
 // Prefer the watched video's native metadata; the existing RYD response is a
 // fallback and requires no additional request.
 NSString *YouModCurrentViewCount(void) {
