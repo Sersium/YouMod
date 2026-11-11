@@ -1002,11 +1002,6 @@ static CGFloat YouModSpeedForHoldIndex(NSInteger index) {
 }
 %end
 
-// Upstream's config gate complements the live overlay gate below.
-%hook YTColdConfig
-- (BOOL)isLandscapeEngagementPanelEnabled { return IS_ENABLED(DisablesEngagementPanel) ? NO : %orig; }
-%end
-
 // Hide related videos in fullscreen / Disables engagement panel
 %hook YTFullscreenEngagementOverlayController
 - (void)setEnabled:(BOOL)enabled { 

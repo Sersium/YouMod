@@ -5,8 +5,8 @@ Reviewed all 74 open issues in Tonwalter888/YouMod, including comments and the t
 ## Changes and validation
 
 - Merged upstream main. Its Logos pin is already covered by our full-SHA fetch/checkout (including cached Theos). Kept our single build/release workflow; the old IPA-workflow alderis URL fix has no remaining consumer here.
-- Adapted the useful current-Shorts controller and fullscreen-config hooks from pre-release. Kept our existing DeArrow, navigation identity, preview audio and release behavior; did not import the broad workflow/UI rewrite.
-- Fixed seven confirmed code paths (#154, #157, #174, #189, #192, #193, #204) and strengthened the packaging guard for #208.
+- Adapted the useful current-Shorts controller hooks from pre-release. The fullscreen config and live overlay gates are already present. Kept our existing DeArrow, navigation identity, preview audio and release behavior; did not import the broad workflow/UI rewrite.
+- Fixed six confirmed code paths (#154, #174, #189, #192, #193, #204) and strengthened the packaging guard for #208.
 - Portable regression checks run locally. macOS runs the production Objective-C title, watch-layout, tab, Shorts and gesture fixtures before compiling/injecting. The final IPA is checked for ZIP integrity, injected dependencies and Mach-O header/section overlap.
 - Device results remain pending on iPhone 17 and iPad Pro M2 11-inch. Implementation present means the source has the requested behavior; it does not claim the reporter's runtime symptom was reproduced or closed.
 
@@ -51,7 +51,7 @@ Reviewed all 74 open issues in Tonwalter888/YouMod, including comments and the t
 | [#161](https://github.com/Tonwalter888/YouMod/issues/161) Tap video to close comments in Shorts | Feature request | An additional capability or optional third-party tweak, not an established regression in this fork; not added in this bug-fix change. |
 | [#160](https://github.com/Tonwalter888/YouMod/issues/160) Option to disable translation of title and description | Feature request | An additional capability or optional third-party tweak, not an established regression in this fork; not added in this bug-fix change. |
 | [#159](https://github.com/Tonwalter888/YouMod/issues/159) after 2.0.0 came out, the app is very slow, even in a iPhone 17 and one extra bug which isnt still resolved and open in youtube button dont work | Needs runtime evidence | Watermark handling is present; this patch bounds watch-row remeasurement and avoids inherited glyph runs. General slowness and Open in YouTube depend on active settings, profiling and sideload URL registration. |
-| [#157](https://github.com/Tonwalter888/YouMod/issues/157) Fullscreen engagement-panel toggle does not block swipe-up recommendations | Fixed / guarded in this patch | Player.x: retain the live overlay gate and restore the upstream YTColdConfig gate. |
+| [#157](https://github.com/Tonwalter888/YouMod/issues/157) Fullscreen engagement-panel toggle does not block swipe-up recommendations | Implementation already present | Player.x already has both the YTColdConfig gate and the live YTFullscreenEngagementOverlayController gate. |
 | [#154](https://github.com/Tonwalter888/YouMod/issues/154) OLED Keyboard Not showing in Dark Mode iOS 27 Beta 7 | Fixed / guarded in this patch | Apperence.x: remove the window-wide CABackdropLayer hiding pass that can hide native keys. |
 | [#153](https://github.com/Tonwalter888/YouMod/issues/153) Removing “More Videos” button | Feature request | An additional capability or optional third-party tweak, not an established regression in this fork; not added in this bug-fix change. |
 | [#152](https://github.com/Tonwalter888/YouMod/issues/152) option to embed subtitle | Feature request | An additional capability or optional third-party tweak, not an established regression in this fork; not added in this bug-fix change. |
@@ -89,6 +89,6 @@ Reviewed all 74 open issues in Tonwalter888/YouMod, including comments and the t
 | [#26](https://github.com/Tonwalter888/YouMod/issues/26) Translations seem to be inaccurate | Needs runtime evidence | No concrete translation corrections supplied. Retain localized resources; do not replace all languages or create a translation service without scope. |
 | [#11](https://github.com/Tonwalter888/YouMod/issues/11) Playback speed and one other mini suggestion | Implementation already present | Playback speeds above 3x already exist; custom startup video remains a feature request. |
 
-Counts: 19 implementation already present, 34 feature request, 8 fixed / guarded in this patch, 9 needs runtime evidence, 4 version-specific / enhancement.
+Counts: 20 implementation already present, 34 feature request, 7 fixed / guarded in this patch, 9 needs runtime evidence, 4 version-specific / enhancement.
 
 See [DEVICE_SMOKE_TEST.md](DEVICE_SMOKE_TEST.md) for the remaining phone/tablet checks.

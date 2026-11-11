@@ -507,6 +507,11 @@ static NSString *YouModFormatDeArrowTitle(NSString *origTitle) {
 
 @end
 
+static NSAttributedString *YouModOriginalTitleText(NSAttributedString *native, NSString *videoID) {
+    NSString *original = [[YouModDeArrowManager sharedInstance] originalTitleForVideoID:videoID];
+    return original.length && ![native.string isEqualToString:original] ? YouModDeArrowTitleText(native, original) : native;
+}
+
 // Helper to extract 11-char YouTube video ID from standard thumbnail URLs
 static NSString *YouModExtractDeArrowVideoID(NSString *urlStr) {
     if (!urlStr || urlStr.length < 15) return nil;
@@ -1122,9 +1127,10 @@ static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell) {
         if (!native.length) continue;
         NSString *oldID = objc_getAssociatedObject(label, "kYMDeArrowVideoIDKey");
         if (![oldID isEqualToString:videoID]) {
-            objc_setAssociatedObject(label, "kYMDeArrowOrigAttrKey", native, OBJC_ASSOCIATION_COPY_NONATOMIC);
+            NSAttributedString *original = YouModOriginalTitleText(native, videoID);
+            objc_setAssociatedObject(label, "kYMDeArrowOrigAttrKey", original, OBJC_ASSOCIATION_COPY_NONATOMIC);
             objc_setAssociatedObject(label, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:native.string forVideoID:videoID];
+            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:original.string forVideoID:videoID];
         }
         NSAttributedString *original = objc_getAssociatedObject(label, "kYMDeArrowOrigAttrKey");
         BOOL enabled = IS_ENABLED(DeArrowEnabled) && IS_ENABLED(DeArrowReplaceTitles) &&
@@ -1286,9 +1292,10 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     if (title) {
         NSString *oldID = objc_getAssociatedObject(title, "kYMDeArrowVideoIDKey");
         if (![oldID isEqualToString:videoID]) {
-            objc_setAssociatedObject(title, "kYMDeArrowOrigAttrKey", title.attributedText, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            NSAttributedString *original = YouModOriginalTitleText(title.attributedText, videoID);
+            objc_setAssociatedObject(title, "kYMDeArrowOrigAttrKey", original, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             objc_setAssociatedObject(title, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:title.attributedText.string forVideoID:videoID];
+            [[YouModDeArrowManager sharedInstance] registerOriginalTitle:original.string forVideoID:videoID];
         }
         if (IS_ENABLED(DeArrowReplaceTitles)) {
             NSString *replacement = [[YouModDeArrowManager sharedInstance] titleForVideoID:videoID];

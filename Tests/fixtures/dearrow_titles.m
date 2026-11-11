@@ -74,6 +74,7 @@ static BOOL preferences[] = {YES, YES};
 - (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID;
 - (BOOL)isOriginalToggledForVideoID:(NSString *)videoID;
 - (NSString *)titleForVideoID:(NSString *)videoID;
+- (NSString *)originalTitleForVideoID:(NSString *)videoID;
 - (void)prefetchBrandingForVideoID:(NSString *)videoID;
 @end
 @implementation YouModDeArrowManager
@@ -90,6 +91,7 @@ static BOOL preferences[] = {YES, YES};
 - (void)registerOriginalTitle:(NSString *)title forVideoID:(NSString *)videoID { self.originals[videoID] = title; }
 - (BOOL)isOriginalToggledForVideoID:(NSString *)videoID { return [self.toggled containsObject:videoID]; }
 - (NSString *)titleForVideoID:(NSString *)videoID { return self.titles[videoID]; }
+- (NSString *)originalTitleForVideoID:(NSString *)videoID { return self.originals[videoID]; }
 - (void)prefetchBrandingForVideoID:(NSString *)videoID {}
 @end
 static void YouModCollectNodesFromView(NSArray *labels, NSMutableArray *texts, NSMutableArray *images) {
@@ -153,6 +155,17 @@ int main(void) { @autoreleasepool {
     YouModUpdateWatchTitle(cell);
     assert([cell.titleLabel.attributedText.string isEqual:@"Second replacement"]);
     assert([manager.originals[firstID] isEqual:native.string]);
+    // A renderer may have replaced the string before its label is first bound.
+    NSString *prefetchedID = @"ABCDEFGHIJK";
+    manager.originals[prefetchedID] = @"RAW ORIGINAL TITLE";
+    manager.titles[prefetchedID] = @"Prefetched DeArrow";
+    cell.titleLabel.attributedText = [[NSAttributedString alloc] initWithString:manager.titles[prefetchedID]];
+    cell.experimentalTitleLabel = nil;
+    objc_setAssociatedObject(cell, "YMWatchTitleVideoID", prefetchedID, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    YouModUpdateWatchTitle(cell);
+    [manager.toggled addObject:prefetchedID];
+    YouModUpdateWatchTitle(cell);
+    assert([cell.titleLabel.attributedText.string isEqual:@"RAW ORIGINAL TITLE"]);
     ASTextNode *text = [ASTextNode new];
     text.bounds = CGRectMake(0,0,300,60);
     text.layerBacked = YES;

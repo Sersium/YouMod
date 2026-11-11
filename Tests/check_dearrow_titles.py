@@ -28,7 +28,7 @@ if platform.system() != 'Darwin':
 program = (root / 'Tests/fixtures/dearrow_titles.m').read_text()
 program = program.replace('/* TEXT_HELPERS */', function('static NSAttributedString *YouModDeArrowTitleText(') +
                           function('static NSString *YouModCleanDeArrowTitle('))
-program = program.replace('/* WATCH_BINDING */', function('static void YouModUpdateWatchTitle('))
+program = program.replace('/* WATCH_BINDING */', function('static NSAttributedString *YouModOriginalTitleText(') + function('static void YouModUpdateWatchTitle('))
 program = program.replace('/* EXCLUSION_HELPER */', function('static void YouModReserveToggleText('))
 with tempfile.TemporaryDirectory() as tmp:
     src, binary = Path(tmp) / 'titles.m', Path(tmp) / 'titles'

@@ -43,6 +43,7 @@ assert 'setInlinePlaybackUnmutedAtStart:!IS_ENABLED(AutoFeedMute)' in preview
 assert 'setAudioSoundOn:!IS_ENABLED(AutoFeedMute)' in preview
 assert 'if (newVideo' in preview, 'Manual audio changes must remain usable'
 assert '%hook YTColdConfig\n- (BOOL)isLandscapeEngagementPanelEnabled' in player
+assert player.count('- (BOOL)isLandscapeEngagementPanelEnabled') == 1
 print('PASS: notch-safe speed indicator, preview mute preference and fullscreen config gate')
 
 if platform.system() != 'Darwin':
