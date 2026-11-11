@@ -20,6 +20,7 @@ def hook(name):
 
 
 assert 'mod.mutableString setString:' not in source
+assert source.index('@class YTEngagementPanelIdentifier;') < source.index('%hook'), 'Logos emits all hook declarations at the first hook'
 assert 'exclusionPaths' not in source, 'Button spacing must not alter title/channel glyph flow'
 assert 'YMDeArrowBesideMenu' not in source
 assert 'void YouModUpdateWatchTitlesForRow(' in source and 'YouModUpdateWatchTitlesForRow(bar)' in watch

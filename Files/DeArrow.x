@@ -6,6 +6,7 @@
 // Thumbnails: https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID={videoID}&time={timestamp}
 
 static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNotification";
+@class YTEngagementPanelIdentifier;
 static NSAttributedString *YouModBoundWatchTitle(id label, NSAttributedString *native);
 static void YouModClearWatchTitle(id label);
 static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel);
