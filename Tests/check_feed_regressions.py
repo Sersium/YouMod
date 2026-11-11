@@ -18,13 +18,16 @@ end = dearrow.index('\n}\n', start) + 3
 helper = dearrow[start:end]
 stubs = r'''
 #include <assert.h>
-typedef double CGFloat;
+typedef double CGFloat; typedef int BOOL;
 typedef struct { double x, y; } CGPoint;
 typedef struct { double width, height; } CGSize;
 typedef struct { CGPoint origin; CGSize size; } CGRect;
 #define CGRectZero ((CGRect){{0,0},{0,0}})
 #define CGRectMake(x,y,w,h) ((CGRect){{x,y},{w,h}})
 #define CGRectInset(r,dx,dy) CGRectMake((r).origin.x+(dx),(r).origin.y+(dy),(r).size.width-2*(dx),(r).size.height-2*(dy))
+#define CGRectGetMidY(r) ((r).origin.y + (r).size.height / 2)
+#define MAX(a,b) ((a)>(b)?(a):(b))
+#define MIN(a,b) ((a)<(b)?(a):(b))
 #define CGRectGetMidX(r) ((r).origin.x + (r).size.width / 2)
 #define CGRectGetMaxX(r) ((r).origin.x + (r).size.width)
 #define CGRectGetMaxY(r) ((r).origin.y + (r).size.height)
@@ -50,7 +53,7 @@ int main(void) {
         {{{0,0},{393,114}}, {{0,0},{30,24}}, {{30,0},{112,64}}, {{150,0},{181,94}}},
     };
     for (unsigned i = 0; i < sizeof(cases)/sizeof(cases[0]); i++) {
-        CGRect frame = YouModDeArrowButtonFrame(cases[i][0], cases[i][1]);
+        CGRect frame = YouModDeArrowButtonFrame(cases[i][0], cases[i][1], 0);
         assert(frame.size.width == 26 && frame.size.height == 26);
         assert(CGRectContainsRect(cases[i][0], frame));
         for (int j = 1; j < 4; j++) assert(!intersects(frame, cases[i][j]));
@@ -59,20 +62,26 @@ int main(void) {
         assert(!intersects(hit, cases[i][1]));
     }
     // A one-line tablet card has no space below its menu. The fallback must
-    // remain visible and keep the entire hit target away from menu and metadata.
+    // align beside More, outside the thumbnail; native text excludes its hit target.
     CGRect shortCard = CGRectMake(0,0,400,260), menu = CGRectMake(348,226,44,24);
-    CGRect fallback = YouModDeArrowButtonFrame(shortCard, menu);
-    assert(fallback.size.width==26 && fallback.origin.y==191);
+    CGRect fallback = YouModDeArrowButtonFrame(shortCard, menu, 0);
+    assert(fallback.size.width==26 && fallback.origin.y==225 && fallback.origin.x==313);
     assert(CGRectContainsRect(shortCard, CGRectInset(fallback,-9,-9)));
     assert(!intersects(CGRectInset(fallback,-9,-9),menu));
-    assert(CGRectGetMaxY(CGRectInset(fallback,-9,-9))==menu.origin.y);
+    assert(CGRectGetMidY(fallback)==CGRectGetMidY(menu));
+    assert(CGRectGetMaxX(CGRectInset(fallback,-9,-9))==menu.origin.x);
     // A temporarily short wrapper must never move the toggle to the top.
-    CGRect transient = YouModDeArrowButtonFrame(CGRectMake(0,0,400,250), menu);
-    assert(transient.origin.y == fallback.origin.y);
+    CGRect transient = YouModDeArrowButtonFrame(CGRectMake(0,0,400,250), menu, 0);
+    assert(transient.origin.y == 224 && transient.origin.x == fallback.origin.x);
     // After final Texture measurement, return to the normal menu column.
-    CGRect settled = YouModDeArrowButtonFrame(CGRectMake(0,0,400,310), menu);
+    CGRect settled = YouModDeArrowButtonFrame(CGRectMake(0,0,400,310), menu, 0);
     assert(settled.origin.y == 260);
-    CGRect frame = YouModDeArrowButtonFrame(CGRectMake(0,0,30,24), CGRectMake(0,0,30,24));
+    // Watch More: always aligned beside the native menu, including RTL.
+    CGRect watch = YouModDeArrowButtonFrame(CGRectMake(0,0,393,88),CGRectMake(170,44,44,44),1);
+    assert(watch.origin.x==135 && CGRectGetMidY(watch)==66);
+    CGRect rtl = YouModDeArrowButtonFrame(CGRectMake(0,0,393,88),CGRectMake(0,44,44,44),1);
+    assert(rtl.origin.x==53 && CGRectGetMidY(rtl)==66);
+    CGRect frame = YouModDeArrowButtonFrame(CGRectMake(0,0,30,24), CGRectMake(0,0,30,24), 0);
     assert(frame.size.width == 0); // Clipped wrapper: caller must ascend to the card.
 }
 '''
@@ -93,7 +102,7 @@ image_hook = dearrow.split('%hook ASNetworkImageNode', 1)[1].split('%end', 1)[0]
 assert '@selector(view)' not in image_hook, 'Never force a view for a layer-backed image node'
 assert 'titleView.frame =' not in dearrow, 'Do not fight native title layout'
 assert '- (BOOL)inlinePlaybackUnmutedAtStart {' not in player, 'Leave audio getter live after taps'
-assert 'setInlinePlaybackUnmutedAtStart:YES' in player and 'if (newVideo' in player
+assert 'setInlinePlaybackUnmutedAtStart:!IS_ENABLED(AutoFeedMute)' in player and 'if (newVideo' in player
 assert 'addYogaChild:' not in ryd and 'addSubnode:' not in ryd and 'setMinWidth:' not in ryd, 'Do not mutate native vote layout trees'
 assert 'CATextLayer' in ryd and 'button.isNodeLoaded' in ryd
 assert '%orig(url, reset)' in image_hook and 'setURL:[NSURL' not in dearrow
@@ -166,7 +175,7 @@ for text in ['Channel name', '12:34', '7y ago', 'LIVE', '544K subscribers']:
     assert not re.search(pattern, text, re.I) and not re.fullmatch(plain, text), text
 feed = ryd.split('#pragma mark - Feed metadata', 1)[1].split('#pragma mark - Protobuf Model Hooks', 1)[0]
 assert 'YouModVideoCard(menu, texts, images, &videoID)' in feed
-assert 'YouModGetCurrentVideoID' not in feed, 'Feed identity must come from the card'
+assert 'YouModCurrentWatchVideoID' not in feed, 'Feed identity must come from the card'
 assert 'YMFeedBaseText' in feed and 'YMSettingFeedVotes' in feed
 assert 'cachedVotesForVideoID:videoID' in feed and 'fetchVotesForVideoID:videoID' in feed
 print('PASS: cold-start filter path, reversible tabs, feed metadata patterns and recycled-card identity guards')
@@ -193,7 +202,7 @@ watch = (root / 'Files/WatchActionBar.x').read_text()
 deferred_watch = watch.split('__weak UIView *weakControl = self;', 1)[1].split('});', 1)[0]
 assert 'UIView *control = weakControl;' in deferred_watch
 assert 'if (!control.window) return;' in deferred_watch
-assert 'YMWatchRowForControl(self)' not in deferred_watch
+assert 'YouModWatchRowForControl(self)' not in deferred_watch
 
 # Grouped upload labels must never become a video's cached original title.
 start = dearrow.index('static BOOL YouModIsGroupedUploadText(')

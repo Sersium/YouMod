@@ -3,6 +3,9 @@
 #include <assert.h>
 #define LOC(key) (key)
 #define TabOrder @"YouModTabOrder"
+#define DeArrowEnabled 0
+static BOOL deArrowEnabled = YES;
+#define IS_ENABLED(key) deArrowEnabled
 static NSUserDefaults *preferences;
 
 @interface YTIBrowseRequest : NSObject
@@ -135,4 +138,19 @@ int main(void) { @autoreleasepool {
     assert(YMConfigureWatchRow(outer,YES) && inner.style.flexWrap == 1 && outer.style.height.unit == 0);
     assert(objc_getAssociatedObject(outer, "YMWatchViewsReserved"));
     assert(!YMConfigureWatchRow(outer,YES));
+    ASDisplayNode *player = node(@"player",nil);
+    player.style.height = (YMWatchDimension){1,844};
+    ASDisplayNode *reparented = node(nil,@[node(@"id.video.like.button",nil),share]);
+    ASDisplayNode *bounded = node(nil,@[reparented]);
+    reparented.yogaParent = player; // Transition temporarily changes the parent link.
+    assert(YMConfigureWatchRow(bounded,YES));
+    assert(player.style.height.unit == 1 && player.style.height.value == 844);
+    ASDisplayNode *more = node(@"id.video.action.menu",nil);
+    ASDisplayNode *actions = node(nil,@[node(@"id.video.like.button",nil),more]);
+    assert(YMConfigureWatchRow(actions,YES));
+    assert(more.style.margin.start.unit == 1 && more.style.margin.start.value == 44);
+    assert(!YMConfigureWatchRow(actions,YES));
+    deArrowEnabled = NO;
+    assert(YMConfigureWatchRow(actions,YES));
+    assert(more.style.margin.start.unit == 0 && more.style.margin.start.value == 0);
 } return 0; }

@@ -40,6 +40,8 @@ jobs:
           python3 YouMod/Tests/check_ipa_source.py
           python3 YouMod/Tests/check_watch_bar.py
           python3 YouMod/Tests/check_ui_compat.py
+          python3 YouMod/Tests/check_dearrow_titles.py
+          python3 YouMod/Tests/check_player_regressions.py
 
       - name: Install dependencies
         run: brew install make ldid

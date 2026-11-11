@@ -150,7 +150,7 @@ static NSString *YouModFormatVoteCount(NSInteger count) {
 
 #pragma mark - Hooks
 
-static NSString *YouModGetCurrentVideoID(void) {
+NSString *YouModCurrentWatchVideoID(void) {
     return currentWatchPlayer.contentVideoID;
 }
 
@@ -158,7 +158,7 @@ static NSString *YouModGetCurrentVideoID(void) {
 // fallback and requires no additional request.
 NSString *YouModCurrentViewCount(void) {
     YTIVideoDetails *details = currentWatchPlayer.activeVideo.singleVideo.playbackData.playerResponse.playerData.videoDetails;
-    NSString *videoID = YouModGetCurrentVideoID();
+    NSString *videoID = YouModCurrentWatchVideoID();
     NSString *value = [details.videoId isEqualToString:videoID] ? details.viewCount : nil;
     long long views = 0;
     if (value.length && [[NSScanner scannerWithString:value] scanLongLong:&views] && views >= 0)
@@ -314,7 +314,7 @@ static void YouModUpdateVoteNode(ASDisplayNode *button) {
     if (!YouModIsVoteButton(button) || !button.isNodeLoaded) return;
     CATextLayer *label = objc_getAssociatedObject(button, "kYMVoteLabel");
     BOOL likes = [button.accessibilityIdentifier isEqualToString:@"id.video.like.button"];
-    NSString *videoID = YouModGetCurrentVideoID();
+    NSString *videoID = YouModCurrentWatchVideoID();
     ASDisplayNode *parent = button.yogaParent ?: button.supernode;
     if (!IS_ENABLED(ReturnYouTubeDislike) || !videoID.length || !(button.interfaceState & 8)) {
         [label removeFromSuperlayer];
@@ -413,7 +413,7 @@ static void YouModUpdateVoteNode(ASDisplayNode *button) {
     if (!IS_ENABLED(ReturnYouTubeDislike)) return;
     BOOL likes = [self.accessibilityIdentifier isEqualToString:@"id.video.like.button"];
     if (!(likes ? IS_ENABLED(RYDShowLikes) : IS_ENABLED(RYDShowDislikes))) return;
-    NSString *videoID = YouModGetCurrentVideoID();
+    NSString *videoID = YouModCurrentWatchVideoID();
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoID];
     id number = votes[likes ? @"likes" : @"dislikes"];
     if (![number isKindOfClass:[NSNumber class]]) {
@@ -544,7 +544,7 @@ static void YMUpdateFeedVotes(UIView *menu) {
 - (YTIFormattedString *)dislikeCountText {
     if (!IS_ENABLED(ReturnYouTubeDislike)) return %orig;
     NSString *videoId = self.target.videoId;
-    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+    if (videoId.length == 0) videoId = YouModCurrentWatchVideoID();
     if (videoId.length == 0) return %orig;
 
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoId];
@@ -564,7 +564,7 @@ static void YMUpdateFeedVotes(UIView *menu) {
 - (YTIFormattedString *)dislikeCountWithDislikeText {
     if (!IS_ENABLED(ReturnYouTubeDislike)) return %orig;
     NSString *videoId = self.target.videoId;
-    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+    if (videoId.length == 0) videoId = YouModCurrentWatchVideoID();
     if (videoId.length == 0) return %orig;
 
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoId];
@@ -583,7 +583,7 @@ static void YMUpdateFeedVotes(UIView *menu) {
 - (YTIFormattedString *)dislikeCountWithUndislikeText {
     if (!IS_ENABLED(ReturnYouTubeDislike)) return %orig;
     NSString *videoId = self.target.videoId;
-    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+    if (videoId.length == 0) videoId = YouModCurrentWatchVideoID();
     if (videoId.length == 0) return %orig;
 
     NSDictionary *votes = [[YouModRYDManager sharedInstance] cachedVotesForVideoID:videoId];
@@ -617,7 +617,7 @@ static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
             if (videoId.length == 0) videoId = [model valueForKeyPath:@"command.reelWatchEndpoint.videoId"];
         } @catch (id ex) {}
     }
-    if (videoId.length == 0) videoId = YouModGetCurrentVideoID();
+    if (videoId.length == 0) videoId = YouModCurrentWatchVideoID();
     if (videoId.length == 0) return;
 
     // Elements path for Shorts
@@ -740,7 +740,7 @@ static void YouModApplyShortsOverlayVotes(UIView *overlayView) {
         vID = [renderer valueForKeyPath:@"target.videoId"];
     } @catch (id ex) {}
 
-    if (vID.length == 0) vID = YouModGetCurrentVideoID();
+    if (vID.length == 0) vID = YouModCurrentWatchVideoID();
     if (vID.length == 0) return;
 
     YTQTMButton *dislikeBtn = nil;

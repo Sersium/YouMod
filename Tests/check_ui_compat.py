@@ -32,6 +32,10 @@ int main(void) {
     subprocess.run(['cc', '-Wall', '-Werror', str(c), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
 print('PASS: OLED surface selection preserves dark, colored and transparent backgrounds')
+keyboard = appearance.split('%group OLEDKeyboard', 1)[1]
+assert 'CABackdropLayer' not in keyboard and 'me.window.layer' not in keyboard, 'Never hide key-rendering layers across the keyboard window'
+assert 'isDarkMode(self) ? UIColor.blackColor : UIColor.clearColor' in keyboard
+print('PASS: OLED keyboard preserves native key layers and light-mode background')
 
 if platform.system() != 'Darwin':
     print('SKIP: Foundation runtime checks require macOS; the release workflow runs them')

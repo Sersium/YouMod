@@ -147,6 +147,36 @@ static void YouModRemoveShortsOverlayButton(_ASDisplayView *dpView) {
 }
 %end
 
+// Current Shorts use this controller; retain the legacy hooks for older YouTube.
+@interface YTReelContainerViewController : UIViewController
+@property (nonatomic, readonly) YTPlayerViewController *player;
+@property (nonatomic, readonly) id delegate;
+- (void)pause;
+@end
+@interface NSObject (YouModShortsAdvance)
+- (void)playbackSequentialItemControllerDidRequestNextReel:(id)controller isAutoAdvance:(BOOL)autoAdvance;
+@end
+
+%hook YTReelContainerViewController
+- (void)playbackControllerDidActivateVideo:(id)video withPlayerResponse:(id)response {
+    %orig;
+    YTPlayerViewController *player = self.player;
+    if (INTFORVAL(ShortsAutoSpeedIndex) != 0) [player performSelector:@selector(YouModSetShortsAutoSpeed)];
+    else if (INTFORVAL(AutoSpeedIndex) != 0 || IS_ENABLED(GlobalSpeedLocked)) [player performSelector:@selector(YouModSetAutoSpeed)];
+}
+- (void)handleLoopBehavior {
+    NSInteger action = INTFORVAL(ShortsActionIndex);
+    if (action == 1 && [self.delegate respondsToSelector:@selector(playbackSequentialItemControllerDidRequestNextReel:isAutoAdvance:)]) {
+        [self.delegate playbackSequentialItemControllerDidRequestNextReel:self isAutoAdvance:YES];
+    } else if (action == 2) {
+        [self.player seekToTime:MAX(0, self.player.currentVideoTotalMediaTime - 0.05)];
+        [self pause];
+    } else {
+        %orig;
+    }
+}
+%end
+
 %hook YTReelTopBarView
 - (void)didMoveToWindow {
     %orig;

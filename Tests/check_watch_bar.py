@@ -70,7 +70,7 @@ with tempfile.TemporaryDirectory() as tmp:
 assert 'addYogaChild:' not in source and 'addSubnode:' not in source
 assert 'YMCompactSubscribe' not in source and 'YMGeminiOverflow' not in source, 'Keep original Subscribe, Gemini and More hit targets'
 assert 'id.sponsorship.sponsor.button' in source
-assert 'YMWatchRowForControl(self)' in source
+assert 'YouModWatchRowForControl(self)' in source
 assert 'if (!like || !subscribe)' not in source, 'Tablet actions do not contain Subscribe'
 assert 'frame = YMPrependWatchViews(bar, like)' in source
 configure = source.split('static BOOL YMConfigureWatchRow(', 1)[1].split('static UIView *YMFindWatchControl', 1)[0]
@@ -85,3 +85,5 @@ assert '__weak UIView *weakBar' in source and '__weak ASDisplayNode *weakNode' i
 assert 'if (YMConfigureWatchRow(currentNode, wrap)) [currentNode setNeedsLayout]' in source
 assert 'currentNode != ((_ASDisplayView *)currentBar).keepalive_node' in source, 'Skip recycled rows before the deferred update'
 print('PASS: tight counter placement, wrapped/RTL rows, tablet fallback, native actions and no added Yoga children')
+
+assert "wrapper = wrapper.yogaParent" not in configure, "Height changes must never escape the action row"

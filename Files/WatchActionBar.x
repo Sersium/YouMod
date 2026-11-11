@@ -33,28 +33,48 @@ static ASDisplayNode *YMFindWatchNode(ASDisplayNode *node, NSString *identifier)
 
 static BOOL YMConfigureWatchRow(ASDisplayNode *row, BOOL wrap) {
     ASDisplayNode *layout = row;
+    NSMutableArray *wrappers = [NSMutableArray arrayWithObject:row];
     while (layout.yogaChildren.count == 1) {
         ASDisplayNode *child = layout.yogaChildren.firstObject;
         if (!child.yogaChildren.count) break;
         layout = child;
+        [wrappers addObject:child];
     }
     ASDisplayNode *first = nil;
     for (ASDisplayNode *child in layout.yogaChildren) {
         if (YMFindWatchNode(child, @"id.video.like.button")) { first = child; break; }
     }
     if (!first) return NO;
+    ASDisplayNode *more = YMFindWatchNode(layout, @"id.ui.video.action.menu") ?: YMFindWatchNode(layout, @"id.video.action.menu") ?: YMFindWatchNode(layout, @"id.video.menu.button") ?:
+        YMFindWatchNode(layout, @"eml.overflow_button") ?: YMFindWatchNode(layout, @"overflow_button");
+    BOOL showToggle = IS_ENABLED(DeArrowEnabled);
+    NSValue *originalMargin = objc_getAssociatedObject(more, "YMDeArrowOriginalMargin");
+    BOOL moreReady = !more || (showToggle ? more.style.margin.start.value == 44 && originalMargin != nil : originalMargin == nil);
     YMWatchDimension prefix = first.style.margin.start;
     if (objc_getAssociatedObject(row, "YMWatchViewsReserved") &&
-        (!wrap || layout.style.flexWrap == 1) && prefix.unit == 1 && prefix.value == 56) return NO;
+        moreReady && (!wrap || layout.style.flexWrap == 1) && prefix.unit == 1 && prefix.value == 56) return NO;
+    if (more) {
+        YMWatchInsets margin = more.style.margin;
+        if (showToggle) {
+            if (!originalMargin) {
+                originalMargin = [NSValue valueWithBytes:&margin objCType:@encode(YMWatchInsets)];
+                objc_setAssociatedObject(more, "YMDeArrowOriginalMargin", originalMargin, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            }
+            margin.start = (YMWatchDimension){1, 44};
+        } else if (originalMargin) {
+            [originalMargin getValue:&margin size:sizeof(margin)];
+            objc_setAssociatedObject(more, "YMDeArrowOriginalMargin", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        more.style.margin = margin;
+    }
     YMWatchDimension automatic = {0, 0}, zero = {1, 0};
     // Remeasure the existing row after its views have loaded; never insert children.
     if (wrap) {
         layout.style.flexWrap = 1;
         layout.style.justifyContent = 0;
-        for (ASDisplayNode *wrapper = layout; wrapper; wrapper = wrapper.yogaParent) {
+        for (ASDisplayNode *wrapper in wrappers) {
             wrapper.style.height = automatic;
             wrapper.style.maxHeight = automatic;
-            if (wrapper == row) break;
         }
     }
     for (ASDisplayNode *child in layout.yogaChildren) {
@@ -97,16 +117,25 @@ static CGRect YMWatchJoinViewsFrame(CGRect join) {
     return CGRectMake(CGRectGetMinX(join), CGRectGetMidY(join) - 22, MIN(52, join.size.width), 44);
 }
 
-static UIView *YMWatchRowForControl(UIView *like) {
+UIView *YouModWatchRowForControl(UIView *like) {
+    UIView *cell = like;
+    while (cell && ![cell isKindOfClass:UICollectionViewCell.class]) {
+        if ([cell isKindOfClass:%c(YTPlayerView)] || [cell isKindOfClass:%c(YTMainAppPlayerOverlayView)]) return nil;
+        cell = cell.superview;
+    }
+    if (!cell) return nil;
     for (UIView *row = like.superview; row; row = row.superview) {
+        if ([row isKindOfClass:%c(YTPlayerView)] || [row isKindOfClass:%c(YTMainAppPlayerOverlayView)]) return nil;
         NSString *identifier = row.accessibilityIdentifier;
         if ([identifier isEqualToString:@"id.video.non_scrollable_action_bar"] ||
             [identifier isEqualToString:@"id.video.scrollable_action_bar"]) return row;
-        if ([row isKindOfClass:UICollectionViewCell.class]) break;
+        if ([row isKindOfClass:UICollectionViewCell.class] || [row isKindOfClass:UIScrollView.class]) break;
     }
     UIView *actions = nil;
     for (UIView *row = like.superview; row; row = row.superview) {
-        if (row.bounds.size.height > 100) break;
+        if ([row isKindOfClass:UICollectionViewCell.class] || [row isKindOfClass:UIScrollView.class] ||
+            [row isKindOfClass:%c(YTPlayerView)] || [row isKindOfClass:%c(YTMainAppPlayerOverlayView)] ||
+            row.bounds.size.height > 100) break;
         if (!YMFindWatchControl(row, @"id.video.dislike.button") ||
             !YMFindWatchControl(row, @"id.video.share.button")) continue;
         if (!actions) actions = row;
@@ -237,7 +266,7 @@ static void YMMarkWatchRow(UIView *row) {
         dispatch_async(dispatch_get_main_queue(), ^{
             UIView *control = weakControl;
             if (!control.window) return;
-            UIView *row = YMWatchRowForControl(control);
+            UIView *row = YouModWatchRowForControl(control);
             YMMarkWatchRow(row);
             YMUpdateWatchBar(row);
         });
@@ -247,7 +276,7 @@ static void YMMarkWatchRow(UIView *row) {
     %orig;
     if ([self.accessibilityIdentifier isEqualToString:@"id.sponsorship.sponsor.button"]) self.hidden = YES;
     if ([self.accessibilityIdentifier isEqualToString:@"id.video.like.button"]) {
-        UIView *row = YMWatchRowForControl(self);
+        UIView *row = YouModWatchRowForControl(self);
         YMMarkWatchRow(row);
         YMUpdateWatchBar(row);
     } else if (objc_getAssociatedObject(self, "YMWatchRow")) {
@@ -256,6 +285,6 @@ static void YMMarkWatchRow(UIView *row) {
 }
 %new
 - (void)youmod_refreshWatchBar:(NSNotification *)notification {
-    YMUpdateWatchBar(YMWatchRowForControl(self));
+    YMUpdateWatchBar(YouModWatchRowForControl(self));
 }
 %end

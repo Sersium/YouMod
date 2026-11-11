@@ -795,7 +795,7 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 - (NSInteger)audioControlUIStyle {
     NSInteger style = %orig;
     // YouTube 21.38: 0 omits the audio/CC controller entirely; 2 creates it.
-    return style == 0 && (IS_ENABLED(FeedPreviewSoundOn) || IS_ENABLED(FeedPreviewCCDisabled)) ? 2 : style;
+    return style == 0 && (IS_ENABLED(FeedPreviewSoundOn) || IS_ENABLED(AutoFeedMute) || IS_ENABLED(FeedPreviewCCDisabled)) ? 2 : style;
 }
 - (void)setActiveSingleVideo:(YTSingleVideoController *)video {
     NSString *videoID = video.singleVideo.videoId;
@@ -805,8 +805,8 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
     if (newVideo) {
         @try {
             id monitor = [self valueForKey:@"_globalStateMonitor"];
-            if (IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute) && [monitor respondsToSelector:@selector(setInlinePlaybackUnmutedAtStart:)]) {
-                [monitor setInlinePlaybackUnmutedAtStart:YES];
+            if ((IS_ENABLED(FeedPreviewSoundOn) || IS_ENABLED(AutoFeedMute)) && [monitor respondsToSelector:@selector(setInlinePlaybackUnmutedAtStart:)]) {
+                [monitor setInlinePlaybackUnmutedAtStart:!IS_ENABLED(AutoFeedMute)];
             }
             if (IS_ENABLED(FeedPreviewCCDisabled) && [monitor respondsToSelector:@selector(setInlinePlaybackCaptionHidden:)]) {
                 [monitor setInlinePlaybackCaptionHidden:YES];
@@ -814,10 +814,10 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
         } @catch (id ex) {}
     }
     %orig;
-    if (newVideo && IS_ENABLED(FeedPreviewSoundOn) && !IS_ENABLED(AutoFeedMute)) {
-        [video setMuted:NO];
+    if (newVideo && (IS_ENABLED(FeedPreviewSoundOn) || IS_ENABLED(AutoFeedMute))) {
+        [video setMuted:IS_ENABLED(AutoFeedMute)];
         if ([self.viewIfLoaded respondsToSelector:@selector(setAudioSoundOn:)]) {
-            [(id)self.viewIfLoaded setAudioSoundOn:YES];
+            [(id)self.viewIfLoaded setAudioSoundOn:!IS_ENABLED(AutoFeedMute)];
         }
     }
 }
@@ -826,7 +826,7 @@ static void YouModAddEndTime(YTInlinePlayerBarContainerView *playerbar, YTPlayer
 // A player response can also switch styles after the overlay was constructed.
 %hook YTInlineMutedPlaybackPlayerOverlayView
 - (void)updateAudioControlUIStyle:(NSInteger)style {
-    if (style == 0 && (IS_ENABLED(FeedPreviewSoundOn) || IS_ENABLED(FeedPreviewCCDisabled))) style = 2;
+    if (style == 0 && (IS_ENABLED(FeedPreviewSoundOn) || IS_ENABLED(AutoFeedMute) || IS_ENABLED(FeedPreviewCCDisabled))) style = 2;
     %orig(style);
 }
 %end
@@ -1000,6 +1000,11 @@ static CGFloat YouModSpeedForHoldIndex(NSInteger index) {
     }
     %orig(actionsView);
 }
+%end
+
+// Upstream's config gate complements the live overlay gate below.
+%hook YTColdConfig
+- (BOOL)isLandscapeEngagementPanelEnabled { return IS_ENABLED(DisablesEngagementPanel) ? NO : %orig; }
 %end
 
 // Hide related videos in fullscreen / Disables engagement panel
@@ -1189,6 +1194,12 @@ static UISlider *YouModVolumeSlider(void) {
     for (UIView *v in volumeView.subviews)
         if ([v isKindOfClass:UISlider.class]) return (UISlider *)v;
     return nil;
+}
+
+static CGPoint YouModSpeedToastCenter(CGFloat activeWidth, CGFloat toastHeight, UIEdgeInsets safe) {
+    CGFloat centerX = safe.left + MAX(0, activeWidth - safe.left - safe.right) / 2;
+    CGFloat centerY = MAX(36, safe.top + toastHeight / 2 + 8);
+    return CGPointMake(centerX, centerY);
 }
 
 %hook YTPlayerViewController
@@ -1472,9 +1483,16 @@ static UISlider *YouModVolumeSlider(void) {
 }
 
 %new
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    return gestureRecognizer == self.YouModTapGesture && [otherGestureRecognizer isKindOfClass:UIPinchGestureRecognizer.class];
+}
+
+%new
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    if (gestureRecognizer == self.YouModPanGesture) {
-        return NO; 
+    if (gestureRecognizer == self.YouModPanGesture ||
+        ((gestureRecognizer == self.YouModTapGesture || otherGestureRecognizer == self.YouModTapGesture) &&
+         ([gestureRecognizer isKindOfClass:UIPinchGestureRecognizer.class] || [otherGestureRecognizer isKindOfClass:UIPinchGestureRecognizer.class]))) {
+        return NO;
     }
     if (gestureRecognizer == self.YouModHoldGesture || otherGestureRecognizer == self.YouModHoldGesture) {
         if ([gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]] || [otherGestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]]) {
@@ -1720,7 +1738,7 @@ static UISlider *YouModVolumeSlider(void) {
     self.YouModSpeedToastView.layer.cornerRadius = toastHeight / 2.0;
     self.YouModSpeedToastLabel.frame = self.YouModSpeedToastView.bounds;
 
-    self.YouModSpeedToastView.center = CGPointMake(activeWidth / 2.0, 36.0);
+    self.YouModSpeedToastView.center = YouModSpeedToastCenter(activeWidth, toastHeight, self.playerView.safeAreaInsets);
     self.YouModSpeedToastView.layer.zPosition = 999;
     [self.playerView bringSubviewToFront:self.YouModSpeedToastView];
 

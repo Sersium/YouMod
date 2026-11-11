@@ -37,7 +37,7 @@ September 27 phone/iPad regressions (pending device verification):
 
 - iPhone/iPad: Home → Notifications → Home, then Subscriptions → Home. Repeat after reordering tabs and after disabling/re-enabling Shorts. Confirm both the selected icon and displayed feed change.
 - iPad landscape: open several videos and verify the right-hand recommendations remain visible with Hide Related Videos off, including when Hide Horizontal Shelf is on. Rotate and return to Home.
-- iPad: compare one-line and multiline cards. Short cards without room below the menu must show the DeArrow toggle in the lower thumbnail corner. Test delayed thumbnail loading, scrolling/reuse, both toggle states, and independent menu taps.
+- iPad: compare one-line and multiline cards. Short cards without room below the menu must show the DeArrow toggle beside More, with text flowing around it. Test delayed thumbnail loading, scrolling/reuse, both toggle states, and independent menu taps.
 - iPad Home/Subscriptions: with Playback in feeds enabled, leave a normal video centered until it starts, then scroll, rotate, open/close a video and return from Notifications. Repeat with the native playback setting off to confirm it remains respected.
 
 2.5 fullscreen regression (pending device verification):
@@ -52,7 +52,7 @@ October 26 DeArrow regressions (pending device verification on YouTube 21.42.4):
 
 - Expand a channel's “Uploaded 7 videos” notification before visiting any of its videos. The group heading must stay unchanged and the first video's row must retain its actual title. Toggle original/replacement twice, collapse/re-expand, then repeat with another group from the same channel.
 - Open comments containing timestamps, linked video titles, emoji and ordinary text. No comment or reply should receive a DeArrow toggle or have its text replaced. Scroll rapidly and reopen comments to exercise reused cells.
-- Cold-launch Home and scroll through cards with one-line and multiline titles, delayed thumbnails and playing previews. Toggles must stay below the menu, or at the thumbnail's lower corner when there is no space below, without jumping to the top. Repeat after opening/closing a video, rotating and on iPad.
+- Cold-launch Home and scroll through cards with one-line and multiline titles, delayed thumbnails and playing previews. Toggles must stay below the menu, or beside More when there is no space below, without jumping to the top. Repeat after opening/closing a video, rotating and on iPad.
 
 October 31 floating tab bar and OLED settings (pending device verification on YouTube 21.42.4):
 
@@ -62,3 +62,14 @@ October 31 floating tab bar and OLED settings (pending device verification on Yo
 - Enable Hide Tab Labels, scroll the glass bar away/back, then change tabs and rotate. Labels must stay hidden. Disable the preference and confirm YouTube's native label behavior returns.
 - In OLED dark mode, open Settings and scroll through Privacy and the following row: its text/icon must remain visible against black. Tap it to verify its original action and selection feedback, scroll away/back to recycle it, then switch light/dark appearance in both YouTube and iOS. Light mode must retain the original background; repeat with OLED disabled after relaunch.
 - Watch row: compare subscribed and unsubscribed channels, with and without Join. The view counter should have a compact slot immediately before Like, with no stretched gap after Subscribe. On narrow screens, Gemini and other overflowing actions must wrap below; Comments must move down with the measured row. Tap Subscribe/the bell, Like/Dislike, Share, Gemini and More, then rotate and change videos repeatedly. Repeat with large text and an RTL language. On iPad, verify the separate scrollable action row and its view counter remain usable.
+
+November 10 acceptance checks (pending on iPhone 17 and iPad Pro M2 11-inch):
+
+- Feed: compare the supplied South Korea card, long titles, compact notifications, RTL cards, delayed thumbnails and playing previews. The DeArrow control must stay outside the thumbnail. On short cards it aligns beside More and text leaves its hit target clear. Scroll/reuse and rotate in both states.
+- Watch title: open a video directly, from a notification and from Home with an empty DeArrow cache. The title must update when branding arrives. Tap the DeArrow control beside the native watch More button below the views row; switch original/replacement twice. Both the normal and experimental title labels must update. More must still open its native menu. Repeat with branding unavailable, title replacement disabled, rapid video changes, larger text and iPad Split View.
+- Text: check emoji, accents, Japanese, quotes, question/exclamation marks and genuine mathematical `>` symbols. Replacements must use ordinary spaces without inheriting inline icon/glyph runs. Original restores the native attributed title.
+- Player: repeatedly open videos, enter/exit fullscreen by button and rotation, show/hide controls and return to the feed. Video/player geometry must remain native. Watch-row height changes must stay inside the action row. Repeat with DeArrow and RYD independently disabled.
+- Shorts: test Repeat, Next and Pause at end, separate Shorts speed, fallback regular speed and global speed lock. Swipe repeatedly to the next Short with the seekbar hidden. Pinch a regular video with two-finger pause enabled: zoom must not pause playback.
+- Preview audio: enable Auto mute with Preview sound on; each new preview must start muted and remain manually switchable. Disable Auto mute and confirm new previews start with sound again.
+- Hold-speed indicator: test portrait vertical videos and landscape; the capsule must remain below the Dynamic Island/notch and inside the safe horizontal area.
+- OLED keyboard: type in Search and comments, open emoji search, rotate, then switch dark/light appearance. Native keys, suggestions and dock buttons must stay visible.

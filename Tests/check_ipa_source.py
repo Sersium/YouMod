@@ -7,6 +7,7 @@ import tempfile
 import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'Scripts'))
 from ipa_source import source, inspect, prepare, repair_zip_crc
+from verify_ipa import libraries
 
 config = {'url': 'https://example.com/old.ipa', 'sha256': 'a' * 64}
 a = source(config)
@@ -52,3 +53,19 @@ with tempfile.TemporaryDirectory() as tmp:
         except ValueError: pass
         else: raise AssertionError('Invalid base accepted')
 print('PASS: source override, cache invalidation, version detection, encrypted/wrong-app rejection')
+
+# Upstream #208: extra injected libraries can silently overwrite __text.
+def executable(section_offset=512, command_bytes=152, count=1):
+    header = struct.pack('<8I', 0xfeedfacf, 0x100000c, 0, 2, count, command_bytes, 0, 0)
+    segment = bytearray(152)
+    struct.pack_into('<II', segment, 0, 0x19, 152)
+    struct.pack_into('<I', segment, 64, 1)
+    struct.pack_into('<QI', segment, 72 + 40, 16, section_offset)
+    return header + segment + bytes(1024)
+
+assert list(libraries(executable())) == []
+for damaged in [executable(176), executable(command_bytes=144), executable(count=2), b'\xcf\xfa\xed\xfe']:
+    try: list(libraries(damaged))
+    except ValueError: pass
+    else: raise AssertionError('Overlapping or malformed Mach-O header accepted')
+print('PASS: injected Mach-O header bounds and section-overlap rejection')
