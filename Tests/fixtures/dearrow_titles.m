@@ -466,6 +466,8 @@ int main(void) { @autoreleasepool {
     ASDisplayNode *reopened = [ASDisplayNode new];
     FeedTextHook *reopenedTitle = titleNode(detailsTitle);
     reopened.subnodes = @[reopenedTitle];
+    reopenedTitle.forbidParentAccess = NO;
+    reopenedTitle.supernode = reopened;
     ELMComponent *newHeader = [[ELMComponent alloc] initWithElement:reopened context:@"youtube://components/video_description_header.eml_80d1782e180cb1b" treeLocalContext:nil];
     assert(!newHeader.nativeReady);
     assert(newHeader.node == reopened); drainUpdates(reopened);
