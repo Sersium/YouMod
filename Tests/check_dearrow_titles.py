@@ -20,11 +20,11 @@ def hook(name):
 
 
 assert 'mod.mutableString setString:' not in source
-assert source.index('@class YTEngagementPanelIdentifier;') < source.index('%hook'), 'Logos emits all hook declarations at the first hook'
 assert 'exclusionPaths' not in source, 'Button spacing must not alter title/channel glyph flow'
 assert 'YMDeArrowBesideMenu' not in source
 assert 'void YouModUpdateWatchTitlesForRow(' in source and 'YouModUpdateWatchTitlesForRow(bar)' in watch
-assert 'templateURI' not in source and 'isVisible' not in source, 'Watch titles must not depend on guessed template ownership or flattened-node visibility'
+assert 'templateURI' not in function('static void YouModApplyWatchTitles(') and 'isVisible' not in source, 'Collapsed watch titles must not depend on template ownership or flattened-node visibility'
+assert '%hook YTEngagementPanelView' not in source, 'Expanded titles must bind the native header component, independent of its panel host'
 assert 'candidate != cell && CGRectGetMaxY(candidate.frame) <= CGRectGetMinY(actions)' in source
 assert 'YouModBoundWatchTitle(self, attributedString)' in hook('ASTextNode')
 assert '- (void)didLoad' not in hook('ASTextNode'), 'Do not subscribe every player/comment text node to branding updates'
@@ -53,13 +53,10 @@ scanner = ''.join(function(s) for s in ('static void YouModCollectWatchLabels(',
 for name in ('YTPlayerView', 'YTMainAppPlayerOverlayView', '_ASCollectionViewCell'):
     scanner = scanner.replace('%c(' + name + ')', name + '.class')
 program = program.replace('/* SCANNER_HELPERS */', scanner)
-description = ''.join(function(s) for s in ('static BOOL YouModIsDescriptionPanel(', 'static void YouModDescriptionTitleRoots(',
-    'static void YouModApplyDescriptionTitle(', 'static void YouModUpdateDescriptionTitle(')).replace('%c(_ASCollectionViewCell)', '_ASCollectionViewCell.class')
-program = program.replace('/* DESCRIPTION_HELPERS */', description)
-panel_hooks = hook('YTEngagementPanelView')
-setter = function('- (void)setPanelIdentifier:', panel_hooks)
-panel_hooks = panel_hooks.replace(setter, setter.replace('%orig;', 'self.rawIdentifier = identifier;'))
-program = program.replace('/* DESCRIPTION_HOOKS */', panel_hooks.replace('%orig;', ''))
+program = program.replace('/* DESCRIPTION_HELPERS */', function('static void YouModUpdateDescriptionTitle(') + function('static void YouModObserveDescriptionComponent('))
+program = program.replace('/* DESCRIPTION_CONTROLLER_HOOKS */', hook('ELMNodeController'))
+component_hooks = hook('ELMComponent').replace('id component = %orig;', 'self = [super init]; self.templateURI = context; self.materializedInstance = element; id component = self;')
+program = program.replace('/* DESCRIPTION_COMPONENT_HOOKS */', component_hooks)
 program = program.replace('/* BUTTON_HIT_AREA */', function('- (BOOL)pointInside:'))
 program = program.replace('/* CELL_HIT_TEST */', hook('_ASCollectionViewCell').replace('%orig', 'self.nativeHitView'))
 program = program.replace('/* COLLECTION_HOOK */', hook('UICollectionView').replace('%orig;', ''))
@@ -82,4 +79,4 @@ with tempfile.TemporaryDirectory() as tmp:
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
-print('PASS: watch and expanded titles, preserved selection, late branding, description-body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')
+print('PASS: watch and expanded titles, preserved selection, late branding, native description-header callbacks, rendering-lock deferral, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')

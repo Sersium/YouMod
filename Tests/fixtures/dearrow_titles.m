@@ -16,8 +16,7 @@ static NSString * const kYMReturnDislikeNotification = @"YouModReturnDislikeNoti
 static NSString *currentWatchID, *detailsID, *detailsTitle;
 static NSString *YouModCurrentWatchVideoID(void);
 static NSString *YouModCurrentWatchTitle(void);
-@class YTEngagementPanelView;
-static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel);
+static NSString *descriptionTitleStatus;
 /* TEXT_HELPERS */
 
 @class ASDisplayNode;
@@ -71,6 +70,8 @@ static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel);
 @end
 @interface ASDisplayNode : NSObject
 @property BOOL isNodeLoaded;
+@property NSUInteger layoutRequests;
+- (void)setNeedsLayout;
 @property BOOL layerBacked;
 @property(weak) ASDisplayNode *supernode;
 @property(strong) UIView *view;
@@ -82,6 +83,7 @@ static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel);
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node;
 @end
 @implementation ASDisplayNode
+- (void)setNeedsLayout { self.layoutRequests++; }
 - (UIView *)view { assert(!self.layerBacked); return _view; }
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node {
     for (ASDisplayNode *p=self; p && p != node; p=p.supernode) rect = CGRectOffset(rect,p.frame.origin.x,p.frame.origin.y);
@@ -236,27 +238,38 @@ static NSString *YouModCurrentWatchTitle(void) { return [detailsID isEqual:curre
 /* COLLECTION_HOOK */
 @end
 
-@interface YTEngagementPanelIdentifier : NSObject
-@property(copy) NSString *identifierString;
-@property(copy) NSString *tag;
-- (BOOL)equalToIdentifierString:(NSString *)identifier;
+@interface ELMNodeController : NSObject
+@property(strong) ASDisplayNode *node;
+@property(strong) NSMutableDictionary *callbacks;
+@property BOOL nativeRendering;
+- (void)fireEvent:(NSString *)event;
 @end
-@implementation YTEngagementPanelIdentifier
-- (BOOL)equalToIdentifierString:(NSString *)identifier { return [self.identifierString isEqual:identifier]; }
-@end
-@interface YTEngagementPanelView : UIView
-@property(strong) YTEngagementPanelIdentifier *rawIdentifier;
-@property(readonly) YTEngagementPanelIdentifier *panelIdentifier;
-@property(strong) UIView *currentHeaderView;
-@property(strong) UIView *contentView;
-- (void)didMoveToWindow;
-- (void)layoutSubviews;
-- (void)setPanelIdentifier:(YTEngagementPanelIdentifier *)identifier;
+@interface ELMComponent : NSObject
+@property(copy) NSString *templateURI;
+@property(strong) ELMNodeController *materializedInstance;
+- (instancetype)initWithElement:(id)element context:(id)context treeLocalContext:(id)treeLocalContext;
+- (void)setOnNodeDidLoad:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
+- (void)setOnNodeDidLayout:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
+- (void)setOnNodeDidEnterVisibleState:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
 @end
 /* DESCRIPTION_HELPERS */
-@implementation YTEngagementPanelView
-- (YTEngagementPanelIdentifier *)panelIdentifier { return self.rawIdentifier; }
-/* DESCRIPTION_HOOKS */
+@implementation ELMNodeController
+@synthesize node = _node;
+- (ASDisplayNode *)node { assert(!self.nativeRendering); return _node; }
+- (instancetype)init { if ((self = [super init])) _callbacks = [NSMutableDictionary new]; return self; }
+- (void)fireEvent:(NSString *)event {
+    void (^callback)(ELMNodeController *, id) = self.callbacks[event];
+    self.nativeRendering = YES;
+    if (callback) callback(self, @"native context, not a node");
+    self.nativeRendering = NO;
+}
+/* DESCRIPTION_CONTROLLER_HOOKS */
+@end
+@implementation ELMComponent
+- (void)setOnNodeDidLoad:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key { assert([key isEqual:@"YouModDescriptionTitle"]); self.materializedInstance.callbacks[@"load"] = callback; }
+- (void)setOnNodeDidLayout:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key { self.materializedInstance.callbacks[@"layout"] = callback; }
+- (void)setOnNodeDidEnterVisibleState:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key { self.materializedInstance.callbacks[@"visible"] = callback; }
+/* DESCRIPTION_COMPONENT_HOOKS */
 @end
 
 @interface TestLikeControl : UIView
@@ -268,7 +281,7 @@ static void YMUpdateWatchBar(UIView *row) { YouModUpdateWatchTitlesForRow(row); 
 @implementation TestLikeControl
 /* WATCH_ROW_NOTIFICATION */
 @end
-static void drainUpdates(UIView *row) {
+static void drainUpdates(id row) {
     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
     assert(!objc_getAssociatedObject(row,"YMWatchTitleQueued"));
     assert(!objc_getAssociatedObject(row,"YMDescriptionTitleQueued"));
@@ -398,109 +411,85 @@ int main(void) { @autoreleasepool {
     [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
     assert([heading.attributedText.string isEqual:detached]);
 
-    // Opening the expanded description must preserve the selected title, including reopen.
+    // Replay the user's report through native header callbacks, without a panel host.
     row.window = NO;
+    currentWatchID = detailsID = @"0TkYBxVCev4";
+    detailsTitle = @"A baby rotisserie chicken 😭";
+    manager.originals[currentWatchID] = detailsTitle;
+    manager.titles[currentWatchID] = @"Grooming a baby rotisserie chicken (Sphinx Kitten)";
     [manager.toggled removeObject:currentWatchID];
-    YTEngagementPanelView *panel = [YTEngagementPanelView new];
-    panel.window = YES;
-    panel.frame = CGRectMake(0,0,393,700);
-    YTEngagementPanelIdentifier *descriptionID = [YTEngagementPanelIdentifier new];
-    descriptionID.identifierString = @"engagement-panel-structured-description";
-    UILabel *expanded = [UILabel new], *body = [UILabel new];
-    expanded.frame = CGRectMake(16,12,340,90);
-    body.frame = CGRectMake(16,240,340,90);
-    expanded.text = body.text = detailsTitle;
-    UIView *headerView = [UIView new], *bodyView = [UIView new];
-    headerView.subviews = @[expanded];
-    bodyView.subviews = @[body];
-    panel.currentHeaderView = headerView;
-    panel.contentView = bodyView;
-    panel.subviews = @[headerView,bodyView];
-    [panel setPanelIdentifier:descriptionID];
-    [panel didMoveToWindow]; drainUpdates(panel);
-    assert([expanded.text isEqual:manager.titles[currentWatchID]]);
-    assert([body.text isEqual:detailsTitle]); // A repeated title in the description is content.
-    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
-    assert([expanded.text isEqual:detailsTitle]);
-    panel.window = NO;
-    [panel didMoveToWindow]; drainUpdates(panel);
+    ELMNodeController *description = [ELMNodeController new];
+    description.node = [ASDisplayNode new];
+    description.node.layerBacked = YES; // Never request a UIView from the flattened header.
+    FeedTextHook *expanded = titleNode(detailsTitle), *body = titleNode(detailsTitle);
+    expanded.forbidParentAccess = body.forbidParentAccess = NO;
+    expanded.frame = CGRectMake(0,20,340,90); expanded.bounds = CGRectMake(0,0,340,90);
+    body.frame = CGRectMake(0,240,340,90); body.bounds = CGRectMake(0,0,340,90);
+    expanded.supernode = body.supernode = description.node;
+    description.node.subnodes = @[body,expanded]; // Traversal order is not the visual order.
+    ELMComponent *descriptionHeader = [[ELMComponent alloc] initWithElement:description context:@"video_description_header.eml|80d1782e180cb1b" treeLocalContext:nil];
+    assert(descriptionHeader.materializedInstance == description && description.callbacks.count == 3);
+    [description fireEvent:@"load"];
+    [description fireEvent:@"layout"]; // Coalesced; native holds its rendering lock here.
+    drainUpdates(description);
+    assert([expanded.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    assert([body.attributedText.string isEqual:detailsTitle]);
+    assert([descriptionTitleStatus containsString:@"matched=1"]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(description);
+    assert([expanded.attributedText.string isEqual:detailsTitle]);
+    [expanded didExitHierarchy];
     assert(!objc_getAssociatedObject(expanded,"YMDeArrowWatchLabelVideoID"));
-    panel.window = YES;
-    [panel didMoveToWindow]; drainUpdates(panel);
-    assert([manager isOriginalToggledForVideoID:currentWatchID] && [expanded.text isEqual:detailsTitle]);
-    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
-    assert([expanded.text isEqual:manager.titles[currentWatchID]]);
-    expanded.text = detailsTitle;
-    assert([expanded.text isEqual:manager.titles[currentWatchID]]); // Native header refresh keeps the choice.
+    [description fireEvent:@"visible"]; drainUpdates(description);
+    assert([manager isOriginalToggledForVideoID:currentWatchID] && [expanded.attributedText.string isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(description);
+    assert([expanded.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    expanded.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
+    assert([expanded.attributedText.string isEqual:manager.titles[currentWatchID]]);
 
-    // Seamless Elements panels can put the header and body in one flattened node.
-    UIView *elementsView = [UIView new];
-    elementsView.keepalive_node = [ASDisplayNode new];
-    elementsView.keepalive_node.layerBacked = YES;
-    FeedTextHook *expandedNode = titleNode(detailsTitle), *bodyNode = titleNode(detailsTitle);
-    expandedNode.forbidParentAccess = bodyNode.forbidParentAccess = NO;
-    expandedNode.frame = CGRectMake(0,20,340,90); expandedNode.bounds = CGRectMake(0,0,340,90);
-    bodyNode.frame = CGRectMake(0,240,340,90); bodyNode.bounds = CGRectMake(0,0,340,90);
-    expandedNode.supernode = bodyNode.supernode = elementsView.keepalive_node;
-    elementsView.keepalive_node.subnodes = @[expandedNode,bodyNode];
-    panel.currentHeaderView = nil;
-    panel.contentView = elementsView;
-    panel.subviews = @[elementsView];
-    descriptionID.identifierString = nil;
-    descriptionID.tag = @"structured-description";
-    [panel layoutSubviews]; drainUpdates(panel);
-    assert([expandedNode.attributedText.string isEqual:manager.titles[currentWatchID]]);
-    assert([bodyNode.attributedText.string isEqual:detailsTitle]);
+    // A new native tree on reopen gets its own callbacks and binding.
+    ELMNodeController *reopened = [ELMNodeController new];
+    FeedTextHook *reopenedTitle = titleNode(detailsTitle);
+    reopened.node = reopenedTitle;
+    ELMComponent *newHeader = [[ELMComponent alloc] initWithElement:reopened context:@"youtube://components/video_description_header.eml-js|revision" treeLocalContext:nil];
+    assert(newHeader.materializedInstance == reopened);
+    [reopened fireEvent:@"layout"]; drainUpdates(reopened);
+    assert([reopenedTitle.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    NSUInteger requests = description.node.layoutRequests;
+    for (int i=0; i<200; i++) [description fireEvent:@"layout"];
+    drainUpdates(description);
+    assert(description.node.layoutRequests == requests); // Stable text cannot create a layout loop.
 
-    // A collection description must never bind a body cell when its header is offscreen.
-    _ASCollectionViewCell *expandedCell = nodeCell(0,@[expandedNode]);
-    expandedNode.supernode = expandedCell.node;
-    _ASCollectionViewCell *bodyCell = nodeCell(200,@[bodyNode]);
-    bodyNode.supernode = bodyCell.node;
-    bodyCell.sourceIndexPath = [NSIndexPath indexPathWithIndexes:(NSUInteger[]){0,1} length:2];
-    UICollectionView *descriptionCollection = [UICollectionView new];
-    descriptionCollection.subviews = descriptionCollection.visibleCells = @[expandedCell,bodyCell];
-    panel.contentView = descriptionCollection;
-    panel.subviews = @[descriptionCollection];
-    [panel layoutSubviews]; drainUpdates(panel);
-    assert([expandedNode.attributedText.string isEqual:manager.titles[currentWatchID]] && [bodyNode.attributedText.string isEqual:detailsTitle]);
-    descriptionCollection.visibleCells = @[bodyCell];
-    [panel layoutSubviews]; drainUpdates(panel);
-    assert(!objc_getAssociatedObject(bodyNode,"YMDeArrowWatchLabelVideoID"));
-    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
-    descriptionCollection.visibleCells = @[expandedCell,bodyCell];
-    [descriptionCollection layoutSubviews]; drainUpdates(panel);
-    assert([expandedNode.attributedText.string isEqual:detailsTitle]);
+    // Comments and the description body never receive callbacks, even for identical text.
+    for (NSString *uri in @[@"comments_header.eml|1", @"description_body.eml|f1087e40a7108802", @"video_metadata_carousel.eml|2"]) {
+        ELMNodeController *unrelated = [ELMNodeController new];
+        unrelated.node = titleNode(detailsTitle);
+        ELMComponent *component = [[ELMComponent alloc] initWithElement:unrelated context:uri treeLocalContext:nil];
+        assert(component.materializedInstance == unrelated && unrelated.callbacks.count == 0);
+        [unrelated fireEvent:@"load"]; drainUpdates(unrelated);
+        assert([((ASTextNode *)unrelated.node).attributedText.string isEqual:detailsTitle]);
+        assert(!objc_getAssociatedObject(unrelated,"YMDescriptionObserved"));
+    }
 
-    // Switching an existing panel to Comments clears bindings and subscriptions.
-    YTEngagementPanelIdentifier *commentsID = [YTEngagementPanelIdentifier new];
-    commentsID.identifierString = @"engagement-panel-comments-section";
-    [panel setPanelIdentifier:commentsID];
-    assert(!objc_getAssociatedObject(panel,"YMDescriptionObserved"));
-    assert(!objc_getAssociatedObject(expandedNode,"YMDeArrowWatchLabelVideoID"));
-    expandedNode.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
-    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(panel);
-    assert([expandedNode.attributedText.string isEqual:detailsTitle]);
-
-    // Branding arriving while the description is open updates the expanded title.
+    // New playback data and late branding must not rewrite a stale header.
     currentWatchID = detailsID = @"PANEL000001";
     detailsTitle = @"An original full title";
-    manager.originals[currentWatchID] = detailsTitle;
-    expanded.text = detailsTitle;
-    panel.currentHeaderView = headerView;
-    panel.contentView = bodyView;
-    panel.subviews = @[headerView,bodyView];
-    [panel setPanelIdentifier:descriptionID]; drainUpdates(panel);
-    assert([expanded.text isEqual:detailsTitle]);
+    FeedTextHook *lateTitle = titleNode(detailsTitle);
+    ELMNodeController *late = [ELMNodeController new]; late.node = lateTitle;
+    ELMComponent *lateHeader = [[ELMComponent alloc] initWithElement:late context:@"video_description_header.eml" treeLocalContext:nil];
+    assert(lateHeader.materializedInstance == late);
+    [late fireEvent:@"layout"]; drainUpdates(late);
+    assert([lateTitle.attributedText.string isEqual:detailsTitle]);
+    NSString *stale = expanded.attributedText.string;
     manager.titles[currentWatchID] = @"A later DeArrow full title";
-    [[NSNotificationCenter defaultCenter] postNotificationName:kYMDeArrowUpdatedNotification object:nil userInfo:@{@"videoID":currentWatchID}]; drainUpdates(panel);
-    assert([expanded.text isEqual:@"A later DeArrow full title"]);
+    [[NSNotificationCenter defaultCenter] postNotificationName:kYMDeArrowUpdatedNotification object:nil userInfo:@{@"videoID":currentWatchID}]; drainUpdates(late);
+    assert([lateTitle.attributedText.string isEqual:@"A later DeArrow full title"]);
+    assert([expanded.attributedText.string isEqual:stale]);
     preferences[DeArrowReplaceTitles] = NO;
-    [panel layoutSubviews]; drainUpdates(panel);
-    assert([expanded.text isEqual:detailsTitle]);
+    [late fireEvent:@"layout"]; drainUpdates(late);
+    assert([lateTitle.attributedText.string isEqual:detailsTitle]);
     preferences[DeArrowReplaceTitles] = YES;
-    panel.window = NO;
-    [panel didMoveToWindow]; drainUpdates(panel);
+    [late fireEvent:@"layout"]; drainUpdates(late);
+    assert([lateTitle.attributedText.string isEqual:@"A later DeArrow full title"]);
 
     // The legacy UIKit cell also handles an absent renderer video ID.
     currentWatchID = detailsID = @"LEGACY00001";

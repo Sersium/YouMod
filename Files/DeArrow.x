@@ -6,10 +6,9 @@
 // Thumbnails: https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID={videoID}&time={timestamp}
 
 static NSString * const kYMDeArrowUpdatedNotification = @"YouModDeArrowUpdatedNotification";
-@class YTEngagementPanelIdentifier;
 static NSAttributedString *YouModBoundWatchTitle(id label, NSAttributedString *native);
 static void YouModClearWatchTitle(id label);
-static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel);
+static NSString *descriptionTitleStatus;
 
 
 @interface ELMImageNode : ASNetworkImageNode
@@ -1100,7 +1099,8 @@ static ASNetworkImageNode *YouModFindThumbnailNode(NSArray *imageNodes, NSString
 - (void)copyWatchTitleDetails:(UILongPressGestureRecognizer *)gesture {
     if (gesture.state != UIGestureRecognizerStateBegan) return;
     NSString *details = objc_getAssociatedObject(gesture.view.superview, "YMWatchTitleStatus");
-    UIPasteboard.generalPasteboard.string = details ?: @"YouMod: the watch title scan has not run for this action row.";
+    details = details ?: @"YouMod: the watch title scan has not run for this action row.";
+    UIPasteboard.generalPasteboard.string = [details stringByAppendingFormat:@"\nexpanded header: %@\n", descriptionTitleStatus ?: @"not rendered since launch"];
     [SBSkipNotificationView showSuccessInView:sbGetNotificationParent() message:LOC(@"COPIED_TO_CLIPBOARD") duration:3.0];
 }
 
@@ -1395,139 +1395,75 @@ void YouModUpdateWatchTitlesForRow(UIView *row) {
     %orig;
     NSHashTable *rows = objc_getAssociatedObject(self, "YMWatchTitleRows");
     for (UIView *row in rows.allObjects) YouModUpdateWatchTitlesForRow(row);
-    NSHashTable *panels = objc_getAssociatedObject(self, "YMDescriptionPanels");
-    for (YTEngagementPanelView *panel in panels.allObjects) YouModUpdateDescriptionTitle(panel);
 }
 %end
 
-@interface YTEngagementPanelIdentifier : NSObject
-- (BOOL)equalToIdentifierString:(NSString *)identifier;
-- (NSString *)tag;
-@end
-@interface YTEngagementPanelView (YouModDeArrowDescription)
-@property (nonatomic, readonly) YTEngagementPanelIdentifier *panelIdentifier;
-@property (nonatomic, readonly) UIView *currentHeaderView;
-@property (nonatomic, readonly) UIView *contentView;
+@interface ELMComponent (YouModDeArrowDescription)
+- (void)setOnNodeDidLoad:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
+- (void)setOnNodeDidLayout:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
+- (void)setOnNodeDidEnterVisibleState:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
 @end
 
-static BOOL YouModIsDescriptionPanel(YTEngagementPanelView *panel) {
-    YTEngagementPanelIdentifier *identifier = panel.panelIdentifier;
-    return [identifier equalToIdentifierString:@"engagement-panel-structured-description"] ||
-        [identifier.tag isEqualToString:@"structured-description"] || [identifier.tag isEqualToString:@"description"];
-}
-
-static void YouModDescriptionTitleRoots(UIView *view, YTEngagementPanelView *panel, NSMutableArray *roots) {
-    if (!view || view.hidden || view.alpha <= 0.01) return;
-    if ([view isKindOfClass:UICollectionView.class]) {
-        UICollectionView *collection = (UICollectionView *)view;
-        NSHashTable *panels = objc_getAssociatedObject(collection, "YMDescriptionPanels");
-        if (!panels) {
-            panels = [NSHashTable weakObjectsHashTable];
-            objc_setAssociatedObject(collection, "YMDescriptionPanels", panels, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
-        [panels addObject:panel];
-        for (UICollectionViewCell *cell in collection.visibleCells) {
-            NSIndexPath *path = [collection indexPathForCell:cell];
-            if (path && path.section == 0 && path.item == 0) [roots addObject:cell];
-        }
-        return;
-    }
-    if (([view respondsToSelector:@selector(keepalive_node)] && [(id)view keepalive_node]) ||
-        ([view respondsToSelector:@selector(attributedText)] && [view respondsToSelector:@selector(setAttributedText:)])) {
-        [roots addObject:view];
-        return;
-    }
-    for (UIView *child in view.subviews) YouModDescriptionTitleRoots(child, panel, roots);
-}
-
-static void YouModApplyDescriptionTitle(YTEngagementPanelView *panel, NSString *videoID) {
-    NSMutableArray *roots = [NSMutableArray array], *labels = [NSMutableArray array], *positions = [NSMutableArray array];
-    YouModDescriptionTitleRoots(panel.currentHeaderView, panel, roots);
-    YouModDescriptionTitleRoots(panel.contentView, panel, roots);
-    CGFloat top = CGFLOAT_MAX;
-    for (UIView *root in roots) {
-        ASDisplayNode *node = [root isKindOfClass:%c(_ASCollectionViewCell)] ? ((_ASCollectionViewCell *)root).node :
-            ([root respondsToSelector:@selector(keepalive_node)] ? [(id)root keepalive_node] : nil);
-        NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
-        YouModCollectCardNodes(node, texts, images);
-        for (ASTextNode *text in texts) {
-            if (text.hidden || CGRectIsEmpty(text.bounds)) continue;
-            if (!YouModWatchTitleMatches(text, text.attributedText, videoID)) continue;
-            CGRect rect = [text convertRect:text.bounds toNode:node];
-            CGFloat y = CGRectGetMinY([root convertRect:rect toView:panel]);
-            [labels addObject:text]; [positions addObject:@(y)]; top = MIN(top, y);
-        }
-        NSMutableArray *views = [NSMutableArray array];
-        YouModCollectWatchLabels(root, views);
-        for (UIView *label in views) {
-            if (label.hidden || label.alpha <= 0.01 || CGRectIsEmpty(label.bounds)) continue;
-            if (!YouModWatchTitleMatches(label, YouModReadTitleText(label), videoID)) continue;
-            CGFloat y = CGRectGetMinY([label convertRect:label.bounds toView:panel]);
-            [labels addObject:label]; [positions addObject:@(y)]; top = MIN(top, y);
-        }
-    }
-    NSHashTable *bound = objc_getAssociatedObject(panel, "YMDescriptionTitles");
-    if (!bound) {
-        bound = [NSHashTable weakObjectsHashTable];
-        objc_setAssociatedObject(panel, "YMDescriptionTitles", bound, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    BOOL changed = NO;
-    for (NSUInteger i = 0; i < labels.count; i++) {
-        // A description can repeat the video's title in its body; keep that text native.
-        if ([positions[i] doubleValue] > top + 2) continue;
-        id label = labels[i];
-        NSAttributedString *before = YouModReadTitleText(label);
-        YouModUpdateWatchTitleLabel(label, videoID);
-        [bound addObject:label];
-        changed |= ![before isEqualToAttributedString:YouModReadTitleText(label)];
-    }
-    if (changed) { [panel.currentHeaderView setNeedsLayout]; [panel setNeedsLayout]; }
-}
-
-static void YouModUpdateDescriptionTitle(YTEngagementPanelView *panel) {
-    if (!panel.window || !YouModIsDescriptionPanel(panel)) {
-        if (objc_getAssociatedObject(panel, "YMDescriptionObserved")) {
-            [[NSNotificationCenter defaultCenter] removeObserver:panel name:kYMDeArrowUpdatedNotification object:nil];
-            [[NSNotificationCenter defaultCenter] removeObserver:panel name:@"YouModWatchStatsChanged" object:nil];
-            objc_setAssociatedObject(panel, "YMDescriptionObserved", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
-        NSHashTable *bound = objc_getAssociatedObject(panel, "YMDescriptionTitles");
-        for (id label in bound.allObjects) YouModClearWatchTitle(label);
-        objc_setAssociatedObject(panel, "YMDescriptionTitles", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        return;
-    }
-    if (!objc_getAssociatedObject(panel, "YMDescriptionObserved")) {
-        [[NSNotificationCenter defaultCenter] addObserver:panel selector:@selector(youmod_descriptionTitleChanged:) name:kYMDeArrowUpdatedNotification object:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:panel selector:@selector(youmod_descriptionTitleChanged:) name:@"YouModWatchStatsChanged" object:nil];
-        objc_setAssociatedObject(panel, "YMDescriptionObserved", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    if (objc_getAssociatedObject(panel, "YMDescriptionTitleQueued")) return;
-    objc_setAssociatedObject(panel, "YMDescriptionTitleQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    __weak YTEngagementPanelView *weakPanel = panel;
+static void YouModUpdateDescriptionTitle(ELMNodeController *controller) {
+    if (!controller || objc_getAssociatedObject(controller, "YMDescriptionTitleQueued")) return;
+    objc_setAssociatedObject(controller, "YMDescriptionTitleQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak ELMNodeController *weakController = controller;
+    // Native Elements callbacks can hold rendering locks; update text after they return.
     dispatch_async(dispatch_get_main_queue(), ^{
-        YTEngagementPanelView *current = weakPanel;
+        ELMNodeController *current = weakController;
         if (!current) return;
         objc_setAssociatedObject(current, "YMDescriptionTitleQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (!objc_getAssociatedObject(current, "YMDescriptionObserved")) {
+            [[NSNotificationCenter defaultCenter] addObserver:current selector:@selector(youmod_descriptionTitleChanged:) name:kYMDeArrowUpdatedNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:current selector:@selector(youmod_descriptionTitleChanged:) name:@"YouModWatchStatsChanged" object:nil];
+            objc_setAssociatedObject(current, "YMDescriptionObserved", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
         NSString *videoID = YouModCurrentWatchVideoID();
-        if (!current.window || !YouModIsDescriptionPanel(current) || videoID.length != 11) return;
-        YouModApplyDescriptionTitle(current, videoID);
+        if (videoID.length != 11) return;
+        YouModDeArrowManager *manager = [YouModDeArrowManager sharedInstance];
+        if (![manager originalTitleForVideoID:videoID].length) [manager registerOriginalTitle:YouModCurrentWatchTitle() forVideoID:videoID];
+        ASDisplayNode *node = current.node;
+        NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
+        YouModCollectCardNodes(node, texts, images);
+        ASTextNode *title = nil;
+        CGFloat top = CGFLOAT_MAX;
+        for (ASTextNode *text in texts) {
+            if (!YouModWatchTitleMatches(text, text.attributedText, videoID)) continue;
+            CGFloat y = CGRectGetMinY([text convertRect:text.bounds toNode:node]);
+            // The header template also contains the description body, which can repeat the title.
+            if (!title || y < top) { title = text; top = y; }
+        }
+        if (title) {
+            NSAttributedString *before = title.attributedText;
+            YouModUpdateWatchTitleLabel(title, videoID);
+            if (![before isEqualToAttributedString:title.attributedText]) [node setNeedsLayout];
+        }
+        descriptionTitleStatus = [NSString stringWithFormat:@"video=%@ node=%@ texts=%lu matched=%d", videoID,
+            NSStringFromClass(node.class), (unsigned long)texts.count, title != nil];
         if (IS_ENABLED(DeArrowEnabled)) [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
     });
 }
 
-%hook YTEngagementPanelView
-- (void)didMoveToWindow {
-    %orig;
-    YouModUpdateDescriptionTitle(self);
+static void YouModObserveDescriptionComponent(ELMComponent *component) {
+    NSString *name = [[component.templateURI componentsSeparatedByString:@"|"].firstObject lastPathComponent];
+    if (![name isEqualToString:@"video_description_header.eml"] && ![name isEqualToString:@"video_description_header.eml-js"]) return;
+    void (^update)(ELMNodeController *, id) = ^(ELMNodeController *controller, id context) {
+        YouModUpdateDescriptionTitle(controller);
+    };
+    [component setOnNodeDidLoad:update forKey:@"YouModDescriptionTitle"];
+    [component setOnNodeDidLayout:update forKey:@"YouModDescriptionTitle"];
+    [component setOnNodeDidEnterVisibleState:update forKey:@"YouModDescriptionTitle"];
 }
-- (void)setPanelIdentifier:(YTEngagementPanelIdentifier *)identifier {
-    %orig;
-    YouModUpdateDescriptionTitle(self);
+
+%hook ELMComponent
+- (id)initWithElement:(id)element context:(id)context treeLocalContext:(id)treeLocalContext {
+    id component = %orig;
+    YouModObserveDescriptionComponent(component);
+    return component;
 }
-- (void)layoutSubviews {
-    %orig;
-    YouModUpdateDescriptionTitle(self);
-}
+%end
+
+%hook ELMNodeController
 %new
 - (void)youmod_descriptionTitleChanged:(NSNotification *)note {
     if ([note.name isEqualToString:@"YouModWatchStatsChanged"] || [note.userInfo[@"videoID"] isEqualToString:YouModCurrentWatchVideoID()])
