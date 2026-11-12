@@ -78,7 +78,7 @@ static void YouModUpdateDescriptionTitle(ASDisplayNode *node);
 @property BOOL isNodeLoaded;
 @property NSUInteger layoutRequests;
 - (void)setNeedsLayout;
-@property BOOL layerBacked;
+@property(getter=isLayerBacked) BOOL layerBacked;
 @property(weak) ASDisplayNode *supernode;
 @property(strong) UIView *view;
 @property CGRect bounds;
@@ -274,10 +274,19 @@ static NSString *YouModCurrentWatchTitle(void) { return [detailsID isEqual:curre
 - (ASDisplayNode *)node;
 - (ASDisplayNode *)materializeNativeNode;
 @end
+@interface ASDisplayNode (DescriptionTextFixture)
+- (ASDisplayNode *)currentTextNode;
+@end
 /* DESCRIPTION_HELPERS */
 @implementation ELMComponent
 - (ASDisplayNode *)materializeNativeNode { self.nativeReady = YES; return self.pendingNode; }
 /* DESCRIPTION_COMPONENT_HOOKS */
+@end
+
+@interface ELMExpandableTextNode : ASDisplayNode
+@property(strong) ASTextNode *currentTextNode;
+@end
+@implementation ELMExpandableTextNode
 @end
 
 @interface TestLikeControl : UIView
@@ -421,10 +430,10 @@ int main(void) { @autoreleasepool {
 
     // Replay the report with a component that has no text controller until node is requested.
     row.window = NO;
-    currentWatchID = detailsID = @"1FurWDiK9A4";
-    detailsTitle = @"Did Anthropic just save its $1 trillion IPO?";
+    currentWatchID = detailsID = @"GTTLtP9TYvM";
+    detailsTitle = @"Hakeem Jeffries FINALLY Has A Challenger!";
     manager.originals[currentWatchID] = detailsTitle;
-    manager.titles[currentWatchID] = @"Fable 5.2 Review";
+    manager.titles[currentWatchID] = @"Hakeem Jeffries finally Has A Challenger!";
     [manager.toggled removeObject:currentWatchID];
     ASDisplayNode *description = [ASDisplayNode new];
     description.layerBacked = YES; // Never request a UIView from the flattened header.
@@ -433,7 +442,12 @@ int main(void) { @autoreleasepool {
     expanded.frame = CGRectMake(0,20,340,90); expanded.bounds = CGRectMake(0,0,340,90);
     body.frame = CGRectMake(0,240,340,90); body.bounds = CGRectMake(0,0,340,90);
     expanded.supernode = body.supernode = description;
-    description.subnodes = @[body,expanded]; // Traversal order is not the visual order.
+    description.subnodes = @[body,expanded];
+    description.yogaChildren = @[titleNode(@"U.S. Democratic Socialists"),titleNode(@"Likes"),titleNode(@"Views"),titleNode(@"Ago")];
+    // The Yoga list alone reproduces the report: four metadata labels, no title.
+    NSMutableArray *oldTexts = [NSMutableArray array], *oldImages = [NSMutableArray array];
+    YouModCollectCardNodes(description,oldTexts,oldImages);
+    assert(oldTexts.count == 4 && ![oldTexts containsObject:expanded]);
     ELMComponent *descriptionHeader = [[ELMComponent alloc] initWithElement:description context:@"video_description_header.eml|80d1782e180cb1b" treeLocalContext:nil];
     assert(!descriptionHeader.nativeReady && !objc_getAssociatedObject(description,"YMDescriptionHeaderRoot"));
     drainUpdates(description);
@@ -486,6 +500,44 @@ int main(void) { @autoreleasepool {
         assert([unrelated.attributedText.string isEqual:detailsTitle]);
         assert(!objc_getAssociatedObject(unrelated,"YMDescriptionObserved"));
     }
+
+    // Realized UIKit labels can carry the title while the node list contains metadata.
+    ASDisplayNode *nativeHeaderRoot = [ASDisplayNode new];
+    nativeHeaderRoot.isNodeLoaded = YES;
+    nativeHeaderRoot.view = [UIView new];
+    UILabel *nativeExpanded = [UILabel new], *nativeBody = [UILabel new];
+    nativeExpanded.frame = CGRectMake(16,12,340,90); nativeBody.frame = CGRectMake(16,240,340,90);
+    nativeExpanded.text = nativeBody.text = detailsTitle;
+    nativeHeaderRoot.view.subviews = @[nativeBody,nativeExpanded];
+    ELMComponent *nativeHeader = [[ELMComponent alloc] initWithElement:nativeHeaderRoot context:@"video_description_header.eml" treeLocalContext:nil];
+    assert(nativeHeader.node == nativeHeaderRoot); drainUpdates(nativeHeaderRoot);
+    assert([nativeExpanded.text isEqual:manager.titles[currentWatchID]] && [nativeBody.text isEqual:detailsTitle]);
+    assert([descriptionTitleStatus containsString:@"UILabel match=1"]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(nativeHeaderRoot);
+    assert([nativeExpanded.text isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(nativeHeaderRoot);
+    assert([nativeExpanded.text isEqual:manager.titles[currentWatchID]]);
+
+    // Expandable controls keep their active text in a separate controller.
+    ELMExpandableTextNode *expandable = [ELMExpandableTextNode new];
+    FeedTextHook *activeText = titleNode(detailsTitle);
+    expandable.currentTextNode = activeText;
+    ELMComponent *expandableHeader = [[ELMComponent alloc] initWithElement:expandable context:@"video_description_header.eml" treeLocalContext:nil];
+    assert(expandableHeader.node == expandable); drainUpdates(expandable);
+    assert([activeText.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    FeedTextHook *replacementText = titleNode(detailsTitle);
+    expandable.currentTextNode = replacementText;
+    [expandable layout]; drainUpdates(expandable);
+    assert([replacementText.attributedText.string isEqual:manager.titles[currentWatchID]]);
+
+    // Shared children and temporary graph cycles are scanned once without forcing views.
+    ASDisplayNode *mixed = [ASDisplayNode new]; mixed.layerBacked = mixed.isNodeLoaded = YES;
+    mixed.yogaChildren = @[activeText]; mixed.subnodes = @[activeText,mixed];
+    NSMutableArray *mixedLabels = [NSMutableArray array], *mixedPositions = [NSMutableArray array];
+    NSHashTable *visited = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+    YouModCollectDescriptionLabels(mixed,0,mixedLabels,mixedPositions,visited);
+    assert(mixedLabels.count == 1 && mixedPositions.count == 1);
+    mixed.subnodes = nil;
 
     // New playback data and late branding must not rewrite a stale header.
     currentWatchID = detailsID = @"PANEL000001";

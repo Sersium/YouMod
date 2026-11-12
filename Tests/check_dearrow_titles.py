@@ -55,7 +55,8 @@ scanner = ''.join(function(s) for s in ('static void YouModCollectWatchLabels(',
 for name in ('YTPlayerView', 'YTMainAppPlayerOverlayView', '_ASCollectionViewCell'):
     scanner = scanner.replace('%c(' + name + ')', name + '.class')
 program = program.replace('/* SCANNER_HELPERS */', scanner)
-program = program.replace('/* DESCRIPTION_HELPERS */', function('static void YouModUpdateDescriptionTitle(') + function('static void YouModObserveDescriptionComponent('))
+description = function('static void YouModCollectDescriptionLabels(') + function('static void YouModUpdateDescriptionTitle(') + function('static void YouModObserveDescriptionComponent(')
+program = program.replace('/* DESCRIPTION_HELPERS */', description.replace('%c(ASTextNode)', 'ASTextNode.class'))
 program = program.replace('/* DESCRIPTION_NODE_HOOKS */', hook('ASDisplayNode').replace('%orig;', ''))
 component_hooks = hook('ELMComponent').replace('id component = %orig;', 'self = [super init]; self.templateURI = context; self.pendingNode = element; id component = self;')
 program = program.replace('/* DESCRIPTION_COMPONENT_HOOKS */', component_hooks.replace('ASDisplayNode *node = %orig;', 'ASDisplayNode *node = [self materializeNativeNode];'))
@@ -86,4 +87,4 @@ with tempfile.TemporaryDirectory() as tmp:
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
-print('PASS: watch and expanded titles, preserved selection, late branding, lazy native description nodes, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')
+print('PASS: watch and expanded titles, preserved selection, late branding, lazy native description nodes, mixed Yoga/native/expandable text, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')

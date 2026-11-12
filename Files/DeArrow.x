@@ -22,6 +22,7 @@ static NSString *descriptionTitleStatus;
 @interface ASDisplayNode (YouModDeArrowGeometry)
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node;
 - (ELMNodeController *)nodeController;
+- (ASTextNode *)currentTextNode;
 @end
 
 @interface YouModDeArrowButton : UIButton
@@ -1398,6 +1399,34 @@ void YouModUpdateWatchTitlesForRow(UIView *row) {
 }
 %end
 
+static void YouModCollectDescriptionLabels(ASDisplayNode *node, CGFloat y, NSMutableArray *labels, NSMutableArray *positions, NSHashTable *visited) {
+    if (!node || [visited containsObject:node]) return;
+    [visited addObject:node];
+    if ([node isKindOfClass:%c(ASTextNode)]) {
+        [labels addObject:node];
+        [positions addObject:@(y)];
+    }
+    if (node.isNodeLoaded && !node.isLayerBacked) {
+        UIView *view = node.view;
+        NSMutableArray *views = [NSMutableArray array];
+        YouModCollectWatchLabels(view, views);
+        for (UIView *label in views) {
+            if ([visited containsObject:label]) continue;
+            [visited addObject:label];
+            CGRect local = [label convertRect:label.bounds toView:view];
+            [labels addObject:label];
+            [positions addObject:@(y + CGRectGetMinY(local) - CGRectGetMinY(node.bounds))];
+        }
+    }
+    // Yoga children and rendered subnodes can contain different text objects.
+    for (ASDisplayNode *child in node.yogaChildren) YouModCollectDescriptionLabels(child, y + CGRectGetMinY(child.frame) - CGRectGetMinY(node.bounds), labels, positions, visited);
+    for (ASDisplayNode *child in node.subnodes) YouModCollectDescriptionLabels(child, y + CGRectGetMinY(child.frame) - CGRectGetMinY(node.bounds), labels, positions, visited);
+    if ([node respondsToSelector:@selector(currentTextNode)]) {
+        ASDisplayNode *text = [node currentTextNode];
+        if (text) YouModCollectDescriptionLabels(text, y + CGRectGetMinY(text.frame) - CGRectGetMinY(node.bounds), labels, positions, visited);
+    }
+}
+
 static void YouModUpdateDescriptionTitle(ASDisplayNode *node) {
     if (!node || objc_getAssociatedObject(node, "YMDescriptionTitleQueued")) return;
     objc_setAssociatedObject(node, "YMDescriptionHeaderRoot", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -1417,23 +1446,31 @@ static void YouModUpdateDescriptionTitle(ASDisplayNode *node) {
         if (videoID.length != 11) return;
         YouModDeArrowManager *manager = [YouModDeArrowManager sharedInstance];
         if (![manager originalTitleForVideoID:videoID].length) [manager registerOriginalTitle:YouModCurrentWatchTitle() forVideoID:videoID];
-        NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
-        YouModCollectCardNodes(current, texts, images);
-        ASTextNode *title = nil;
+        NSMutableArray *texts = [NSMutableArray array], *positions = [NSMutableArray array];
+        NSHashTable *visited = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+        YouModCollectDescriptionLabels(current, 0, texts, positions, visited);
+        id title = nil;
         CGFloat top = CGFLOAT_MAX;
-        for (ASTextNode *text in texts) {
-            if (!YouModWatchTitleMatches(text, text.attributedText, videoID)) continue;
-            CGFloat y = CGRectGetMinY([text convertRect:text.bounds toNode:current]);
+        NSMutableString *status = [NSMutableString stringWithFormat:@"video=%@ node=%@ texts=%lu", videoID,
+            NSStringFromClass(current.class), (unsigned long)texts.count];
+        for (NSUInteger i = 0; i < texts.count; i++) {
+            id text = texts[i];
+            NSAttributedString *native = YouModReadTitleText(text);
+            BOOL match = YouModWatchTitleMatches(text, native, videoID);
+            if (status.length < 8000) [status appendFormat:@"\n%@ match=%d text=%@", NSStringFromClass([text class]), match,
+                native.length > 300 ? [native.string substringToIndex:300] : native.string ?: @"(empty)"];
+            if (!match) continue;
+            CGFloat y = [positions[i] doubleValue];
             // The header template also contains the description body, which can repeat the title.
             if (!title || y < top) { title = text; top = y; }
         }
         if (title) {
-            NSAttributedString *before = title.attributedText;
+            NSAttributedString *before = YouModReadTitleText(title);
             YouModUpdateWatchTitleLabel(title, videoID);
-            if (![before isEqualToAttributedString:title.attributedText]) [current setNeedsLayout];
+            if (![before isEqualToAttributedString:YouModReadTitleText(title)]) [current setNeedsLayout];
         }
-        descriptionTitleStatus = [NSString stringWithFormat:@"video=%@ node=%@ texts=%lu matched=%d", videoID,
-            NSStringFromClass(current.class), (unsigned long)texts.count, title != nil];
+        [status appendFormat:@"\nmatched=%d", title != nil];
+        descriptionTitleStatus = status;
         if (IS_ENABLED(DeArrowEnabled)) [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
     });
 }
