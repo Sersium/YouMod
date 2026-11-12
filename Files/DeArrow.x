@@ -968,7 +968,7 @@ static void YouModUpdateOverflowIndicator(UIButton *indBtn, NSString *videoID) {
     if ([indBtn imageForState:UIControlStateNormal] != symbol) [indBtn setImage:symbol forState:UIControlStateNormal];
 
     if (isOriginal || !hasBranding) {
-        indBtn.tintColor = [UIColor colorWithWhite:0.6 alpha:0.7];
+        indBtn.tintColor = [UIColor colorWithWhite:0.72 alpha:1.0];
         indBtn.backgroundColor = [UIColor colorWithWhite:0.5 alpha:0.12];
     } else {
         indBtn.tintColor = [UIColor colorWithRed:0.0 green:0.72 blue:1.0 alpha:1.0]; // DeArrow cyan
@@ -1142,7 +1142,7 @@ void YouModUpdateWatchDeArrowButton(UIView *row, CGRect frame) {
     objc_setAssociatedObject(button, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
     if (button.superview != row) [row addSubview:button];
     if (!CGRectEqualToRect(button.frame, frame)) button.frame = frame;
-    [row bringSubviewToFront:button];
+    if (row.subviews.lastObject != button) [row bringSubviewToFront:button];
     YouModUpdateOverflowIndicator(button, videoID);
     [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
 }
@@ -1491,7 +1491,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
         [images removeAllObjects];
         YouModCollectNodesFromView(card, texts, images);
         for (ASTextNode *text in texts) {
-            if ([[text description] containsString:@"id.comment."] || YouModIsGroupedUploadText(text.attributedText.string)) return nil;
+            if ([text.accessibilityIdentifier containsString:@"id.comment."] || YouModIsGroupedUploadText(text.attributedText.string)) return nil;
         }
         YouModFindThumbnailNode(images, videoID);
         if (*videoID) return card;
@@ -1500,35 +1500,16 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     return nil;
 }
 
-%hook _ASDisplayView
-
-- (void)didMoveToWindow {
-    %orig;
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:kYMDeArrowUpdatedNotification object:nil];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModWatchStatsChanged" object:nil];
-    UIButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
-    if (!self.window || !IS_ENABLED(DeArrowEnabled)) {
-        [button removeFromSuperview];
-        return;
-    }
-    if (YouModIsOverflowButtonView(self)) {
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowNotification:) name:kYMDeArrowUpdatedNotification object:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowNotification:) name:@"YouModWatchStatsChanged" object:nil];
-        [self setNeedsLayout];
-    }
-}
-
-- (void)layoutSubviews {
-    %orig;
-    YouModDeArrowButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
-    if (!self.window || !IS_ENABLED(DeArrowEnabled) || !YouModIsOverflowButtonView(self)) {
+static void YouModApplyFeedDeArrow(UIView *menuView) {
+    YouModDeArrowButton *button = objc_getAssociatedObject(menuView, "kYMDeArrowButton");
+    if (!menuView.window || !IS_ENABLED(DeArrowEnabled) || !YouModIsOverflowButtonView(menuView)) {
         [button removeFromSuperview];
         return;
     }
     NSMutableArray *texts = [NSMutableArray array];
     NSMutableArray *images = [NSMutableArray array];
     NSString *videoID = nil;
-    UIView *card = YouModVideoCard(self, texts, images, &videoID);
+    UIView *card = YouModVideoCard(menuView, texts, images, &videoID);
     if (!card || videoID.length != 11) {
         [button removeFromSuperview];
         return;
@@ -1541,8 +1522,8 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
         menus = [NSHashTable weakObjectsHashTable];
         objc_setAssociatedObject(card, "YMDeArrowFeedMenus", menus, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    [menus addObject:self];
-    CGRect menu = [self convertRect:self.bounds toView:card];
+    [menus addObject:menuView];
+    CGRect menu = [menuView convertRect:menuView.bounds toView:card];
     CGRect frame = YouModDeArrowButtonFrame(card.bounds, menu);
     if (CGRectIsEmpty(frame)) {
         [button removeFromSuperview];
@@ -1554,11 +1535,11 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
         button.accessibilityIdentifier = @"youmod.feed.dearrow";
         button.accessibilityLabel = @"Toggle DeArrow original title and thumbnail";
         [button addTarget:[YouModDeArrowSwapHandler sharedHandler] action:@selector(handleSwapButtonTap:) forControlEvents:UIControlEventTouchUpInside];
-        objc_setAssociatedObject(self, "kYMDeArrowButton", button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(menuView, "kYMDeArrowButton", button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    objc_setAssociatedObject(self, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(menuView, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
     objc_setAssociatedObject(button, "kYMDeArrowVideoIDKey", videoID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-    button.overflowView = self;
+    button.overflowView = menuView;
     if (button.superview != card) [card addSubview:button];
     if (!CGRectEqualToRect(button.frame, frame)) button.frame = frame;
     CGRect indicator = YouModDeArrowIndicatorFrame(card.bounds, menu, frame);
@@ -1566,7 +1547,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
         button.indicatorFrame = indicator;
         [button setNeedsLayout];
     }
-    [card bringSubviewToFront:button];
+    if (card.subviews.lastObject != button) [card bringSubviewToFront:button];
     YouModUpdateOverflowIndicator(button, videoID);
 
     ASTextNode *title = YouModFindTitleNode(texts);
@@ -1592,12 +1573,49 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
     [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
 }
 
+static void YouModUpdateFeedDeArrow(UIView *menu) {
+    if ((!YouModIsOverflowButtonView(menu) && !objc_getAssociatedObject(menu, "kYMDeArrowButton")) ||
+        objc_getAssociatedObject(menu, "YMFeedDeArrowQueued")) return;
+    objc_setAssociatedObject(menu, "YMFeedDeArrowQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak UIView *weakMenu = menu;
+    // Updating a Texture accessory inside native layout can keep the collection relaying out.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIView *current = weakMenu;
+        if (!current) return;
+        objc_setAssociatedObject(current, "YMFeedDeArrowQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        YouModApplyFeedDeArrow(current);
+    });
+}
+
+%hook _ASDisplayView
+
+- (void)didMoveToWindow {
+    %orig;
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:kYMDeArrowUpdatedNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YouModWatchStatsChanged" object:nil];
+    UIButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
+    if (!self.window || !IS_ENABLED(DeArrowEnabled)) {
+        [button removeFromSuperview];
+        return;
+    }
+    if (YouModIsOverflowButtonView(self)) {
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowNotification:) name:kYMDeArrowUpdatedNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(youmod_onDeArrowNotification:) name:@"YouModWatchStatsChanged" object:nil];
+        YouModUpdateFeedDeArrow(self);
+    }
+}
+
+- (void)layoutSubviews {
+    %orig;
+    YouModUpdateFeedDeArrow(self);
+}
+
 %new
 - (void)youmod_onDeArrowNotification:(NSNotification *)note {
     UIButton *button = objc_getAssociatedObject(self, "kYMDeArrowButton");
     if (!button.superview || [note.name isEqualToString:@"YouModWatchStatsChanged"] || [note.userInfo[@"videoID"] isEqual:objc_getAssociatedObject(self, "kYMDeArrowVideoIDKey")]) {
         // Retry cards whose thumbnail identity was not ready on first layout.
-        [self setNeedsLayout];
+        YouModUpdateFeedDeArrow(self);
     }
 }
 %end
@@ -1624,7 +1642,7 @@ UIView *YouModVideoCard(UIView *menu, NSMutableArray *texts, NSMutableArray *ima
 - (void)layoutSubviews {
     %orig;
     NSHashTable *menus = objc_getAssociatedObject(self, "YMDeArrowFeedMenus");
-    if (IS_ENABLED(DeArrowEnabled)) for (UIView *menu in menus.allObjects) if (menu.window) [menu setNeedsLayout];
+    if (IS_ENABLED(DeArrowEnabled)) for (UIView *menu in menus.allObjects) if (menu.window) YouModUpdateFeedDeArrow(menu);
 }
 %end
 

@@ -467,7 +467,7 @@ static void YMSetFeedVoteText(ASTextNode *node, NSAttributedString *text) {
     objc_setAssociatedObject(node, "YMSettingFeedVotes", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-static void YMUpdateFeedVotes(UIView *menu) {
+static void YMApplyFeedVotes(UIView *menu) {
     if (!menu.window || !YouModIsOverflowButtonView(menu)) return;
     NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
     NSString *videoID = nil;
@@ -509,6 +509,18 @@ static void YMUpdateFeedVotes(UIView *menu) {
         YMSetFeedVoteText(node, value);
     }
     if (found && enabled && !votes) [[YouModRYDManager sharedInstance] fetchVotesForVideoID:videoID completion:nil];
+}
+
+static void YMUpdateFeedVotes(UIView *menu) {
+    if (!menu.window || !YouModIsOverflowButtonView(menu) || objc_getAssociatedObject(menu, "YMFeedVotesQueued")) return;
+    objc_setAssociatedObject(menu, "YMFeedVotesQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak UIView *weakMenu = menu;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIView *current = weakMenu;
+        if (!current) return;
+        objc_setAssociatedObject(current, "YMFeedVotesQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        YMApplyFeedVotes(current);
+    });
 }
 
 %hook ASTextNode

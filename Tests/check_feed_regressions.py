@@ -218,7 +218,14 @@ assert 'containsString:@"id.comment."' in card_lookup and 'containsString:@"comm
 thumbnail = dearrow.split('static ASNetworkImageNode *YouModFindThumbnailNode(', 1)[1].split('@interface', 1)[0]
 assert 'size.width < size.height * 1.2' in thumbnail, 'Avatars and emoji are not video thumbnails'
 assert 'knownID' not in thumbnail, 'Recycled thumbnails must use their current URL'
-assert 'if (menu.window) [menu setNeedsLayout]' in dearrow, 'Reposition after the full cell finishes layout, including initially unmeasured cards'
+assert 'if (menu.window) YouModUpdateFeedDeArrow(menu)' in dearrow, 'Retry after cell measurement without invalidating native menu layout'
+assert '[menu setNeedsLayout]' not in dearrow, 'Cell-to-menu invalidation can keep Texture relaying out indefinitely'
+assert 'if (card.subviews.lastObject != button) [card bringSubviewToFront:button]' in dearrow
+assert 'if (row.subviews.lastObject != button) [row bringSubviewToFront:button]' in dearrow
+assert '[text description]' not in card_lookup, 'Do not inspect native debug descriptions while rendering'
+feed_layout = dearrow.split('%hook _ASDisplayView', 1)[1].split('%end', 1)[0]
+assert 'YouModVideoCard(' not in feed_layout and 'YouModUpdateFeedDeArrow(self)' in feed_layout
+assert 'YMApplyFeedVotes(self)' not in ryd and 'static void YMUpdateFeedVotes(UIView *menu)' in ryd
 text_hook = dearrow.split('%hook ASTextNode', 1)[1].split('%end', 1)[0]
 assert text_hook.index('videoID = nil;') < text_hook.index('YouModIsLikelyBadgeOrMetadata(curStr)')
 print('PASS: grouped upload labels, comment exclusion, thumbnail identity and delayed card layout guards')

@@ -21,6 +21,8 @@ static NSString *descriptionTitleStatus;
 
 @class ASDisplayNode;
 @interface UIView : NSObject
+@property(copy) NSString *accessibilityIdentifier;
+@property(copy) NSString *accessibilityLabel;
 @property BOOL window;
 @property BOOL hidden;
 @property BOOL userInteractionEnabled;
@@ -193,10 +195,31 @@ static NSString *lastWatchVideoID;
 /* WATCH_PLAYBACK */
 
 
+static BOOL nativeFeedLayout;
+static NSUInteger feedUpdates, voteUpdates;
+/* FEED_IDENTIFIERS */
+static void YouModApplyFeedDeArrow(UIView *menu) {
+    assert(!nativeFeedLayout);
+    if (menu.window && IS_ENABLED(DeArrowEnabled) && YouModIsOverflowButtonView(menu)) feedUpdates++;
+}
+static void YMApplyFeedVotes(UIView *menu) {
+    assert(!nativeFeedLayout);
+    if (menu.window && YouModIsOverflowButtonView(menu)) voteUpdates++;
+}
+/* FEED_QUEUES */
+@interface FeedMenuHook : UIView
+- (void)layoutSubviews;
+@end
+@implementation FeedMenuHook
+/* FEED_LAYOUT */
+@end
+
 @interface UICollectionViewCell : UIView
 @property(strong) NSIndexPath *sourceIndexPath;
+- (void)layoutSubviews;
 @end
 @implementation UICollectionViewCell
+/* FEED_CELL_LAYOUT */
 @end
 @interface _ASCollectionViewCell : UICollectionViewCell
 @property(strong) ASDisplayNode *node;
@@ -540,6 +563,44 @@ int main(void) { @autoreleasepool {
     preferences[DeArrowEnabled] = NO;
     assert([feedTarget hitTest:CGPointMake(370,60) withEvent:nil] == feedTarget.nativeHitView);
     preferences[DeArrowEnabled] = YES;
+
+    // Accessory work must escape native collection layout, coalesce, and recheck reuse.
+    FeedMenuHook *notificationMenu = [FeedMenuHook new];
+    notificationMenu.window = YES;
+    notificationMenu.accessibilityIdentifier = @"eml.overflow_button";
+    NSHashTable *notificationMenus = [NSHashTable weakObjectsHashTable];
+    [notificationMenus addObject:notificationMenu];
+    objc_setAssociatedObject(feedTarget,"YMDeArrowFeedMenus",notificationMenus,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    nativeFeedLayout = YES;
+    for (int i=0; i<200; i++) {
+        [feedTarget layoutSubviews];
+        [notificationMenu layoutSubviews];
+        YMUpdateFeedVotes(notificationMenu);
+    }
+    assert(feedUpdates == 0 && voteUpdates == 0 && notificationMenu.layoutRequests == 0);
+    notificationMenu.window = NO; // A tap navigated away before deferred work can run.
+    nativeFeedLayout = NO;
+    drainUpdates(notificationMenu);
+    assert(feedUpdates == 0 && voteUpdates == 0);
+    notificationMenu.window = YES;
+    [notificationMenu layoutSubviews];
+    YMUpdateFeedVotes(notificationMenu);
+    drainUpdates(notificationMenu);
+    assert(feedUpdates == 1 && voteUpdates == 1);
+    notificationMenu.accessibilityIdentifier = @"unrelated recycled view";
+    [notificationMenu layoutSubviews]; YMUpdateFeedVotes(notificationMenu);
+    drainUpdates(notificationMenu);
+    assert(feedUpdates == 1 && voteUpdates == 1);
+    __weak UIView *releasedMenu;
+    @autoreleasepool {
+        FeedMenuHook *temporary = [FeedMenuHook new]; temporary.window = YES;
+        temporary.accessibilityIdentifier = @"eml.overflow_button";
+        releasedMenu = temporary;
+        [temporary layoutSubviews]; YMUpdateFeedVotes(temporary);
+    }
+    assert(releasedMenu == nil);
+    drainUpdates(nil);
+    assert(feedUpdates == 1 && voteUpdates == 1);
 
     FeedTextHook *fullscreen = titleNode(@"Unrelated fullscreen title");
     NSAttributedString *overlay = fullscreen.attributedText;
