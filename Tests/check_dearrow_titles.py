@@ -27,16 +27,14 @@ assert 'templateURI' not in function('static void YouModApplyWatchTitles(') and 
 assert 'setOnNodeDidLoad:' not in source and 'setOnNodeDidLayout:' not in source, 'Do not install callbacks before the native text controller exists'
 assert 'ASDisplayNode *node = %orig;' in hook('ELMComponent') and 'YouModUpdateDescriptionTitle(node)' in hook('ELMComponent')
 assert '%hook YTEngagementPanelView' not in source, 'Expanded titles must bind the native header component, independent of its panel host'
+assert 'hasPrefix:@"engagement_panel_header.eml"' in function('static void YouModObserveDescriptionComponent(')
+assert 'hasPrefix:@"video_description_header.eml"' not in function('static void YouModObserveDescriptionComponent('), 'The description component contains channel and counters, not the visible title'
 assert 'candidate != cell && CGRectGetMaxY(candidate.frame) <= CGRectGetMinY(actions)' in source
 assert 'YouModBoundWatchTitle(self, attributedString)' in hook('ASTextNode')
 assert '- (void)didLoad' not in hook('ASTextNode'), 'Do not subscribe every player/comment text node to branding updates'
 assert 'addObserver:title selector:@selector(youmod_onDeArrowTextNotification:)' in source
 native = (root / 'Files/ReturnYouTubeDislike.x').read_text().split('NSString *YouModCurrentWatchTitle(void)', 1)[1].split('\n}', 1)[0]
 assert 'details.videoId isEqualToString:YouModCurrentWatchVideoID()' in native
-
-if platform.system() != 'Darwin':
-    print('SKIP: DeArrow attributed-text and watch-binding runtime checks require macOS')
-    raise SystemExit(0)
 
 program = (root / 'Tests/fixtures/dearrow_titles.m').read_text()
 program = program.replace('/* TEXT_HELPERS */', ''.join(function(s) for s in (
@@ -58,6 +56,12 @@ program = program.replace('/* SCANNER_HELPERS */', scanner)
 description = function('static void YouModCollectDescriptionLabels(') + function('static void YouModUpdateDescriptionTitle(') + function('static void YouModObserveDescriptionComponent(')
 program = program.replace('/* DESCRIPTION_HELPERS */', description.replace('%c(ASTextNode)', 'ASTextNode.class'))
 program = program.replace('/* DESCRIPTION_NODE_HOOKS */', hook('ASDisplayNode').replace('%orig;', ''))
+program = program.replace('/* NATIVE_DESCRIPTION_HELPER */', function('static void YouModUpdateNativeDescriptionTitle('))
+native_header_hooks = hook('YTEngagementPanelHeaderView')
+for signature in ('- (void)setTitle:(id)title', '- (void)setTitle:(id)title fontAttributes:'):
+    body = function(signature, native_header_hooks)
+    native_header_hooks = native_header_hooks.replace(body, body.replace('%orig;', 'self.titleLabel.rawText = title; self.titleLabel.rawAttributedText = nil;'))
+program = program.replace('/* NATIVE_DESCRIPTION_HOOKS */', native_header_hooks.replace('%orig;', ''))
 component_hooks = hook('ELMComponent').replace('id component = %orig;', 'self = [super init]; self.templateURI = context; self.pendingNode = element; id component = self;')
 program = program.replace('/* DESCRIPTION_COMPONENT_HOOKS */', component_hooks.replace('ASDisplayNode *node = %orig;', 'ASDisplayNode *node = [self materializeNativeNode];'))
 program = program.replace('/* BUTTON_HIT_AREA */', function('- (BOOL)pointInside:'))
@@ -82,9 +86,13 @@ for argument in ('watchText', 'attributedString', 'mod'):
     setter = setter.replace('%orig(' + argument + ')', 'self.rawAttributedText = ' + argument)
 setter = setter.replace('%orig', 'self.rawAttributedText = attributedString').replace('%c(ASNetworkImageNode)', 'ASNetworkImageNode.class')
 program = program.replace('/* FEED_TEXT_HOOK */', setter + function('- (void)didExitHierarchy', hook('ASTextNode')).replace('%orig;', ''))
+if platform.system() != 'Darwin':
+    print('SKIP: DeArrow attributed-text and watch-binding runtime checks require macOS')
+    raise SystemExit(0)
+
 with tempfile.TemporaryDirectory() as tmp:
     src, binary = Path(tmp) / 'titles.m', Path(tmp) / 'titles'
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
-print('PASS: watch and expanded titles, preserved selection, late branding, lazy native description nodes, mixed Yoga/native/expandable text, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')
+print('PASS: watch and expanded titles, preserved selection, late branding, lazy native description nodes, separate engagement title and description metadata, artifact separators, mixed Yoga/native/expandable text, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')

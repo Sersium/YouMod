@@ -162,7 +162,7 @@ static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell);
 /* NODE_COLLECTORS */
 /* WATCH_BINDING */
 @implementation UILabel
-- (NSAttributedString *)attributedText { return self.rawAttributedText; }
+- (NSAttributedString *)attributedText { assert(!nativeDescriptionRendering); return self.rawAttributedText; }
 - (NSString *)text { return self.rawText ?: self.rawAttributedText.string; }
 /* LABEL_HOOKS */
 @end
@@ -289,6 +289,26 @@ static NSString *YouModCurrentWatchTitle(void) { return [detailsID isEqual:curre
 @implementation ELMExpandableTextNode
 @end
 
+@interface YTEngagementPanelIdentifier : NSObject
+@property(copy) NSString *identifierString;
+- (BOOL)equalToIdentifierString:(NSString *)identifier;
+@end
+@implementation YTEngagementPanelIdentifier
+- (BOOL)equalToIdentifierString:(NSString *)identifier { return [self.identifierString isEqualToString:identifier]; }
+@end
+@interface YTEngagementPanelHeaderView : UIView
+@property(strong) UILabel *titleLabel;
+@property(strong) YTEngagementPanelIdentifier *engagementPanelIdentifier;
+- (void)setTitle:(id)title;
+- (void)setTitle:(id)title fontAttributes:(id)attributes;
+- (void)didMoveToWindow;
+- (void)layoutSubviews;
+@end
+/* NATIVE_DESCRIPTION_HELPER */
+@implementation YTEngagementPanelHeaderView
+/* NATIVE_DESCRIPTION_HOOKS */
+@end
+
 @interface TestLikeControl : UIView
 @property(strong) UIView *watchRow;
 - (void)youmod_refreshWatchBar:(NSNotification *)note;
@@ -327,6 +347,9 @@ int main(void) { @autoreleasepool {
     assert([clean.string isEqual:@"A > B? Yes!"] && [clean attributesAtIndex:0 effectiveRange:NULL].count == 2);
     assert([YouModCleanDeArrowTitle(@"  café\u00A0\uFFFC\u200Btest\n\t動画 👨‍👩‍👧‍👦 > 2! ") isEqual:@"café test 動画 👨‍👩‍👧‍👦 > 2!"]);
     assert(YouModCleanDeArrowTitle((id)NSNull.null) == nil);
+    assert([YouModCleanDeArrowTitle(@"Grading >US state flags") isEqual:@"Grading US state flags"]);
+    assert([YouModCleanDeArrowTitle(@">Start  >here") isEqual:@"Start here"]);
+    assert([YouModCleanDeArrowTitle(@"A > B and x->y") isEqual:@"A > B and x->y"]);
     YouModDeArrowManager *manager = [YouModDeArrowManager sharedInstance];
 
     currentWatchID = detailsID = @"WATCH000001";
@@ -448,7 +471,7 @@ int main(void) { @autoreleasepool {
     NSMutableArray *oldTexts = [NSMutableArray array], *oldImages = [NSMutableArray array];
     YouModCollectCardNodes(description,oldTexts,oldImages);
     assert(oldTexts.count == 4 && ![oldTexts containsObject:expanded]);
-    ELMComponent *descriptionHeader = [[ELMComponent alloc] initWithElement:description context:@"video_description_header.eml|80d1782e180cb1b" treeLocalContext:nil];
+    ELMComponent *descriptionHeader = [[ELMComponent alloc] initWithElement:description context:@"engagement_panel_header.eml|7eb81024a40365cd" treeLocalContext:nil];
     assert(!descriptionHeader.nativeReady && !objc_getAssociatedObject(description,"YMDescriptionHeaderRoot"));
     drainUpdates(description);
     assert([expanded.attributedText.string isEqual:detailsTitle]);
@@ -464,7 +487,7 @@ int main(void) { @autoreleasepool {
     [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(description);
     assert([expanded.attributedText.string isEqual:detailsTitle]);
     FeedTextHook *originalPanelTitle = titleNode(detailsTitle);
-    ELMComponent *originalPanel = [[ELMComponent alloc] initWithElement:originalPanelTitle context:@"video_description_header.eml-js" treeLocalContext:nil];
+    ELMComponent *originalPanel = [[ELMComponent alloc] initWithElement:originalPanelTitle context:@"engagement_panel_header.eml-js" treeLocalContext:nil];
     assert(originalPanel.node == originalPanelTitle); drainUpdates(originalPanelTitle);
     assert([originalPanelTitle.attributedText.string isEqual:detailsTitle]);
     [expanded didExitHierarchy];
@@ -482,7 +505,7 @@ int main(void) { @autoreleasepool {
     reopened.subnodes = @[reopenedTitle];
     reopenedTitle.forbidParentAccess = NO;
     reopenedTitle.supernode = reopened;
-    ELMComponent *newHeader = [[ELMComponent alloc] initWithElement:reopened context:@"youtube://components/video_description_header.eml_80d1782e180cb1b" treeLocalContext:nil];
+    ELMComponent *newHeader = [[ELMComponent alloc] initWithElement:reopened context:@"youtube://components/engagement_panel_header.eml_7eb81024a40365cd" treeLocalContext:nil];
     assert(!newHeader.nativeReady);
     assert(newHeader.node == reopened); drainUpdates(reopened);
     assert([reopenedTitle.attributedText.string isEqual:manager.titles[currentWatchID]]);
@@ -492,7 +515,7 @@ int main(void) { @autoreleasepool {
     assert(description.layoutRequests == requests); // Stable text cannot create a layout loop.
 
     // Comments and the description body never acquire a binding, even for identical text.
-    for (NSString *uri in @[@"comments_header.eml|1", @"description_body.eml|f1087e40a7108802", @"video_metadata_carousel.eml|2"]) {
+    for (NSString *uri in @[@"video_description_header.eml|80d1782e180cb1b", @"comments_header.eml|1", @"description_body.eml|f1087e40a7108802", @"video_metadata_carousel.eml|2"]) {
         ASTextNode *unrelated = titleNode(detailsTitle);
         ELMComponent *component = [[ELMComponent alloc] initWithElement:unrelated context:uri treeLocalContext:nil];
         assert(component.node == unrelated);
@@ -509,7 +532,7 @@ int main(void) { @autoreleasepool {
     nativeExpanded.frame = CGRectMake(16,12,340,90); nativeBody.frame = CGRectMake(16,240,340,90);
     nativeExpanded.text = nativeBody.text = detailsTitle;
     nativeHeaderRoot.view.subviews = @[nativeBody,nativeExpanded];
-    ELMComponent *nativeHeader = [[ELMComponent alloc] initWithElement:nativeHeaderRoot context:@"video_description_header.eml" treeLocalContext:nil];
+    ELMComponent *nativeHeader = [[ELMComponent alloc] initWithElement:nativeHeaderRoot context:@"engagement_panel_header.eml" treeLocalContext:nil];
     assert(nativeHeader.node == nativeHeaderRoot); drainUpdates(nativeHeaderRoot);
     assert([nativeExpanded.text isEqual:manager.titles[currentWatchID]] && [nativeBody.text isEqual:detailsTitle]);
     assert([descriptionTitleStatus containsString:@"UILabel match=1"]);
@@ -522,7 +545,7 @@ int main(void) { @autoreleasepool {
     ELMExpandableTextNode *expandable = [ELMExpandableTextNode new];
     FeedTextHook *activeText = titleNode(detailsTitle);
     expandable.currentTextNode = activeText;
-    ELMComponent *expandableHeader = [[ELMComponent alloc] initWithElement:expandable context:@"video_description_header.eml" treeLocalContext:nil];
+    ELMComponent *expandableHeader = [[ELMComponent alloc] initWithElement:expandable context:@"engagement_panel_header.eml" treeLocalContext:nil];
     assert(expandableHeader.node == expandable); drainUpdates(expandable);
     assert([activeText.attributedText.string isEqual:manager.titles[currentWatchID]]);
     FeedTextHook *replacementText = titleNode(detailsTitle);
@@ -544,7 +567,7 @@ int main(void) { @autoreleasepool {
     detailsTitle = @"An original full title";
     FeedTextHook *lateTitle = titleNode(detailsTitle);
     ASDisplayNode *late = lateTitle;
-    ELMComponent *lateHeader = [[ELMComponent alloc] initWithElement:late context:@"video_description_header.eml" treeLocalContext:nil];
+    ELMComponent *lateHeader = [[ELMComponent alloc] initWithElement:late context:@"engagement_panel_header.eml" treeLocalContext:nil];
     assert(lateHeader.node == late);
     [late layout]; drainUpdates(late);
     assert([lateTitle.attributedText.string isEqual:detailsTitle]);
@@ -559,6 +582,73 @@ int main(void) { @autoreleasepool {
     preferences[DeArrowReplaceTitles] = YES;
     [late layout]; drainUpdates(late);
     assert([lateTitle.attributedText.string isEqual:@"A later DeArrow full title"]);
+
+    // Captured CGP Grey structure: metadata and the visible title are sibling components.
+    currentWatchID = detailsID = @"l4w6808wJcU";
+    detailsTitle = @"There's No Crying in Flag Design";
+    manager.originals[currentWatchID] = detailsTitle;
+    manager.titles[currentWatchID] = YouModCleanDeArrowTitle(@"Grading >US state flags");
+    ASDisplayNode *metadata = [ASDisplayNode new];
+    metadata.isNodeLoaded = YES; metadata.view = [UIView new];
+    NSMutableArray *digits = [NSMutableArray array];
+    for (NSString *part in @[@"K",@"9",@"3",@"4",@"M",@"0",@"2",@"3",@"2",@"0",@"2"]) {
+        UILabel *digit = [UILabel new]; digit.text = part; [digits addObject:digit];
+    }
+    metadata.view.subviews = digits;
+    metadata.yogaChildren = @[titleNode(@"CGP Grey"),titleNode(@"Likes"),titleNode(@"Views"),titleNode(@"Apr 2")];
+    NSMutableArray *captured = [NSMutableArray array], *capturedY = [NSMutableArray array];
+    NSHashTable *capturedNodes = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+    YouModCollectDescriptionLabels(metadata,0,captured,capturedY,capturedNodes);
+    assert(captured.count == 15);
+    for (id candidate in captured) assert(!YouModWatchTitleMatches(candidate,YouModReadTitleText(candidate),currentWatchID));
+    ELMComponent *metadataComponent = [[ELMComponent alloc] initWithElement:metadata context:@"video_description_header.eml|80d1782e180cb1b" treeLocalContext:nil];
+    assert(metadataComponent.node == metadata); drainUpdates(metadata);
+    assert(!objc_getAssociatedObject(metadata,"YMDescriptionHeaderRoot"));
+    assert(!objc_getAssociatedObject(metadata,"YMDescriptionObserved"));
+    FeedTextHook *descriptionBody = titleNode(detailsTitle);
+    ELMComponent *bodyComponent = [[ELMComponent alloc] initWithElement:descriptionBody context:@"description_body.eml" treeLocalContext:nil];
+    assert(bodyComponent.node == descriptionBody);
+    FeedTextHook *commentsHeading = titleNode(@"Comments");
+    ELMComponent *commentsHeader = [[ELMComponent alloc] initWithElement:commentsHeading context:@"engagement_panel_header.eml" treeLocalContext:nil];
+    assert(commentsHeader.node == commentsHeading);
+    FeedTextHook *visibleTitle = titleNode(detailsTitle);
+    ELMComponent *visibleHeader = [[ELMComponent alloc] initWithElement:visibleTitle context:@"engagement_panel_header.eml|7eb81024a40365cd" treeLocalContext:nil];
+    assert(visibleHeader.node == visibleTitle); drainUpdates(visibleTitle);
+    assert([visibleTitle.attributedText.string isEqual:@"Grading US state flags"]);
+    assert([descriptionBody.attributedText.string isEqual:detailsTitle]);
+    assert([commentsHeading.attributedText.string isEqual:@"Comments"]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(visibleTitle);
+    assert([visibleTitle.attributedText.string isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(visibleTitle);
+    assert([visibleTitle.attributedText.string isEqual:@"Grading US state flags"]);
+    assert([manager.originals[currentWatchID] isEqual:detailsTitle]);
+
+    // The native formatted-label header is separate from the Elements metadata too.
+    YTEngagementPanelHeaderView *nativeTitleHeader = [YTEngagementPanelHeaderView new];
+    nativeTitleHeader.window = YES;
+    nativeTitleHeader.titleLabel = [UILabel new];
+    nativeTitleHeader.engagementPanelIdentifier = [YTEngagementPanelIdentifier new];
+    nativeTitleHeader.engagementPanelIdentifier.identifierString = @"engagement-panel-structured-description";
+    nativeDescriptionRendering = YES;
+    [nativeTitleHeader setTitle:detailsTitle fontAttributes:nil];
+    [nativeTitleHeader didMoveToWindow];
+    [nativeTitleHeader layoutSubviews];
+    nativeDescriptionRendering = NO;
+    drainUpdates(nativeTitleHeader);
+    assert([nativeTitleHeader.titleLabel.text isEqual:@"Grading US state flags"]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(nativeTitleHeader);
+    assert([nativeTitleHeader.titleLabel.text isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(nativeTitleHeader);
+    [nativeTitleHeader setTitle:detailsTitle]; drainUpdates(nativeTitleHeader);
+    assert([nativeTitleHeader.titleLabel.text isEqual:@"Grading US state flags"]);
+    nativeTitleHeader.window = NO; [nativeTitleHeader didMoveToWindow]; drainUpdates(nativeTitleHeader);
+    assert(!objc_getAssociatedObject(nativeTitleHeader.titleLabel,"YMDeArrowWatchLabelVideoID"));
+    nativeTitleHeader.window = YES; [nativeTitleHeader didMoveToWindow]; drainUpdates(nativeTitleHeader);
+    assert([nativeTitleHeader.titleLabel.text isEqual:@"Grading US state flags"]);
+    nativeTitleHeader.engagementPanelIdentifier.identifierString = @"engagement-panel-comments-section";
+    [nativeTitleHeader setTitle:@"Comments"]; drainUpdates(nativeTitleHeader);
+    assert([nativeTitleHeader.titleLabel.text isEqual:@"Comments"]);
+    assert(!objc_getAssociatedObject(nativeTitleHeader,"YMNativeDescriptionObserved"));
 
     // The legacy UIKit cell also handles an absent renderer video ID.
     currentWatchID = detailsID = @"LEGACY00001";

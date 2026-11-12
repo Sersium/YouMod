@@ -59,6 +59,13 @@ static NSString *YouModCleanDeArrowTitle(NSString *title) {
     for (NSString *character in @[@"\uFFFC", @"\u200B", @"\uFEFF"]) {
         title = [title stringByReplacingOccurrencesOfString:character withString:@" "];
     }
+    static NSRegularExpression *separator;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        // Remove a separator stuck to a word, preserving comparisons such as A > B.
+        separator = [NSRegularExpression regularExpressionWithPattern:@"(?<!\\S)>(?=\\S)" options:0 error:nil];
+    });
+    title = [separator stringByReplacingMatchesInString:title options:0 range:NSMakeRange(0, title.length) withTemplate:@" "];
     NSArray *words = [title componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     return [[words filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"length > 0"]] componentsJoinedByString:@" "];
 }
@@ -1461,7 +1468,7 @@ static void YouModUpdateDescriptionTitle(ASDisplayNode *node) {
                 native.length > 300 ? [native.string substringToIndex:300] : native.string ?: @"(empty)"];
             if (!match) continue;
             CGFloat y = [positions[i] doubleValue];
-            // The header template also contains the description body, which can repeat the title.
+            // Choose the heading if native text is repeated farther down the header.
             if (!title || y < top) { title = text; top = y; }
         }
         if (title) {
@@ -1477,10 +1484,11 @@ static void YouModUpdateDescriptionTitle(ASDisplayNode *node) {
 
 static void YouModObserveDescriptionComponent(ELMComponent *component) {
     NSString *name = [[component.templateURI componentsSeparatedByString:@"|"].firstObject lastPathComponent];
-    if (![name hasPrefix:@"video_description_header.eml"]) return;
+    // The visible title and close button are separate from description metadata.
+    if (![name hasPrefix:@"engagement_panel_header.eml"]) return;
     objc_setAssociatedObject(component, "YMDescriptionComponent", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!descriptionTitleStatus) descriptionTitleStatus = @"description component created; awaiting native node";
+        if (!descriptionTitleStatus) descriptionTitleStatus = @"engagement header created; awaiting native node";
     });
 }
 
@@ -1507,6 +1515,79 @@ static void YouModObserveDescriptionComponent(ELMComponent *component) {
 - (void)youmod_descriptionTitleChanged:(NSNotification *)note {
     if ([note.name isEqualToString:@"YouModWatchStatsChanged"] || [note.userInfo[@"videoID"] isEqualToString:YouModCurrentWatchVideoID()])
         YouModUpdateDescriptionTitle(self);
+}
+%end
+
+@interface YTEngagementPanelIdentifier : NSObject
+- (BOOL)equalToIdentifierString:(NSString *)identifier;
+@end
+@interface YTEngagementPanelHeaderView (YouModDeArrowTitle)
+- (id)titleLabel;
+- (YTEngagementPanelIdentifier *)engagementPanelIdentifier;
+@end
+
+static void YouModUpdateNativeDescriptionTitle(YTEngagementPanelHeaderView *header) {
+    if (!header || objc_getAssociatedObject(header, "YMNativeDescriptionQueued")) return;
+    objc_setAssociatedObject(header, "YMNativeDescriptionQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak YTEngagementPanelHeaderView *weakHeader = header;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        YTEngagementPanelHeaderView *current = weakHeader;
+        if (!current) return;
+        objc_setAssociatedObject(current, "YMNativeDescriptionQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        id label = current.titleLabel;
+        YTEngagementPanelIdentifier *identifier = current.engagementPanelIdentifier;
+        BOOL description = [identifier equalToIdentifierString:@"engagement-panel-structured-description"] ||
+            [identifier equalToIdentifierString:@"structured-description"];
+        if (!current.window || !description) {
+            [[NSNotificationCenter defaultCenter] removeObserver:current name:kYMDeArrowUpdatedNotification object:nil];
+            [[NSNotificationCenter defaultCenter] removeObserver:current name:@"YouModWatchStatsChanged" object:nil];
+            objc_setAssociatedObject(current, "YMNativeDescriptionObserved", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            if (label) YouModClearWatchTitle(label);
+            return;
+        }
+        if (!objc_getAssociatedObject(current, "YMNativeDescriptionObserved")) {
+            [[NSNotificationCenter defaultCenter] addObserver:current selector:@selector(youmod_nativeDescriptionTitleChanged:) name:kYMDeArrowUpdatedNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:current selector:@selector(youmod_nativeDescriptionTitleChanged:) name:@"YouModWatchStatsChanged" object:nil];
+            objc_setAssociatedObject(current, "YMNativeDescriptionObserved", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        if (!label) return; // Hybrid headers render their title in engagement_panel_header.eml.
+        NSString *videoID = YouModCurrentWatchVideoID();
+        if (videoID.length != 11) return;
+        YouModDeArrowManager *manager = [YouModDeArrowManager sharedInstance];
+        if (![manager originalTitleForVideoID:videoID].length) [manager registerOriginalTitle:YouModCurrentWatchTitle() forVideoID:videoID];
+        NSAttributedString *before = YouModReadTitleText(label);
+        BOOL match = YouModWatchTitleMatches(label, before, videoID);
+        if (match) {
+            YouModUpdateWatchTitleLabel(label, videoID);
+            if (![before isEqualToAttributedString:YouModReadTitleText(label)]) [current setNeedsLayout];
+        }
+        descriptionTitleStatus = [NSString stringWithFormat:@"video=%@ native header=%@ title=%@ matched=%d", videoID,
+            NSStringFromClass(current.class), before.string ?: @"(empty)", match];
+        if (IS_ENABLED(DeArrowEnabled)) [manager prefetchBrandingForVideoID:videoID];
+    });
+}
+
+%hook YTEngagementPanelHeaderView
+- (void)didMoveToWindow {
+    %orig;
+    YouModUpdateNativeDescriptionTitle(self);
+}
+- (void)layoutSubviews {
+    %orig;
+    YouModUpdateNativeDescriptionTitle(self);
+}
+- (void)setTitle:(id)title {
+    %orig;
+    YouModUpdateNativeDescriptionTitle(self);
+}
+- (void)setTitle:(id)title fontAttributes:(id)attributes {
+    %orig;
+    YouModUpdateNativeDescriptionTitle(self);
+}
+%new
+- (void)youmod_nativeDescriptionTitleChanged:(NSNotification *)note {
+    if ([note.name isEqualToString:@"YouModWatchStatsChanged"] || [note.userInfo[@"videoID"] isEqualToString:YouModCurrentWatchVideoID()])
+        YouModUpdateNativeDescriptionTitle(self);
 }
 %end
 
