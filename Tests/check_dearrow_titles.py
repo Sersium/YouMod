@@ -24,6 +24,8 @@ assert 'exclusionPaths' not in source, 'Button spacing must not alter title/chan
 assert 'YMDeArrowBesideMenu' not in source
 assert 'void YouModUpdateWatchTitlesForRow(' in source and 'YouModUpdateWatchTitlesForRow(bar)' in watch
 assert 'templateURI' not in function('static void YouModApplyWatchTitles(') and 'isVisible' not in source, 'Collapsed watch titles must not depend on template ownership or flattened-node visibility'
+assert 'setOnNodeDidLoad:' not in source and 'setOnNodeDidLayout:' not in source, 'Do not install callbacks before the native text controller exists'
+assert 'ASDisplayNode *node = %orig;' in hook('ELMComponent') and 'YouModUpdateDescriptionTitle(node)' in hook('ELMComponent')
 assert '%hook YTEngagementPanelView' not in source, 'Expanded titles must bind the native header component, independent of its panel host'
 assert 'candidate != cell && CGRectGetMaxY(candidate.frame) <= CGRectGetMinY(actions)' in source
 assert 'YouModBoundWatchTitle(self, attributedString)' in hook('ASTextNode')
@@ -54,9 +56,9 @@ for name in ('YTPlayerView', 'YTMainAppPlayerOverlayView', '_ASCollectionViewCel
     scanner = scanner.replace('%c(' + name + ')', name + '.class')
 program = program.replace('/* SCANNER_HELPERS */', scanner)
 program = program.replace('/* DESCRIPTION_HELPERS */', function('static void YouModUpdateDescriptionTitle(') + function('static void YouModObserveDescriptionComponent('))
-program = program.replace('/* DESCRIPTION_CONTROLLER_HOOKS */', hook('ELMNodeController'))
-component_hooks = hook('ELMComponent').replace('id component = %orig;', 'self = [super init]; self.templateURI = context; self.materializedInstance = element; id component = self;')
-program = program.replace('/* DESCRIPTION_COMPONENT_HOOKS */', component_hooks)
+program = program.replace('/* DESCRIPTION_NODE_HOOKS */', hook('ASDisplayNode').replace('%orig;', ''))
+component_hooks = hook('ELMComponent').replace('id component = %orig;', 'self = [super init]; self.templateURI = context; self.pendingNode = element; id component = self;')
+program = program.replace('/* DESCRIPTION_COMPONENT_HOOKS */', component_hooks.replace('ASDisplayNode *node = %orig;', 'ASDisplayNode *node = [self materializeNativeNode];'))
 program = program.replace('/* BUTTON_HIT_AREA */', function('- (BOOL)pointInside:'))
 program = program.replace('/* CELL_HIT_TEST */', hook('_ASCollectionViewCell').replace('%orig', 'self.nativeHitView'))
 program = program.replace('/* COLLECTION_HOOK */', hook('UICollectionView').replace('%orig;', ''))
@@ -84,4 +86,4 @@ with tempfile.TemporaryDirectory() as tmp:
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
-print('PASS: watch and expanded titles, preserved selection, late branding, native description-header callbacks, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')
+print('PASS: watch and expanded titles, preserved selection, late branding, lazy native description nodes, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')

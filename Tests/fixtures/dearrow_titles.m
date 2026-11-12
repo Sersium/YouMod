@@ -17,6 +17,9 @@ static NSString *currentWatchID, *detailsID, *detailsTitle;
 static NSString *YouModCurrentWatchVideoID(void);
 static NSString *YouModCurrentWatchTitle(void);
 static NSString *descriptionTitleStatus;
+static BOOL nativeDescriptionRendering;
+@class ASDisplayNode;
+static void YouModUpdateDescriptionTitle(ASDisplayNode *node);
 /* TEXT_HELPERS */
 
 @class ASDisplayNode;
@@ -71,6 +74,7 @@ static NSString *descriptionTitleStatus;
 @property(strong) id textColor;
 @end
 @interface ASDisplayNode : NSObject
+- (void)layout;
 @property BOOL isNodeLoaded;
 @property NSUInteger layoutRequests;
 - (void)setNeedsLayout;
@@ -85,6 +89,7 @@ static NSString *descriptionTitleStatus;
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node;
 @end
 @implementation ASDisplayNode
+/* DESCRIPTION_NODE_HOOKS */
 - (void)setNeedsLayout { self.layoutRequests++; }
 - (UIView *)view { assert(!self.layerBacked); return _view; }
 - (CGRect)convertRect:(CGRect)rect toNode:(ASDisplayNode *)node {
@@ -168,7 +173,7 @@ static void YouModUpdateWatchTitle(YTSlimVideoInformationCell *cell);
 @end
 @implementation FeedTextHook
 - (ASDisplayNode *)supernode { self.parentReads++; assert(!self.forbidParentAccess); return [super supernode]; }
-- (NSAttributedString *)attributedText { return self.rawAttributedText; }
+- (NSAttributedString *)attributedText { assert(!nativeDescriptionRendering); return self.rawAttributedText; }
 /* FEED_TEXT_HOOK */
 @end
 
@@ -261,37 +266,17 @@ static NSString *YouModCurrentWatchTitle(void) { return [detailsID isEqual:curre
 /* COLLECTION_HOOK */
 @end
 
-@interface ELMNodeController : NSObject
-@property(strong) ASDisplayNode *node;
-@property(strong) NSMutableDictionary *callbacks;
-@property BOOL nativeRendering;
-- (void)fireEvent:(NSString *)event;
-@end
 @interface ELMComponent : NSObject
 @property(copy) NSString *templateURI;
-@property(strong) ELMNodeController *materializedInstance;
+@property(strong) ASDisplayNode *pendingNode;
+@property BOOL nativeReady;
 - (instancetype)initWithElement:(id)element context:(id)context treeLocalContext:(id)treeLocalContext;
-- (void)setOnNodeDidLoad:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
-- (void)setOnNodeDidLayout:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
-- (void)setOnNodeDidEnterVisibleState:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
+- (ASDisplayNode *)node;
+- (ASDisplayNode *)materializeNativeNode;
 @end
 /* DESCRIPTION_HELPERS */
-@implementation ELMNodeController
-@synthesize node = _node;
-- (ASDisplayNode *)node { assert(!self.nativeRendering); return _node; }
-- (instancetype)init { if ((self = [super init])) _callbacks = [NSMutableDictionary new]; return self; }
-- (void)fireEvent:(NSString *)event {
-    void (^callback)(ELMNodeController *, id) = self.callbacks[event];
-    self.nativeRendering = YES;
-    if (callback) callback(self, @"native context, not a node");
-    self.nativeRendering = NO;
-}
-/* DESCRIPTION_CONTROLLER_HOOKS */
-@end
 @implementation ELMComponent
-- (void)setOnNodeDidLoad:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key { assert([key isEqual:@"YouModDescriptionTitle"]); self.materializedInstance.callbacks[@"load"] = callback; }
-- (void)setOnNodeDidLayout:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key { self.materializedInstance.callbacks[@"layout"] = callback; }
-- (void)setOnNodeDidEnterVisibleState:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key { self.materializedInstance.callbacks[@"visible"] = callback; }
+- (ASDisplayNode *)materializeNativeNode { self.nativeReady = YES; return self.pendingNode; }
 /* DESCRIPTION_COMPONENT_HOOKS */
 @end
 
@@ -434,62 +419,69 @@ int main(void) { @autoreleasepool {
     [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(row);
     assert([heading.attributedText.string isEqual:detached]);
 
-    // Replay the user's report through native header callbacks, without a panel host.
+    // Replay the report with a component that has no text controller until node is requested.
     row.window = NO;
-    currentWatchID = detailsID = @"0TkYBxVCev4";
-    detailsTitle = @"A baby rotisserie chicken 😭";
+    currentWatchID = detailsID = @"1FurWDiK9A4";
+    detailsTitle = @"Did Anthropic just save its $1 trillion IPO?";
     manager.originals[currentWatchID] = detailsTitle;
-    manager.titles[currentWatchID] = @"Grooming a baby rotisserie chicken (Sphinx Kitten)";
+    manager.titles[currentWatchID] = @"Fable 5.2 Review";
     [manager.toggled removeObject:currentWatchID];
-    ELMNodeController *description = [ELMNodeController new];
-    description.node = [ASDisplayNode new];
-    description.node.layerBacked = YES; // Never request a UIView from the flattened header.
+    ASDisplayNode *description = [ASDisplayNode new];
+    description.layerBacked = YES; // Never request a UIView from the flattened header.
     FeedTextHook *expanded = titleNode(detailsTitle), *body = titleNode(detailsTitle);
     expanded.forbidParentAccess = body.forbidParentAccess = NO;
     expanded.frame = CGRectMake(0,20,340,90); expanded.bounds = CGRectMake(0,0,340,90);
     body.frame = CGRectMake(0,240,340,90); body.bounds = CGRectMake(0,0,340,90);
-    expanded.supernode = body.supernode = description.node;
-    description.node.subnodes = @[body,expanded]; // Traversal order is not the visual order.
+    expanded.supernode = body.supernode = description;
+    description.subnodes = @[body,expanded]; // Traversal order is not the visual order.
     ELMComponent *descriptionHeader = [[ELMComponent alloc] initWithElement:description context:@"video_description_header.eml|80d1782e180cb1b" treeLocalContext:nil];
-    assert(descriptionHeader.materializedInstance == description && description.callbacks.count == 3);
-    [description fireEvent:@"load"];
-    [description fireEvent:@"layout"]; // Coalesced; native holds its rendering lock here.
+    assert(!descriptionHeader.nativeReady && !objc_getAssociatedObject(description,"YMDescriptionHeaderRoot"));
+    drainUpdates(description);
+    assert([expanded.attributedText.string isEqual:detailsTitle]);
+    nativeDescriptionRendering = YES;
+    assert(descriptionHeader.node == description);
+    assert([expanded.rawAttributedText.string isEqual:detailsTitle]);
+    [description layout]; // Native rendering must finish before reading or changing text.
+    nativeDescriptionRendering = NO;
     drainUpdates(description);
     assert([expanded.attributedText.string isEqual:manager.titles[currentWatchID]]);
     assert([body.attributedText.string isEqual:detailsTitle]);
     assert([descriptionTitleStatus containsString:@"matched=1"]);
     [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(description);
     assert([expanded.attributedText.string isEqual:detailsTitle]);
+    FeedTextHook *originalPanelTitle = titleNode(detailsTitle);
+    ELMComponent *originalPanel = [[ELMComponent alloc] initWithElement:originalPanelTitle context:@"video_description_header.eml-js" treeLocalContext:nil];
+    assert(originalPanel.node == originalPanelTitle); drainUpdates(originalPanelTitle);
+    assert([originalPanelTitle.attributedText.string isEqual:detailsTitle]);
     [expanded didExitHierarchy];
     assert(!objc_getAssociatedObject(expanded,"YMDeArrowWatchLabelVideoID"));
-    [description fireEvent:@"visible"]; drainUpdates(description);
+    [descriptionHeader node]; drainUpdates(description);
     assert([manager isOriginalToggledForVideoID:currentWatchID] && [expanded.attributedText.string isEqual:detailsTitle]);
     [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(description);
     assert([expanded.attributedText.string isEqual:manager.titles[currentWatchID]]);
     expanded.attributedText = [[NSAttributedString alloc] initWithString:detailsTitle];
     assert([expanded.attributedText.string isEqual:manager.titles[currentWatchID]]);
 
-    // A new native tree on reopen gets its own callbacks and binding.
-    ELMNodeController *reopened = [ELMNodeController new];
+    // A new native tree on reopen gets its own binding, including hashed resource names.
+    ASDisplayNode *reopened = [ASDisplayNode new];
     FeedTextHook *reopenedTitle = titleNode(detailsTitle);
-    reopened.node = reopenedTitle;
-    ELMComponent *newHeader = [[ELMComponent alloc] initWithElement:reopened context:@"youtube://components/video_description_header.eml-js|revision" treeLocalContext:nil];
-    assert(newHeader.materializedInstance == reopened);
-    [reopened fireEvent:@"layout"]; drainUpdates(reopened);
+    reopened.subnodes = @[reopenedTitle];
+    ELMComponent *newHeader = [[ELMComponent alloc] initWithElement:reopened context:@"youtube://components/video_description_header.eml_80d1782e180cb1b" treeLocalContext:nil];
+    assert(!newHeader.nativeReady);
+    assert(newHeader.node == reopened); drainUpdates(reopened);
     assert([reopenedTitle.attributedText.string isEqual:manager.titles[currentWatchID]]);
-    NSUInteger requests = description.node.layoutRequests;
-    for (int i=0; i<200; i++) [description fireEvent:@"layout"];
+    NSUInteger requests = description.layoutRequests;
+    for (int i=0; i<200; i++) [description layout];
     drainUpdates(description);
-    assert(description.node.layoutRequests == requests); // Stable text cannot create a layout loop.
+    assert(description.layoutRequests == requests); // Stable text cannot create a layout loop.
 
-    // Comments and the description body never receive callbacks, even for identical text.
+    // Comments and the description body never acquire a binding, even for identical text.
     for (NSString *uri in @[@"comments_header.eml|1", @"description_body.eml|f1087e40a7108802", @"video_metadata_carousel.eml|2"]) {
-        ELMNodeController *unrelated = [ELMNodeController new];
-        unrelated.node = titleNode(detailsTitle);
+        ASTextNode *unrelated = titleNode(detailsTitle);
         ELMComponent *component = [[ELMComponent alloc] initWithElement:unrelated context:uri treeLocalContext:nil];
-        assert(component.materializedInstance == unrelated && unrelated.callbacks.count == 0);
-        [unrelated fireEvent:@"load"]; drainUpdates(unrelated);
-        assert([((ASTextNode *)unrelated.node).attributedText.string isEqual:detailsTitle]);
+        assert(component.node == unrelated);
+        [unrelated layout]; drainUpdates(unrelated);
+        assert([unrelated.attributedText.string isEqual:detailsTitle]);
         assert(!objc_getAssociatedObject(unrelated,"YMDescriptionObserved"));
     }
 
@@ -497,10 +489,10 @@ int main(void) { @autoreleasepool {
     currentWatchID = detailsID = @"PANEL000001";
     detailsTitle = @"An original full title";
     FeedTextHook *lateTitle = titleNode(detailsTitle);
-    ELMNodeController *late = [ELMNodeController new]; late.node = lateTitle;
+    ASDisplayNode *late = lateTitle;
     ELMComponent *lateHeader = [[ELMComponent alloc] initWithElement:late context:@"video_description_header.eml" treeLocalContext:nil];
-    assert(lateHeader.materializedInstance == late);
-    [late fireEvent:@"layout"]; drainUpdates(late);
+    assert(lateHeader.node == late);
+    [late layout]; drainUpdates(late);
     assert([lateTitle.attributedText.string isEqual:detailsTitle]);
     NSString *stale = expanded.attributedText.string;
     manager.titles[currentWatchID] = @"A later DeArrow full title";
@@ -508,10 +500,10 @@ int main(void) { @autoreleasepool {
     assert([lateTitle.attributedText.string isEqual:@"A later DeArrow full title"]);
     assert([expanded.attributedText.string isEqual:stale]);
     preferences[DeArrowReplaceTitles] = NO;
-    [late fireEvent:@"layout"]; drainUpdates(late);
+    [late layout]; drainUpdates(late);
     assert([lateTitle.attributedText.string isEqual:detailsTitle]);
     preferences[DeArrowReplaceTitles] = YES;
-    [late fireEvent:@"layout"]; drainUpdates(late);
+    [late layout]; drainUpdates(late);
     assert([lateTitle.attributedText.string isEqual:@"A later DeArrow full title"]);
 
     // The legacy UIKit cell also handles an absent renderer video ID.
@@ -605,7 +597,7 @@ int main(void) { @autoreleasepool {
     FeedTextHook *fullscreen = titleNode(@"Unrelated fullscreen title");
     NSAttributedString *overlay = fullscreen.attributedText;
     manager.titleQueries = 0;
-    for (int i=0; i<10000; i++) fullscreen.attributedText = overlay;
+    for (int i=0; i<10000; i++) { fullscreen.attributedText = overlay; [fullscreen layout]; }
     assert(fullscreen.parentReads == 0 && manager.titleQueries == 0);
     manager.originals[@"FEEDHOOK001"] = @"Original feed title";
     manager.titles[@"FEEDHOOK001"] = @"Replacement feed title";

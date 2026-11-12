@@ -1398,19 +1398,14 @@ void YouModUpdateWatchTitlesForRow(UIView *row) {
 }
 %end
 
-@interface ELMComponent (YouModDeArrowDescription)
-- (void)setOnNodeDidLoad:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
-- (void)setOnNodeDidLayout:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
-- (void)setOnNodeDidEnterVisibleState:(void (^)(ELMNodeController *, id))callback forKey:(NSString *)key;
-@end
-
-static void YouModUpdateDescriptionTitle(ELMNodeController *controller) {
-    if (!controller || objc_getAssociatedObject(controller, "YMDescriptionTitleQueued")) return;
-    objc_setAssociatedObject(controller, "YMDescriptionTitleQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    __weak ELMNodeController *weakController = controller;
+static void YouModUpdateDescriptionTitle(ASDisplayNode *node) {
+    if (!node || objc_getAssociatedObject(node, "YMDescriptionTitleQueued")) return;
+    objc_setAssociatedObject(node, "YMDescriptionHeaderRoot", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(node, "YMDescriptionTitleQueued", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak ASDisplayNode *weakNode = node;
     // Native Elements callbacks can hold rendering locks; update text after they return.
     dispatch_async(dispatch_get_main_queue(), ^{
-        ELMNodeController *current = weakController;
+        ASDisplayNode *current = weakNode;
         if (!current) return;
         objc_setAssociatedObject(current, "YMDescriptionTitleQueued", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         if (!objc_getAssociatedObject(current, "YMDescriptionObserved")) {
@@ -1422,37 +1417,34 @@ static void YouModUpdateDescriptionTitle(ELMNodeController *controller) {
         if (videoID.length != 11) return;
         YouModDeArrowManager *manager = [YouModDeArrowManager sharedInstance];
         if (![manager originalTitleForVideoID:videoID].length) [manager registerOriginalTitle:YouModCurrentWatchTitle() forVideoID:videoID];
-        ASDisplayNode *node = current.node;
         NSMutableArray *texts = [NSMutableArray array], *images = [NSMutableArray array];
-        YouModCollectCardNodes(node, texts, images);
+        YouModCollectCardNodes(current, texts, images);
         ASTextNode *title = nil;
         CGFloat top = CGFLOAT_MAX;
         for (ASTextNode *text in texts) {
             if (!YouModWatchTitleMatches(text, text.attributedText, videoID)) continue;
-            CGFloat y = CGRectGetMinY([text convertRect:text.bounds toNode:node]);
+            CGFloat y = CGRectGetMinY([text convertRect:text.bounds toNode:current]);
             // The header template also contains the description body, which can repeat the title.
             if (!title || y < top) { title = text; top = y; }
         }
         if (title) {
             NSAttributedString *before = title.attributedText;
             YouModUpdateWatchTitleLabel(title, videoID);
-            if (![before isEqualToAttributedString:title.attributedText]) [node setNeedsLayout];
+            if (![before isEqualToAttributedString:title.attributedText]) [current setNeedsLayout];
         }
         descriptionTitleStatus = [NSString stringWithFormat:@"video=%@ node=%@ texts=%lu matched=%d", videoID,
-            NSStringFromClass(node.class), (unsigned long)texts.count, title != nil];
+            NSStringFromClass(current.class), (unsigned long)texts.count, title != nil];
         if (IS_ENABLED(DeArrowEnabled)) [[YouModDeArrowManager sharedInstance] prefetchBrandingForVideoID:videoID];
     });
 }
 
 static void YouModObserveDescriptionComponent(ELMComponent *component) {
     NSString *name = [[component.templateURI componentsSeparatedByString:@"|"].firstObject lastPathComponent];
-    if (![name isEqualToString:@"video_description_header.eml"] && ![name isEqualToString:@"video_description_header.eml-js"]) return;
-    void (^update)(ELMNodeController *, id) = ^(ELMNodeController *controller, id context) {
-        YouModUpdateDescriptionTitle(controller);
-    };
-    [component setOnNodeDidLoad:update forKey:@"YouModDescriptionTitle"];
-    [component setOnNodeDidLayout:update forKey:@"YouModDescriptionTitle"];
-    [component setOnNodeDidEnterVisibleState:update forKey:@"YouModDescriptionTitle"];
+    if (![name hasPrefix:@"video_description_header.eml"]) return;
+    objc_setAssociatedObject(component, "YMDescriptionComponent", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!descriptionTitleStatus) descriptionTitleStatus = @"description component created; awaiting native node";
+    });
 }
 
 %hook ELMComponent
@@ -1461,9 +1453,19 @@ static void YouModObserveDescriptionComponent(ELMComponent *component) {
     YouModObserveDescriptionComponent(component);
     return component;
 }
+- (ASDisplayNode *)node {
+    ASDisplayNode *node = %orig;
+    // The native getter materializes the text controller lazily, after initialization.
+    if (objc_getAssociatedObject(self, "YMDescriptionComponent")) YouModUpdateDescriptionTitle(node);
+    return node;
+}
 %end
 
-%hook ELMNodeController
+%hook ASDisplayNode
+- (void)layout {
+    %orig;
+    if (objc_getAssociatedObject(self, "YMDescriptionHeaderRoot")) YouModUpdateDescriptionTitle(self);
+}
 %new
 - (void)youmod_descriptionTitleChanged:(NSNotification *)note {
     if ([note.name isEqualToString:@"YouModWatchStatsChanged"] || [note.userInfo[@"videoID"] isEqualToString:YouModCurrentWatchVideoID()])
