@@ -67,6 +67,10 @@ program = program.replace('/* DESCRIPTION_COMPONENT_HOOKS */', component_hooks.r
 program = program.replace('/* BUTTON_HIT_AREA */', function('- (BOOL)pointInside:'))
 program = program.replace('/* CELL_HIT_TEST */', hook('_ASCollectionViewCell').replace('%orig', 'self.nativeHitView'))
 program = program.replace('/* COLLECTION_HOOK */', hook('UICollectionView').replace('%orig;', ''))
+description_collection = function('static void YouModUpdateDescriptionCollection(').replace('UIResponder *', 'UIView *')
+for name in ('YTVariableHeightHeaderView', 'YTEngagementPanelView', '_ASCollectionViewCell'):
+    description_collection = description_collection.replace('%c(' + name + ')', name + '.class')
+program = program.replace('/* DESCRIPTION_COLLECTION_HELPER */', description_collection)
 program = program.replace('/* FEED_IDENTIFIERS */', function('BOOL YouModIsOverflowButtonIdentifier(') + function('BOOL YouModIsOverflowButtonView('))
 ryd_source = (root / 'Files/ReturnYouTubeDislike.x').read_text()
 program = program.replace('/* FEED_QUEUES */', function('static void YouModUpdateFeedDeArrow(') + function('static void YMUpdateFeedVotes(', ryd_source))
@@ -95,4 +99,4 @@ with tempfile.TemporaryDirectory() as tmp:
     src.write_text(program)
     subprocess.run(['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'CoreGraphics', str(src), '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=20)
-print('PASS: watch and expanded titles, preserved selection, late branding, lazy native description nodes, separate engagement title and description metadata, artifact separators, mixed Yoga/native/expandable text, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')
+print('PASS: watch and expanded titles, on-device Details collection hierarchy, preserved selection, late branding, lazy native description nodes, separate engagement title and description metadata, artifact separators, mixed Yoga/native/expandable text, rendering-lock deferral, feed update coalescing and detach, body isolation, feed/notification touch routing, recycling and 10000 unrelated text updates')

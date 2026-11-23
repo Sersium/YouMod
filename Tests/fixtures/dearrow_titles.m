@@ -32,6 +32,7 @@ static void YouModUpdateDescriptionTitle(ASDisplayNode *node);
 @property CGFloat alpha;
 @property NSUInteger layoutRequests;
 @property CGRect frame;
+@property(weak) UIView *nextResponder;
 @property(readonly) CGRect bounds;
 @property(weak) UIView *superview;
 @property(copy) NSArray *subviews;
@@ -250,6 +251,7 @@ static void YMApplyFeedVotes(UIView *menu) {
 - (void)layoutSubviews;
 - (NSIndexPath *)indexPathForCell:(UICollectionViewCell *)cell;
 @end
+static void YouModUpdateDescriptionCollection(UICollectionView *collection);
 @interface YTPlayerView : UIView
 @end
 @implementation YTPlayerView
@@ -296,6 +298,24 @@ static NSString *YouModCurrentWatchTitle(void) { return [detailsID isEqual:curre
 @implementation YTEngagementPanelIdentifier
 - (BOOL)equalToIdentifierString:(NSString *)identifier { return [self.identifierString isEqualToString:identifier]; }
 @end
+@interface YTEngagementPanelView : UIView
+@end
+@implementation YTEngagementPanelView
+@end
+@interface YTVariableHeightHeaderView : UIView
+@end
+@implementation YTVariableHeightHeaderView
+@end
+@interface DescriptionPanelController : UIView
+@property(strong) YTEngagementPanelIdentifier *panelIdentifier;
+@end
+@implementation DescriptionPanelController
+@end
+@interface UIView (DescriptionPanelController)
+- (YTEngagementPanelIdentifier *)panelIdentifier;
+@end
+/* DESCRIPTION_COLLECTION_HELPER */
+
 @interface YTEngagementPanelHeaderView : UIView
 @property(strong) UILabel *titleLabel;
 @property(strong) YTEngagementPanelIdentifier *engagementPanelIdentifier;
@@ -582,6 +602,41 @@ int main(void) { @autoreleasepool {
     preferences[DeArrowReplaceTitles] = YES;
     [late layout]; drainUpdates(late);
     assert([lateTitle.attributedText.string isEqual:@"A later DeArrow full title"]);
+
+    // On-device Details: the flattened title is in the first visible cell, in section 3.
+    currentWatchID = detailsID = @"hAUHnuCxNfA";
+    detailsTitle = @"These Are The Best 10 Products I've Ever Tested!";
+    manager.titles[currentWatchID] = @"Top 10 gear of 2026";
+    FeedTextHook *detailsHeading = titleNode(detailsTitle);
+    detailsHeading.layerBacked = YES;
+    FeedTextHook *detailsBody = titleNode(detailsTitle);
+    _ASCollectionViewCell *detailsHeaderCell = nodeCell(0, @[detailsHeading]);
+    detailsHeaderCell.sourceIndexPath = [NSIndexPath indexPathWithIndexes:(NSUInteger[]){3, 0} length:2];
+    _ASCollectionViewCell *detailsBodyCell = nodeCell(80, @[detailsBody]);
+    YTEngagementPanelView *detailsPanel = [YTEngagementPanelView new];
+    YTVariableHeightHeaderView *detailsHost = [YTVariableHeightHeaderView new];
+    DescriptionPanelController *detailsController = [DescriptionPanelController new];
+    detailsController.panelIdentifier = [YTEngagementPanelIdentifier new];
+    detailsPanel.nextResponder = detailsController;
+    UICollectionView *detailsCollection = [UICollectionView new];
+    detailsCollection.window = YES;
+    detailsPanel.subviews = @[detailsHost];
+    detailsHost.subviews = @[detailsCollection];
+    detailsCollection.visibleCells = @[detailsBodyCell, detailsHeaderCell];
+    detailsController.panelIdentifier.identifierString = @"engagement-panel-comments-section";
+    [detailsCollection layoutSubviews]; drainUpdates(detailsHeaderCell.node);
+    assert([detailsHeading.attributedText.string isEqual:detailsTitle]);
+    detailsController.panelIdentifier.identifierString = @"video-description-ep-identifier";
+    [detailsCollection layoutSubviews]; drainUpdates(detailsHeaderCell.node);
+    assert([detailsHeading.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    assert([detailsBody.attributedText.string isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(detailsHeaderCell.node);
+    assert([detailsHeading.attributedText.string isEqual:detailsTitle]);
+    [manager toggleDeArrowForVideoID:currentWatchID]; drainUpdates(detailsHeaderCell.node);
+    assert([detailsHeading.attributedText.string isEqual:manager.titles[currentWatchID]]);
+    detailsCollection.visibleCells = @[detailsBodyCell];
+    [detailsCollection layoutSubviews]; drainUpdates(detailsBodyCell.node);
+    assert([detailsBody.attributedText.string isEqual:detailsTitle]);
 
     // Captured CGP Grey structure: metadata and the visible title are sibling components.
     currentWatchID = detailsID = @"l4w6808wJcU";

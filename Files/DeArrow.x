@@ -1398,14 +1398,6 @@ void YouModUpdateWatchTitlesForRow(UIView *row) {
     });
 }
 
-%hook UICollectionView
-- (void)layoutSubviews {
-    %orig;
-    NSHashTable *rows = objc_getAssociatedObject(self, "YMWatchTitleRows");
-    for (UIView *row in rows.allObjects) YouModUpdateWatchTitlesForRow(row);
-}
-%end
-
 static void YouModCollectDescriptionLabels(ASDisplayNode *node, CGFloat y, NSMutableArray *labels, NSMutableArray *positions, NSHashTable *visited) {
     if (!node || [visited containsObject:node]) return;
     [visited addObject:node];
@@ -1521,6 +1513,35 @@ static void YouModObserveDescriptionComponent(ELMComponent *component) {
 @interface YTEngagementPanelIdentifier : NSObject
 - (BOOL)equalToIdentifierString:(NSString *)identifier;
 @end
+@interface UIResponder (YouModDescriptionPanel)
+- (YTEngagementPanelIdentifier *)panelIdentifier;
+@end
+
+static void YouModUpdateDescriptionCollection(UICollectionView *collection) {
+    if (!collection.window || ![collection.superview isKindOfClass:%c(YTVariableHeightHeaderView)]) return;
+    UIView *panel = collection.superview;
+    while (panel && ![panel isKindOfClass:%c(YTEngagementPanelView)]) panel = panel.superview;
+    UIResponder *controller = panel.nextResponder;
+    if (![controller respondsToSelector:@selector(panelIdentifier)] ||
+        ![[controller panelIdentifier] equalToIdentifierString:@"video-description-ep-identifier"]) return;
+
+    // The title and close button share the first cell. Empty leading sections can shift its index path.
+    for (UICollectionViewCell *cell in collection.visibleCells) {
+        if (CGRectGetMinY(cell.frame) != 0 || ![cell isKindOfClass:%c(_ASCollectionViewCell)]) continue;
+        YouModUpdateDescriptionTitle(((_ASCollectionViewCell *)cell).node);
+        break;
+    }
+}
+
+%hook UICollectionView
+- (void)layoutSubviews {
+    %orig;
+    NSHashTable *rows = objc_getAssociatedObject(self, "YMWatchTitleRows");
+    for (UIView *row in rows.allObjects) YouModUpdateWatchTitlesForRow(row);
+    YouModUpdateDescriptionCollection(self);
+}
+%end
+
 @interface YTEngagementPanelHeaderView (YouModDeArrowTitle)
 - (id)titleLabel;
 - (YTEngagementPanelIdentifier *)engagementPanelIdentifier;
