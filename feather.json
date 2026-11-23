@@ -7,19 +7,26 @@
   "sourceURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/feather.json",
   "apps": [
     {
-      "name": "YouTube (YouMod 4.7) \u00b7 Latest",
+      "name": "YouTube (YouMod 4.8) \u00b7 Latest",
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "Tonwalter888 & Sersium",
-      "version": "4.7",
-      "versionDate": "2026-11-11T22:08:23-05:00",
-      "versionDescription": "YouMod 4.7 \u00b7 YouTube 21.42.4\n\n- Target the separate details title header and clean stuck arrow separators (3cc1dd4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.6...3cc1dd4ad90f0292b11899c031bab28c2279dc97\nSource: 3cc1dd4ad90f0292b11899c031bab28c2279dc97\n",
-      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v4.7/YouTube_YouMod.ipa",
-      "localizedDescription": "YouMod 4.7 \u00b7 YouTube 21.42.4\n\n- Target the separate details title header and clean stuck arrow separators (3cc1dd4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.6...3cc1dd4ad90f0292b11899c031bab28c2279dc97\nSource: 3cc1dd4ad90f0292b11899c031bab28c2279dc97\n",
+      "version": "4.8",
+      "versionDate": "2026-11-22T22:05:53-05:00",
+      "versionDescription": "YouMod 4.8 \u00b7 YouTube 21.42.4\n\n- Bind DeArrow to the visible video Details title (6a3f53e)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.7...6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\nSource: 6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v4.8/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 4.8 \u00b7 YouTube 21.42.4\n\n- Bind DeArrow to the visible video Details title (6a3f53e)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.7...6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\nSource: 6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\n",
       "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
       "tintColor": "FF0000",
-      "size": 130712725,
+      "size": 130712982,
       "screenshotURLs": [],
       "versions": [
+        {
+          "version": "4.8",
+          "date": "2026-11-22T22:05:53-05:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v4.8/YouTube_YouMod.ipa",
+          "size": 130712982,
+          "localizedDescription": "YouMod 4.8 \u00b7 YouTube 21.42.4\n\n- Bind DeArrow to the visible video Details title (6a3f53e)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.7...6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\nSource: 6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\n"
+        },
         {
           "version": "4.7",
           "date": "2026-11-11T22:08:23-05:00",
@@ -152,6 +159,29 @@
           "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v2.2.0.41/YouTube_YouMod.ipa",
           "size": 129317180,
           "localizedDescription": "YouMod 2.2.0.41 \u00b7 YouTube 21.38.2\n\n- Add DeArrow, video stats, preview defaults and versioned IPA builds (4839f79)\n\nFull diff: https://github.com/Sersium/YouMod/compare/9fd5117f780f6a0b9cf08cec29c47d5106781a7d...4839f798d6f57efa1fe755ae7e6c9d8966c32c31\nSource: 4839f798d6f57efa1fe755ae7e6c9d8966c32c31\n"
+        }
+      ]
+    },
+    {
+      "name": "YouTube (YouMod 4.7)",
+      "bundleIdentifier": "com.google.ios.youtube",
+      "developerName": "Tonwalter888 & Sersium",
+      "version": "4.7",
+      "versionDate": "2026-11-11T22:08:23-05:00",
+      "versionDescription": "YouMod 4.7 \u00b7 YouTube 21.42.4\n\n- Target the separate details title header and clean stuck arrow separators (3cc1dd4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.6...3cc1dd4ad90f0292b11899c031bab28c2279dc97\nSource: 3cc1dd4ad90f0292b11899c031bab28c2279dc97\n",
+      "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v4.7/YouTube_YouMod.ipa",
+      "localizedDescription": "YouMod 4.7 \u00b7 YouTube 21.42.4\n\n- Target the separate details title header and clean stuck arrow separators (3cc1dd4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.6...3cc1dd4ad90f0292b11899c031bab28c2279dc97\nSource: 3cc1dd4ad90f0292b11899c031bab28c2279dc97\n",
+      "iconURL": "https://raw.githubusercontent.com/Sersium/YouMod/main/Icon.png",
+      "tintColor": "FF0000",
+      "size": 130712725,
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "4.7",
+          "date": "2026-11-11T22:08:23-05:00",
+          "downloadURL": "https://github.com/Sersium/YouMod/releases/download/v4.7/YouTube_YouMod.ipa",
+          "size": 130712725,
+          "localizedDescription": "YouMod 4.7 \u00b7 YouTube 21.42.4\n\n- Target the separate details title header and clean stuck arrow separators (3cc1dd4)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.6...3cc1dd4ad90f0292b11899c031bab28c2279dc97\nSource: 3cc1dd4ad90f0292b11899c031bab28c2279dc97\n"
         }
       ]
     },
@@ -571,6 +601,14 @@
     }
   ],
   "news": [
+    {
+      "identifier": "youmod-4.8",
+      "title": "YouMod 4.8",
+      "caption": "YouMod 4.8 \u00b7 YouTube 21.42.4\n\n- Bind DeArrow to the visible video Details title (6a3f53e)\n\nFull diff: https://github.com/Sersium/YouMod/compare/v4.7...6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\nSource: 6a3f53ef0f38640a8ef70f6c97211d8bda9e26ca\n",
+      "date": "2026-11-22T22:05:53-05:00",
+      "url": "https://github.com/Sersium/YouMod/releases/tag/v4.8",
+      "notify": true
+    },
     {
       "identifier": "youmod-4.7",
       "title": "YouMod 4.7",
